@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    // node16 implies moduleResolution: node16. With "type": "commonjs" in
+    // package.json this still emits CommonJS, but avoids the deprecated
+    // node10 resolution, which is a hard error in TypeScript 6 (TS5107).
+    "module": "node16",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    // Required by ts-jest when module is a hybrid kind (node16) — TS151002.
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -13,7 +13,8 @@ backend/dist/
 *.env
 
 
-docs/
+# Spec docs kept local (anchored: must not match backend/src/docs/)
+/docs/
 
 # OS/editor
 .DS_Store

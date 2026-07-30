@@ -1,0 +1,53 @@
+# Compose lives in backend/ per ARCHITECTURE.md Section 5.
+# Frontend is built from ../frontend (ARCHITECTURE.md Section 6).
+#
+# Run from this directory:  docker compose up -d
+# Defaults are inlined so `up` works with no .env file. Copy .env.example
+# to .env to override. SESSION_SECRET MUST be overridden outside local dev.
+
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-recrutpro}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-recrutpro}
+    ports:
+      # Bound to loopback: reachable by Compass/mongosh on this machine only,
+      # never off-host. Other services reach it as mongo:27017 on the network.
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: "3000"
+      MONGO_URI: mongodb://${MONGO_USER:-recrutpro}:${MONGO_PASSWORD:-recrutpro}@mongo:27017/${MONGO_DB:-recrutpro}?authSource=admin
+      SESSION_SECRET: ${SESSION_SECRET:-dev-only-change-me}
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:

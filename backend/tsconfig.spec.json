@@ -1,0 +1,12 @@
+// Test-only config. The base tsconfig.json deliberately includes src/ alone
+// so that `npm run build` never emits specs into dist/; this one widens the
+// program to tests/ so ts-jest can type-check them and see @types/jest.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["jest", "node"]
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
