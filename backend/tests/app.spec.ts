@@ -1,5 +1,11 @@
 import request from 'supertest';
 import { app } from '../src/app';
+import { SESSION_INACTIVITY_MS, sessionStore } from '../src/config/session';
+
+afterAll(async () => {
+  // Without this the Mongo client behind connect-mongo keeps Jest alive.
+  await sessionStore?.close();
+});
 
 describe('Express entrypoint — ARCHITECTURE.md Section 9', () => {
   it('health check responds 200 with a status payload', async () => {
@@ -28,6 +34,15 @@ describe('Express entrypoint — ARCHITECTURE.md Section 9', () => {
     const res = await request(app).get('/nope');
     expect(Object.keys(res.body)).toEqual(['error']);
     expect(Object.keys(res.body.error).sort()).toEqual(['code', 'message']);
+  });
+
+  it('FR-2: the inactivity window is 30 minutes', () => {
+    expect(SESSION_INACTIVITY_MS).toBe(30 * 60 * 1000);
+  });
+
+  it('FR-2: an anonymous request creates no session cookie', async () => {
+    const res = await request(app).get('/health');
+    expect(res.headers['set-cookie']).toBeUndefined();
   });
 
   it('serves the OpenAPI spec with the shared Error schema', async () => {
