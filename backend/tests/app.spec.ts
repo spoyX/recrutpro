@@ -1,10 +1,10 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { SESSION_INACTIVITY_MS, sessionStore } from '../src/config/session';
+import { SESSION_INACTIVITY_MS, closeSessionStore } from '../src/config/session';
 
 afterAll(async () => {
   // Without this the Mongo client behind connect-mongo keeps Jest alive.
-  await sessionStore?.close();
+  await closeSessionStore();
 });
 
 describe('Express entrypoint — ARCHITECTURE.md Section 9', () => {

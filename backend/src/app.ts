@@ -5,6 +5,7 @@ import { connectDb } from './config/db';
 import { sessionMiddleware } from './config/session';
 import { swaggerSpec } from './docs/swagger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import authRoutes from './routes/auth.routes';
 
 export const app = express();
 
@@ -31,6 +32,7 @@ app.get('/api/docs.json', (_req, res) => {
 });
 
 // Domain routers mount under /api/v1 here as Phase 3 builds each module.
+app.use('/api/v1/auth', authRoutes);
 
 // Must stay last, and in this order: unmatched routes become an AppError,
 // which the error handler then serialises as {error:{code,message}}.

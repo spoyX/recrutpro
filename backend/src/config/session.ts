@@ -29,7 +29,7 @@ if (secret === 'dev-only-change-me') {
  * Mongo client alive and stops the process (or Jest) from exiting.
  * Undefined only when MONGO_URI is absent outside production — see above.
  */
-export const sessionStore = mongoUrl
+export const sessionStore: session.Store = mongoUrl
   ? MongoStore.create({
       mongoUrl,
       collectionName: 'sessions',
@@ -41,11 +41,18 @@ export const sessionStore = mongoUrl
       // the inactivity semantics FR-2 requires.
       touchAfter: 0,
     })
-  : undefined;
+  : // Explicit rather than letting express-session pick its own default, so
+    // tests can read back what a request actually stored.
+    new session.MemoryStore();
 
-if (!sessionStore) {
+if (!mongoUrl) {
   console.warn('[session] MONGO_URI not set — using in-memory sessions. Development only.');
 }
+
+/** MongoStore holds a Mongo client open; MemoryStore has nothing to close. */
+export const closeSessionStore = async (): Promise<void> => {
+  await (sessionStore as { close?: () => Promise<void> }).close?.();
+};
 
 export const sessionMiddleware = session({
   name: 'recrutpro.sid',
