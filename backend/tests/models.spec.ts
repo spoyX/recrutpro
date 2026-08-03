@@ -109,6 +109,40 @@ describe('Mongoose schemas — ARCHITECTURE.md Section 7', () => {
     expect(await validationError(candidate)).toBeUndefined();
   });
 
+  it('FR-24 / D-018: registeredAt is stamped server-side on creation', async () => {
+    const before = Date.now();
+    const candidate = new Candidate({
+      fullName: 'Jean Martin',
+      email: 'jean@example.com',
+      phone: '0600000000',
+      jobPositionId: oid(),
+      registeredBy: oid(),
+    });
+    expect(await validationError(candidate)).toBeUndefined();
+    expect(candidate.registeredAt).toBeInstanceOf(Date);
+    expect(candidate.registeredAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(candidate.registeredAt.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('FR-24 / D-018: a client-supplied registeredAt is overwritten, not trusted', async () => {
+    const forged = new Date('2000-01-01T00:00:00.000Z');
+    const candidate = new Candidate({
+      fullName: 'Jean Martin',
+      email: 'jean@example.com',
+      phone: '0600000000',
+      jobPositionId: oid(),
+      registeredBy: oid(),
+      registeredAt: forged,
+    });
+    expect(await validationError(candidate)).toBeUndefined();
+    expect(candidate.registeredAt.getTime()).not.toBe(forged.getTime());
+    expect(candidate.registeredAt.getTime()).toBeGreaterThan(forged.getTime());
+  });
+
+  it('FR-24 / D-018: registeredAt is immutable once the candidate exists', () => {
+    expect(Candidate.schema.path('registeredAt').options.immutable).toBe(true);
+  });
+
   it('ARCHITECTURE.md Section 8: currentStage accepts only the fixed stages', async () => {
     const err = await validationError(
       new Candidate({

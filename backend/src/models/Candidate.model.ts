@@ -8,6 +8,7 @@ export interface ICandidate extends Document {
   jobPositionId: Types.ObjectId;
   currentStage: CandidateStage;
   registeredBy: Types.ObjectId;
+  registeredAt: Date;
 }
 
 const candidateSchema = new Schema<ICandidate>({
@@ -40,6 +41,20 @@ const candidateSchema = new Schema<ICandidate>({
   },
 
   registeredBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+
+  // FR-24 / D-018: the registration date the candidate list filters on.
+  // Server-assigned, never client-supplied — see the pre-validate hook below.
+  // Immutable so it cannot drift after creation and skew time-to-hire.
+  registeredAt: { type: Date, required: true, default: Date.now, immutable: true },
+});
+
+// D-018: stamp registeredAt on the server for every new candidate, overwriting
+// anything that arrived in the request body. `default` alone would not do this —
+// a client-supplied value satisfies the default and would be persisted as-is.
+candidateSchema.pre('validate', function () {
+  if (this.isNew) {
+    this.set('registeredAt', new Date());
+  }
 });
 
 // FR-20: supports the scoped duplicate lookup. Deliberately NOT unique.
