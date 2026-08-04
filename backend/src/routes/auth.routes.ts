@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { login } from '../controllers/auth.controller';
+import { login, logout } from '../controllers/auth.controller';
+import { loginRateLimiter } from '../middleware/rateLimit.middleware';
 
 const router = Router();
 
@@ -34,7 +35,26 @@ const router = Router();
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
+ *       429:
+ *         description: Trop de tentatives (D-025 — 5 par IP par 15 minutes).
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/login', login);
+router.post('/login', loginRateLimiter, login);
+
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     summary: Termine la session courante (FR-4)
+ *     tags: [Auth]
+ *     responses:
+ *       204:
+ *         description: >
+ *           Session détruite côté serveur et cookie effacé. Idempotent —
+ *           répond 204 même sans session active.
+ */
+router.post('/logout', logout);
 
 export default router;

@@ -3,7 +3,16 @@ import { hashSync } from 'bcryptjs';
 import { app } from '../src/app';
 import { User } from '../src/models/User.model';
 import { Role } from '../src/common/constants';
-import { sessionStore, closeSessionStore, SESSION_INACTIVITY_MS } from '../src/config/session';
+import {
+  sessionStore,
+  closeSessionStore,
+  SESSION_INACTIVITY_MS,
+  SESSION_COOKIE_NAME,
+} from '../src/config/session';
+import {
+  loginRateLimitStore,
+  LOGIN_RATE_LIMIT_MAX,
+} from '../src/middleware/rateLimit.middleware';
 
 // The database is the only thing mocked. Routing, controller, service, bcrypt,
 // express-session and the error handler all run for real.
@@ -36,6 +45,9 @@ const login = (body: unknown) => request(app).post('/api/v1/auth/login').send(bo
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // D-025: the limiter is real middleware in the request path, so without a
+  // reset these tests would exhaust each other's 5-attempt budget.
+  loginRateLimitStore.resetAll?.();
 });
 
 afterAll(async () => {
@@ -171,12 +183,109 @@ describe('POST /auth/login — FR-1, FR-2, FR-3', () => {
     expect(res.headers['set-cookie']).toBeUndefined();
   });
 
+  it('FR-4: logout destroys the SERVER-SIDE session, not just the cookie', async () => {
+    findOneResolves(makeUser());
+    const loggedIn = await login({ email: 'marie@example.com', password: PASSWORD });
+    const cookie = loggedIn.headers['set-cookie'] as unknown as string[];
+
+    // Present before logout.
+    expect(await storedSession(cookie)).not.toBeNull();
+
+    const res = await request(app).post('/api/v1/auth/logout').set('Cookie', cookie);
+
+    expect(res.status).toBe(204);
+    // The store record is gone — a stolen cookie is now worthless. Clearing the
+    // cookie alone would have left this document alive until its TTL expired.
+    expect(await storedSession(cookie)).toBeNull();
+  });
+
+  it('FR-4: logout clears the session cookie', async () => {
+    findOneResolves(makeUser());
+    const loggedIn = await login({ email: 'marie@example.com', password: PASSWORD });
+
+    const res = await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Cookie', loggedIn.headers['set-cookie'] as unknown as string[]);
+
+    const cleared = (res.headers['set-cookie'] as unknown as string[]).find((c) =>
+      c.startsWith(`${SESSION_COOKIE_NAME}=`),
+    );
+    expect(cleared).toBeDefined();
+    // Expiry in the past is how a cookie is deleted.
+    expect(cleared).toMatch(/Expires=Thu, 01 Jan 1970|Max-Age=0/);
+  });
+
+  it('FR-4: logout is idempotent without a session', async () => {
+    const res = await request(app).post('/api/v1/auth/logout');
+    expect(res.status).toBe(204);
+  });
+
   it('NFR-05: a NoSQL operator in place of the email never reaches the query', async () => {
     findOneResolves(makeUser());
 
     const res = await login({ email: { $ne: null }, password: PASSWORD });
 
     expect(res.status).toBe(400);
+    expect(mockedFindOne).not.toHaveBeenCalled();
+  });
+
+  it('D-028: successful logins do NOT consume the rate-limit budget', async () => {
+    findOneResolves(makeUser());
+
+    // Well past the 5-attempt limit, all succeeding.
+    for (let attempt = 1; attempt <= LOGIN_RATE_LIMIT_MAX + 3; attempt += 1) {
+      const res = await login({ email: 'marie@example.com', password: PASSWORD });
+      expect(res.status).toBe(200);
+    }
+  });
+
+  it('D-028: failures still count even after successful logins', async () => {
+    findOneResolves(makeUser());
+    for (let attempt = 1; attempt <= LOGIN_RATE_LIMIT_MAX; attempt += 1) {
+      await login({ email: 'marie@example.com', password: PASSWORD });
+    }
+
+    // The budget must be untouched by those successes.
+    for (let attempt = 1; attempt <= LOGIN_RATE_LIMIT_MAX; attempt += 1) {
+      const res = await login({ email: 'marie@example.com', password: 'wrong' });
+      expect(res.status).toBe(401);
+    }
+    const throttled = await login({ email: 'marie@example.com', password: 'wrong' });
+    expect(throttled.status).toBe(429);
+  });
+
+  it('D-025: a 6th FAILED attempt from the same IP inside the window is throttled', async () => {
+    findOneResolves(null);
+
+    for (let attempt = 1; attempt <= LOGIN_RATE_LIMIT_MAX; attempt += 1) {
+      const res = await login({ email: 'marie@example.com', password: 'wrong' });
+      expect(res.status).toBe(401);
+    }
+
+    const throttled = await login({ email: 'marie@example.com', password: 'wrong' });
+
+    expect(throttled.status).toBe(429);
+    // Must still match the Section 9 error shape, not express-rate-limit's
+    // default plain-text body.
+    expect(throttled.body).toEqual({
+      error: {
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
+      },
+    });
+  });
+
+  it('D-025: throttling short-circuits before the credential check', async () => {
+    findOneResolves(null);
+    for (let attempt = 1; attempt <= LOGIN_RATE_LIMIT_MAX; attempt += 1) {
+      await login({ email: 'marie@example.com', password: 'wrong' });
+    }
+    mockedFindOne.mockClear();
+
+    await login({ email: 'marie@example.com', password: 'wrong' });
+
+    // A throttled request must not reach the database at all — otherwise the
+    // limiter would not actually relieve load under a brute-force attempt.
     expect(mockedFindOne).not.toHaveBeenCalled();
   });
 

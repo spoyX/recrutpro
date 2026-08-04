@@ -9,6 +9,13 @@ import authRoutes from './routes/auth.routes';
 
 export const app = express();
 
+// Exactly one proxy hop (nginx, D-014), never `true`. Without this, req.ip is
+// the nginx container's address for EVERY request, so the login rate limiter
+// (D-025) would key all users to one bucket and lock the whole company out
+// after five attempts. `true` is equally wrong: it would trust a client-supplied
+// X-Forwarded-For and let an attacker mint a fresh bucket per request.
+app.set('trust proxy', 1);
+
 app.use(express.json());
 
 // Session-based auth infrastructure (D-001: sessions, never JWT). Mounted

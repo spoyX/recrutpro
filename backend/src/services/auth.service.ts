@@ -95,3 +95,26 @@ export const establishSession = (carrier: SessionCarrier, user: IUser): Promise<
       });
     });
   });
+
+/**
+ * FR-4: end the session immediately.
+ *
+ * destroy() removes the record from the STORE, not just the cookie. Clearing
+ * the cookie alone would leave a live session document that anyone holding the
+ * old cookie value could keep using until its TTL expired.
+ */
+export const terminateSession = (carrier: SessionCarrier): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (!carrier.session) {
+      resolve();
+      return;
+    }
+
+    carrier.session.destroy((destroyError) => {
+      if (destroyError) {
+        reject(destroyError);
+        return;
+      }
+      resolve();
+    });
+  });

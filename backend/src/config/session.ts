@@ -54,8 +54,25 @@ export const closeSessionStore = async (): Promise<void> => {
   await (sessionStore as { close?: () => Promise<void> }).close?.();
 };
 
+/**
+ * Exported so logout clears exactly the cookie the session middleware set.
+ * Two literals would silently drift and leave a stale cookie behind (FR-4).
+ */
+export const SESSION_COOKIE_NAME = 'recrutpro.sid';
+
+/** Cookie attributes shared by the session middleware and clearCookie (FR-4). */
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax',
+  path: '/',
+  // Local dev runs over plain HTTP through nginx, so this stays false.
+  // PRODUCTION GATE: must become true (and the app must trust the proxy)
+  // before any TLS deployment, or the cookie travels in the clear.
+  secure: false,
+} as const;
+
 export const sessionMiddleware = session({
-  name: 'recrutpro.sid',
+  name: SESSION_COOKIE_NAME,
   secret,
   store: sessionStore,
   // Nothing is written back unless the session actually changed.
@@ -68,12 +85,7 @@ export const sessionMiddleware = session({
   // and an actively working user would be logged out mid-task.
   rolling: true,
   cookie: {
-    httpOnly: true,
-    sameSite: 'lax',
-    // Local dev runs over plain HTTP through nginx, so this stays false.
-    // PRODUCTION GATE: must become true (and the app must trust the proxy)
-    // before any TLS deployment, or the cookie travels in the clear.
-    secure: false,
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: SESSION_INACTIVITY_MS,
   },
 });
