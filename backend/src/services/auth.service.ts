@@ -1,4 +1,4 @@
-import { compare, hashSync } from 'bcryptjs';
+import { compare, hash, hashSync } from 'bcryptjs';
 import type { Session, SessionData } from 'express-session';
 import { User, IUser } from '../models/User.model';
 import { AppError } from '../common/errors';
@@ -17,6 +17,8 @@ const invalidCredentials = (): AppError =>
  * cases trivially distinguishable by response time and FR-3 leaks anyway.
  */
 const DUMMY_HASH = hashSync('__no_such_user__', 10);
+
+const BCRYPT_COST = 10;
 
 /**
  * FR-1/FR-2: verify credentials. Returns the user on success, throws the one
@@ -95,6 +97,43 @@ export const establishSession = (carrier: SessionCarrier, user: IUser): Promise<
       });
     });
   });
+
+/**
+ * FR-10 — the user replaces a temporary password with one of their own.
+ *
+ * The current password is required even though the caller is authenticated: a
+ * hijacked session must not be enough to take permanent ownership of an
+ * account by silently changing its credentials.
+ */
+export const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  // requireAuth loads the user without passwordHash (select: false, rule 3),
+  // so it has to be fetched explicitly here.
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user) {
+    throw invalidCredentials();
+  }
+
+  if (!(await compare(currentPassword, user.passwordHash))) {
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Mot de passe actuel incorrect.');
+  }
+
+  if (currentPassword === newPassword) {
+    throw new AppError(
+      400,
+      'VALIDATION_ERROR',
+      'Le nouveau mot de passe doit être différent de l’actuel.',
+    );
+  }
+
+  user.passwordHash = await hash(newPassword, BCRYPT_COST);
+  // Clearing this is what lifts the FR-10 lockout in requireAuth.
+  user.mustChangePassword = false;
+  await user.save();
+};
 
 /**
  * FR-4: end the session immediately.

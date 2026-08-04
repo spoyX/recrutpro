@@ -220,6 +220,30 @@ describe('POST /auth/login — FR-1, FR-2, FR-3', () => {
     expect(res.status).toBe(204);
   });
 
+  it('FR-10: the login response tells the client a change is required', async () => {
+    findOneResolves(makeUser({ mustChangePassword: true }));
+
+    const res = await login({ email: 'marie@example.com', password: PASSWORD });
+
+    expect(res.status).toBe(200);
+    expect(res.body.mustChangePassword).toBe(true);
+  });
+
+  it('FR-10: a user owing a password change is refused protected routes', async () => {
+    const user = makeUser({ mustChangePassword: true });
+    findOneResolves(user);
+    const loggedIn = await login({ email: 'marie@example.com', password: PASSWORD });
+    (User.findById as unknown as jest.Mock).mockResolvedValue(user);
+
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set('Cookie', loggedIn.headers['set-cookie'] as unknown as string[])
+      .send({ name: 'X' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('PASSWORD_CHANGE_REQUIRED');
+  });
+
   it('NFR-05: a NoSQL operator in place of the email never reaches the query', async () => {
     findOneResolves(makeUser());
 

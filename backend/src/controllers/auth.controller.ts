@@ -1,5 +1,11 @@
 import { RequestHandler } from 'express';
-import { authenticate, establishSession, terminateSession } from '../services/auth.service';
+import {
+  authenticate,
+  establishSession,
+  terminateSession,
+  changePassword as changePasswordService,
+} from '../services/auth.service';
+import { MIN_PASSWORD_LENGTH } from '../services/user.service';
 import { toPublicUser } from '../views/user.view';
 import { AppError } from '../common/errors';
 import { SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '../config/session';
@@ -52,6 +58,41 @@ export const logout: RequestHandler = async (req, res, next) => {
     // Must match the attributes the cookie was set with, or the browser keeps
     // the original — hence the shared constants rather than a second literal.
     res.clearCookie(SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS);
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/auth/change-password — FR-10, the second half.
+ *
+ * NOT in the ARCHITECTURE.md Section 9 contract — see D-032. FR-10 requires
+ * the user to be "contraint de le changer à la prochaine connexion", which is
+ * impossible without a route for them to do it on.
+ */
+export const changePassword: RequestHandler = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = (req.body ?? {}) as Record<string, unknown>;
+
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      throw new AppError(
+        400,
+        'VALIDATION_ERROR',
+        'Les champs « mot de passe actuel » et « nouveau mot de passe » sont requis.',
+      );
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      throw new AppError(
+        400,
+        'VALIDATION_ERROR',
+        `Le nouveau mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`,
+      );
+    }
+
+    await changePasswordService(String(req.currentUser?._id), currentPassword, newPassword);
 
     res.status(204).send();
   } catch (error) {

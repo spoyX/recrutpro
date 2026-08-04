@@ -19,7 +19,12 @@ const forbidden = (): AppError =>
  * department — while logged in loses access on its very next request, instead
  * of keeping whatever was true when it signed in.
  */
-export const requireAuth: RequestHandler = async (req, _res, next) => {
+/**
+ * Authenticates without checking mustChangePassword. Only the two routes a
+ * locked-out user must still reach use this: changing their password, and
+ * logging out.
+ */
+export const requireAuthAllowingPasswordChange: RequestHandler = async (req, _res, next) => {
   try {
     const userId = req.session?.userId;
     if (!userId) {
@@ -40,6 +45,36 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+/**
+ * FR-5 / NFR-04 — every protected route starts here.
+ *
+ * Also enforces FR-10: a user carrying `mustChangePassword` is refused
+ * everything until they change it. The check lives HERE, in the default guard,
+ * rather than as a separate middleware each router must remember to add — so a
+ * router written next month is covered without anyone thinking about it.
+ */
+export const requireAuth: RequestHandler = (req, res, next) => {
+  requireAuthAllowingPasswordChange(req, res, (error?: unknown) => {
+    if (error) {
+      next(error);
+      return;
+    }
+
+    if (req.currentUser?.mustChangePassword) {
+      next(
+        new AppError(
+          403,
+          'PASSWORD_CHANGE_REQUIRED',
+          'Vous devez changer votre mot de passe avant de continuer.',
+        ),
+      );
+      return;
+    }
+
+    next();
+  });
 };
 
 /**
