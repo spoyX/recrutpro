@@ -53,6 +53,13 @@ export enum AuditAction {
   UtilisateurDesactive = 'UtilisateurDesactive',
   UtilisateurReactive = 'UtilisateurReactive',
   MotDePasseReinitialise = 'MotDePasseReinitialise',
+  // D-034: department management is audited too. Rule 4 names only user
+  // management explicitly, but a retired or renamed department silently
+  // reshapes the rule 2 scoping every other permission depends on.
+  DepartementCree = 'DepartementCree',
+  DepartementModifie = 'DepartementModifie',
+  DepartementDesactive = 'DepartementDesactive',
+  DepartementReactive = 'DepartementReactive',
   EtapeCandidatModifiee = 'EtapeCandidatModifiee',
   EntretienAnnule = 'EntretienAnnule',
   EvaluationSoumise = 'EvaluationSoumise',

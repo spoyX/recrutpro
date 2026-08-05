@@ -5,6 +5,8 @@ import {
   deactivateUser,
   reactivateUser,
   resetUserPassword,
+  listUsers,
+  getUserById,
   MIN_PASSWORD_LENGTH,
 } from '../services/user.service';
 import { toPublicUser } from '../views/user.view';
@@ -40,6 +42,50 @@ const asRole = (value: unknown, label: string): Role => {
     throw invalid(`Le champ « ${label} » doit être l'un des rôles autorisés.`);
   }
   return value as Role;
+};
+
+/**
+ * Query strings are always text, so "false" must be read as false rather than
+ * as a truthy non-empty string — the classic way an isActive filter silently
+ * returns everyone.
+ */
+const asOptionalBoolean = (value: unknown, label: string): boolean | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === 'true') {
+    return true;
+  }
+  if (value === 'false') {
+    return false;
+  }
+  throw invalid(`Le filtre « ${label} » doit valoir "true" ou "false".`);
+};
+
+/** GET /api/v1/users — FR-12 */
+export const list: RequestHandler = async (req, res, next) => {
+  try {
+    const { role, isActive } = req.query as Record<string, unknown>;
+
+    const users = await listUsers({
+      role: role === undefined ? undefined : asRole(role, 'rôle'),
+      isActive: asOptionalBoolean(isActive, 'statut'),
+    });
+
+    res.status(200).json(users.map(toPublicUser));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** GET /api/v1/users/:id — FR-12 */
+export const getOne: RequestHandler = async (req, res, next) => {
+  try {
+    const user = await getUserById(String(req.params.id));
+    res.status(200).json(toPublicUser(user));
+  } catch (error) {
+    next(error);
+  }
 };
 
 /** POST /api/v1/users — FR-6 */

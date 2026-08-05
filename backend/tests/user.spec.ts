@@ -357,6 +357,84 @@ describe('User management — FR-6 to FR-9', () => {
     });
   });
 
+  describe('FR-12: list and read', () => {
+    const listResolves = (users: unknown[]) => {
+      (mockedUser as unknown as { find: jest.Mock }).find = jest
+        .fn()
+        .mockReturnValue({ sort: jest.fn().mockResolvedValue(users) });
+    };
+
+    it('FR-12: lists all users when no filter is given', async () => {
+      listResolves([makeTarget(), makeTarget({ _id: 'b', name: 'Autre' })]);
+
+      const res = await asAdmin('get', '/api/v1/users');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(2);
+      expect((mockedUser as unknown as { find: jest.Mock }).find).toHaveBeenCalledWith({});
+    });
+
+    it('FR-12: filters by role', async () => {
+      listResolves([makeTarget()]);
+
+      await asAdmin('get', `/api/v1/users?role=${Role.Recruteur}`);
+
+      expect((mockedUser as unknown as { find: jest.Mock }).find).toHaveBeenCalledWith({
+        role: Role.Recruteur,
+      });
+    });
+
+    it('FR-12: filters by status — isActive=false must mean FALSE, not "truthy string"', async () => {
+      listResolves([]);
+
+      await asAdmin('get', '/api/v1/users?isActive=false');
+
+      expect((mockedUser as unknown as { find: jest.Mock }).find).toHaveBeenCalledWith({
+        isActive: false,
+      });
+    });
+
+    it('FR-12: combines both filters', async () => {
+      listResolves([]);
+
+      await asAdmin('get', `/api/v1/users?role=${Role.Recruteur}&isActive=true`);
+
+      expect((mockedUser as unknown as { find: jest.Mock }).find).toHaveBeenCalledWith({
+        role: Role.Recruteur,
+        isActive: true,
+      });
+    });
+
+    it('FR-12 / NFR-05: an invalid filter value is rejected', async () => {
+      listResolves([]);
+
+      const res = await asAdmin('get', '/api/v1/users?isActive=maybe');
+
+      expect(res.status).toBe(400);
+    });
+
+    it('FR-12 / rule 3: the list never carries passwordHash', async () => {
+      listResolves([{ ...makeTarget(), passwordHash: '$2b$10$leaked' }]);
+
+      const res = await asAdmin('get', '/api/v1/users');
+
+      expect(JSON.stringify(res.body)).not.toContain('passwordHash');
+      expect(JSON.stringify(res.body)).not.toContain('leaked');
+    });
+
+    it('FR-12: reads a single user', async () => {
+      const res = await asAdmin('get', `/api/v1/users/${TARGET_ID}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(TARGET_ID);
+    });
+
+    it('FR-12: reading an unknown user is a 404', async () => {
+      const res = await asAdmin('get', `/api/v1/users/${new Types.ObjectId()}`);
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('FR-10: password reset', () => {
     it('FR-10 / D-031: returns a temporary password ONCE and forces a change', async () => {
       const res = await asAdmin('post', `/api/v1/users/${TARGET_ID}/reset-password`);

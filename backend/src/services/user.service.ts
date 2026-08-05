@@ -62,6 +62,34 @@ const assertAssignableDepartment = async (
   }
 };
 
+export interface UserFilters {
+  role?: Role;
+  isActive?: boolean;
+}
+
+/**
+ * FR-12 — list all users, filterable by role and by active status.
+ *
+ * No pagination: NFR-01 caps the system at ~50 concurrent users, so the whole
+ * table is a handful of documents. Add it when a real deployment says otherwise.
+ */
+export const listUsers = async (filters: UserFilters): Promise<IUser[]> => {
+  const query: Record<string, unknown> = {};
+
+  if (filters.role !== undefined) {
+    query.role = filters.role;
+  }
+  if (filters.isActive !== undefined) {
+    query.isActive = filters.isActive;
+  }
+
+  // Sorted by name so the admin screen has a stable order between reloads.
+  return User.find(query).sort({ name: 1 });
+};
+
+/** FR-12 — read a single user. */
+export const getUserById = async (id: string): Promise<IUser> => findUserOr404(id);
+
 export interface CreateUserInput {
   name: string;
   email: string;

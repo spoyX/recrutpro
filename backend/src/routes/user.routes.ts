@@ -5,6 +5,8 @@ import {
   deactivate,
   reactivate,
   resetPassword,
+  list,
+  getOne,
 } from '../controllers/user.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
 import { Role } from '../common/constants';
@@ -47,6 +49,44 @@ router.use(requireAuth, requireRole(Role.Administrateur));
  *       409: { description: Email déjà utilisé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/', create);
+
+/**
+ * @openapi
+ * /users:
+ *   get:
+ *     summary: Liste les utilisateurs, filtrable par rôle et statut (FR-12)
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [Administrateur, Recruteur, ResponsableHierarchique]
+ *       - in: query
+ *         name: isActive
+ *         schema: { type: string, enum: ['true', 'false'] }
+ *     responses:
+ *       200: { description: Liste des comptes (sans passwordHash). }
+ *       400: { description: Filtre invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/', list);
+
+/**
+ * @openapi
+ * /users/{id}:
+ *   get:
+ *     summary: Consulte un utilisateur (FR-12)
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Le compte demandé. }
+ *       404: { description: Utilisateur introuvable., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/:id', getOne);
 
 /**
  * @openapi
