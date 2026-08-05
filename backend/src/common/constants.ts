@@ -60,6 +60,11 @@ export enum AuditAction {
   DepartementModifie = 'DepartementModifie',
   DepartementDesactive = 'DepartementDesactive',
   DepartementReactive = 'DepartementReactive',
+  // D-036: closing a position silently blocks every future application to it,
+  // and editing one rewrites the terms candidates were assessed against.
+  PosteCree = 'PosteCree',
+  PosteModifie = 'PosteModifie',
+  PosteCloture = 'PosteCloture',
   EtapeCandidatModifiee = 'EtapeCandidatModifiee',
   EntretienAnnule = 'EntretienAnnule',
   EvaluationSoumise = 'EvaluationSoumise',
@@ -69,6 +74,7 @@ export enum AuditAction {
 export enum AuditTargetType {
   User = 'User',
   Department = 'Department',
+  JobPosition = 'JobPosition',
   Candidate = 'Candidate',
   Interview = 'Interview',
   InterviewEvaluation = 'InterviewEvaluation',

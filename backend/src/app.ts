@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import departmentRoutes from './routes/department.routes';
+import jobPositionRoutes from './routes/jobPosition.routes';
 
 export const app = express();
 
@@ -44,6 +45,7 @@ app.get('/api/docs.json', (_req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/departments', departmentRoutes);
+app.use('/api/v1/job-positions', jobPositionRoutes);
 
 // Must stay last, and in this order: unmatched routes become an AppError,
 // which the error handler then serialises as {error:{code,message}}.
