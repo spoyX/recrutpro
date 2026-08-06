@@ -15,12 +15,14 @@
   "type": "commonjs",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
     "connect-mongo": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.1",
     "express-session": "^1.19.0",
     "mongoose": "^9.8.1",
+    "multer": "^2.2.0",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
   },
@@ -28,6 +30,7 @@
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^26.1.2",
     "@types/supertest": "^7.2.1",
     "@types/swagger-jsdoc": "^6.0.4",

@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { register } from '../controllers/candidate.controller';
+import { register, putResume, getResume } from '../controllers/candidate.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
+import { uploadResume } from '../middleware/upload.middleware';
 import { Role } from '../common/constants';
 
 const router = Router();
@@ -49,5 +50,69 @@ router.use(requireAuth, requireRole(Role.Recruteur));
  *       409: { description: Poste clôturé (FR-16) ou doublon non confirmé (FR-20)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/', register);
+
+/**
+ * @openapi
+ * /candidates/{id}/resume:
+ *   post:
+ *     summary: Téléverse ou remplace le CV d'un candidat (FR-21, FR-22)
+ *     description: >
+ *       Le fichier est validé côté serveur AVANT tout envoi vers le stockage
+ *       externe (D-007, D-040) : type MIME déclaré, signature binaire réelle
+ *       (magic bytes) et taille maximale de 5 Mo. Un exécutable renommé en
+ *       « .pdf » est rejeté ici, jamais stocké.
+ *       FR-22 : le CV précédent est supprimé du stockage et sa ligne passée à
+ *       `isActive: false` — un seul CV actif par candidat.
+ *     tags: [Candidates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: PDF ou DOCX, 5 Mo maximum.
+ *     responses:
+ *       201: { description: CV enregistré. Aucune URL de stockage n'est renvoyée (D-040). }
+ *       400: { description: Fichier absent, trop volumineux, type non autorisé ou contenu invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Candidat inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       503: { description: Stockage non configuré., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.post('/:id/resume', uploadResume, putResume);
+
+/**
+ * @openapi
+ * /candidates/{id}/resume:
+ *   get:
+ *     summary: Télécharge le CV actif d'un candidat (FR-23)
+ *     description: >
+ *       D-040 : le fichier transite PAR le backend (proxy), il n'y a pas de
+ *       redirection vers une URL de stockage. Les CV sont stockés en mode
+ *       « authenticated » : aucune URL publique n'existe, donc le contrôle
+ *       d'accès de cette route est le seul chemin vers un CV.
+ *     tags: [Candidates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Le fichier CV.
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       404: { description: Candidat inexistant ou aucun CV téléversé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/:id/resume', getResume);
 
 export default router;

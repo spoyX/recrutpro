@@ -3,6 +3,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 export interface IResume extends Document {
   candidateId: Types.ObjectId;
   fileUrl: string;
+  publicId: string;
   uploadedAt: Date;
   isActive: boolean;
 }
@@ -14,6 +15,11 @@ const resumeSchema = new Schema<IResume>({
   // itself to live outside the web root; MIME + signature + 5MB checks are
   // upload-middleware concerns (D-007), not schema concerns.
   fileUrl: { type: String, required: true, trim: true },
+
+  // D-040: the Cloudinary public_id. Added beyond Section 7's field list
+  // because deleting the previous asset (FR-22) and signing a delivery URL
+  // (FR-23) are both impossible from the URL alone. Never exposed to clients.
+  publicId: { type: String, required: true, trim: true },
 
   uploadedAt: { type: Date, required: true, default: Date.now, immutable: true },
 

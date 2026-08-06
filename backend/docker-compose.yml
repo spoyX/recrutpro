@@ -34,6 +34,12 @@ services:
       PORT: "3000"
       MONGO_URI: mongodb://${MONGO_USER:-recrutpro}:${MONGO_PASSWORD:-recrutpro}@mongo:27017/${MONGO_DB:-recrutpro}?authSource=admin
       SESSION_SECRET: ${SESSION_SECRET:-dev-only-change-me}
+      # D-040: resume storage. Deliberately NO inline defaults — these are real
+      # credentials, so they come from .env only. Absent, the API still boots
+      # and only the CV routes return 503.
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     ports:
       - "3000:3000"
     depends_on:

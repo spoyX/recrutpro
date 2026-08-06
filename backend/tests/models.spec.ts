@@ -258,9 +258,21 @@ describe('Mongoose schemas — ARCHITECTURE.md Section 7', () => {
   });
 
   it('FR-22: a resume defaults to active', async () => {
-    const resume = new Resume({ candidateId: oid(), fileUrl: '/srv/cv/abc.pdf' });
+    // D-040: publicId is required — it is the Cloudinary handle needed to
+    // delete the old asset on replacement and to sign a delivery URL.
+    const resume = new Resume({
+      candidateId: oid(),
+      fileUrl: 'https://res.cloudinary.com/demo/raw/authenticated/s--x--/recrutpro/resumes/abc.pdf',
+      publicId: 'recrutpro/resumes/abc.pdf',
+    });
     expect(resume.isActive).toBe(true);
     expect(await validationError(resume)).toBeUndefined();
+  });
+
+  it('FR-22 / D-040: a resume without a publicId is invalid', async () => {
+    // Without it, a replaced CV could only ever be orphaned in Cloudinary.
+    const resume = new Resume({ candidateId: oid(), fileUrl: 'https://res.cloudinary.com/x' });
+    expect(await validationError(resume)).toBeDefined();
   });
 
   it('FR-11 / rule 4: audit entries are valid and immutable', async () => {
