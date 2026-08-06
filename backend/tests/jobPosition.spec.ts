@@ -380,22 +380,75 @@ describe('Job positions — FR-14 to FR-18', () => {
     });
   });
 
-  describe('FR-5 / D-037: only a Recruteur reaches this module', () => {
+  describe('FR-5 / D-038: who reaches this module', () => {
     it('FR-5: an unauthenticated request is rejected', async () => {
       const res = await request(app).get('/api/v1/job-positions');
 
       expect(res.status).toBe(401);
     });
 
-    it('D-037: an Administrateur is 403 — no FR grants it job positions', async () => {
+    it('D-038: an Administrateur CAN read the list', async () => {
       const cookie = await signInAs(admin);
+
+      const res = await request(app).get('/api/v1/job-positions').set('Cookie', cookie);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('D-038: an Administrateur CAN read one position', async () => {
+      const cookie = await signInAs(admin);
+
+      const res = await request(app)
+        .get(`/api/v1/job-positions/${POSITION_ID}`)
+        .set('Cookie', cookie);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('D-038: an Administrateur CANNOT create — read-only', async () => {
+      const cookie = await signInAs(admin);
+
+      const res = await request(app)
+        .post('/api/v1/job-positions')
+        .set('Cookie', cookie)
+        .send({ title: 'Poste', departmentId: DEPT_ID, description: 'Description' });
+
+      expect(res.status).toBe(403);
+      expect(mockedJobPosition.create).not.toHaveBeenCalled();
+    });
+
+    it('D-038: an Administrateur CANNOT edit — read-only', async () => {
+      const cookie = await signInAs(admin);
+
+      const res = await request(app)
+        .patch(`/api/v1/job-positions/${POSITION_ID}`)
+        .set('Cookie', cookie)
+        .send({ title: 'Autre' });
+
+      expect(res.status).toBe(403);
+      expect(position.save).not.toHaveBeenCalled();
+    });
+
+    it('D-038: an Administrateur CANNOT close — read-only', async () => {
+      const cookie = await signInAs(admin);
+
+      const res = await request(app)
+        .post(`/api/v1/job-positions/${POSITION_ID}/close`)
+        .set('Cookie', cookie);
+
+      expect(res.status).toBe(403);
+      expect(position.status).toBe(JobPositionStatus.Ouvert);
+    });
+
+    it('D-038: a Responsable hiérarchique cannot READ — deferred to FR-46', async () => {
+      const cookie = await signInAs(responsable);
 
       const res = await request(app).get('/api/v1/job-positions').set('Cookie', cookie);
 
       expect(res.status).toBe(403);
     });
 
-    it('D-037: a Responsable hiérarchique is 403', async () => {
+    it('D-038: a Responsable hiérarchique cannot WRITE', async () => {
       const cookie = await signInAs(responsable);
 
       const res = await request(app)
