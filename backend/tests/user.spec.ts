@@ -58,7 +58,9 @@ const makeTarget = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-let target: ReturnType<typeof makeTarget>;
+// passwordHash is absent from the literal above but IS assigned by the service
+// during a password reset (FR-10), which is what the NFR-03 test reads back.
+let target: ReturnType<typeof makeTarget> & { passwordHash?: string };
 
 /** Logs in as the admin through the REAL login endpoint and returns the cookie. */
 const signInAsAdmin = async (): Promise<string[]> => {
@@ -96,7 +98,7 @@ afterAll(async () => {
   await closeSessionStore();
 });
 
-const asAdmin = (method: 'post' | 'patch', url: string) =>
+const asAdmin = (method: 'get' | 'post' | 'patch', url: string) =>
   request(app)[method](url).set('Cookie', adminCookie);
 
 describe('User management — FR-6 to FR-9', () => {

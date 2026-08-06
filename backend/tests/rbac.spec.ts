@@ -69,7 +69,8 @@ const buildHarness = () => {
   // belong to" once fetched by id.
   harness.get('/_scoped/:dept', requireAuth, (req, res, next) => {
     try {
-      assertDepartmentAccess(req.currentUser!, req.params.dept);
+      // Express 5 types a route param as string | string[].
+      assertDepartmentAccess(req.currentUser!, String(req.params.dept));
       res.json({ ok: true });
     } catch (error) {
       next(error);

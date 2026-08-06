@@ -62,8 +62,10 @@ const storedSession = (setCookie: string[]): Promise<Record<string, unknown> | n
     .replace(/^s:/, '')
     .split('.')[0];
   return new Promise((resolve, reject) =>
+    // SessionData is a fixed-shape interface with no index signature, so it
+    // needs the double assertion to be read as a bag of keys.
     sessionStore.get(sid, (err, sess) =>
-      err ? reject(err) : resolve((sess as Record<string, unknown>) ?? null),
+      err ? reject(err) : resolve((sess as unknown as Record<string, unknown>) ?? null),
     ),
   );
 };
