@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, putResume, getResume } from '../controllers/candidate.controller';
+import { register, list, putResume, getResume } from '../controllers/candidate.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
 import { uploadResume } from '../middleware/upload.middleware';
 import { Role } from '../common/constants';
@@ -50,6 +50,59 @@ router.use(requireAuth, requireRole(Role.Recruteur));
  *       409: { description: Poste clôturé (FR-16) ou doublon non confirmé (FR-20)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/', register);
+
+/**
+ * @openapi
+ * /candidates:
+ *   get:
+ *     summary: Liste les candidats (FR-24) — Recruteur uniquement
+ *     description: >
+ *       Filtrable par poste, étape du pipeline et plage de dates
+ *       d'enregistrement, avec pagination et tri.
+ *       Le nombre total de candidats correspondant au filtre (avant
+ *       pagination) est renvoyé dans l'en-tête `X-Total-Count`.
+ *       Une valeur de filtre inconnue est refusée avec un 400 — jamais ignorée
+ *       silencieusement, ce qui renverrait une liste faussement vide.
+ *       `toDate` au format AAAA-MM-JJ couvre la journée entière.
+ *     tags: [Candidates]
+ *     parameters:
+ *       - in: query
+ *         name: jobPositionId
+ *         schema: { type: string }
+ *       - in: query
+ *         name: currentStage
+ *         schema:
+ *           type: string
+ *           enum: [Candidature reçue, Présélection CV validée, Rejeté (CV), Entretien planifié, Évaluation complétée, Accepté, Rejeté]
+ *       - in: query
+ *         name: fromDate
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: toDate
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer, minimum: 0, default: 0 }
+ *       - in: query
+ *         name: sortBy
+ *         schema: { type: string, enum: [fullName, currentStage, registeredAt], default: registeredAt }
+ *       - in: query
+ *         name: sortDir
+ *         schema: { type: string, enum: [asc, desc], default: desc }
+ *     responses:
+ *       200:
+ *         description: Liste des candidats correspondant au filtre.
+ *         headers:
+ *           X-Total-Count:
+ *             description: Nombre total de candidats correspondant au filtre, avant pagination.
+ *             schema: { type: integer }
+ *       400: { description: Filtre, tri ou pagination invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: Rôle non autorisé — Recruteur uniquement., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/', list);
 
 /**
  * @openapi

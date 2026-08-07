@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { Candidate, ICandidate } from '../models/Candidate.model';
+import { Resume } from '../models/Resume.model';
 import { CandidateStage } from '../common/constants';
 import { AppError } from '../common/errors';
 import { assertAcceptsCandidates } from './jobPosition.service';
@@ -76,4 +77,89 @@ export const registerCandidate = async (
     registeredBy: new Types.ObjectId(actorId),
     // registeredAt is stamped server-side by the model's pre-validate hook (D-018).
   });
+};
+
+/** FR-24 — the only sortable columns. Anything else is refused, not ignored. */
+export const CANDIDATE_SORT_FIELDS = ['fullName', 'currentStage', 'registeredAt'] as const;
+export type CandidateSortField = (typeof CANDIDATE_SORT_FIELDS)[number];
+
+export const DEFAULT_CANDIDATE_LIMIT = 25;
+export const MAX_CANDIDATE_LIMIT = 100;
+
+export interface ListCandidatesInput {
+  jobPositionId?: string;
+  currentStage?: CandidateStage;
+  fromDate?: Date;
+  toDate?: Date;
+  limit: number;
+  offset: number;
+  sortBy: CandidateSortField;
+  sortDir: 1 | -1;
+}
+
+export interface ListCandidatesResult {
+  items: Array<{ candidate: ICandidate; hasResume: boolean }>;
+  total: number;
+}
+
+/**
+ * FR-24 — list candidates, filterable by poste, étape and registration date
+ * range, with pagination and sorting.
+ *
+ * No department scoping: D-027 scopes only ResponsableHierarchique, and this
+ * route is Recruteur-only, so the `scopeFilter` helper D-027 left unbuilt is
+ * still not needed. It becomes necessary the first time a Responsable can
+ * reach a list.
+ */
+export const listCandidates = async (input: ListCandidatesInput): Promise<ListCandidatesResult> => {
+  const query: Record<string, unknown> = {};
+
+  if (input.jobPositionId) {
+    if (!Types.ObjectId.isValid(input.jobPositionId)) {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Identifiant de poste invalide.');
+    }
+    query.jobPositionId = input.jobPositionId;
+  }
+
+  if (input.currentStage) {
+    query.currentStage = input.currentStage;
+  }
+
+  if (input.fromDate || input.toDate) {
+    const range: Record<string, Date> = {};
+    if (input.fromDate) {
+      range.$gte = input.fromDate;
+    }
+    if (input.toDate) {
+      range.$lte = input.toDate;
+    }
+    query.registeredAt = range;
+  }
+
+  // Counted against the SAME filter, before pagination — the total a caller
+  // needs is "how many match", not "how many are on this page".
+  const total = await Candidate.countDocuments(query);
+
+  const candidates = await Candidate.find(query)
+    .populate('jobPositionId', 'title')
+    .sort({ [input.sortBy]: input.sortDir })
+    .skip(input.offset)
+    .limit(input.limit);
+
+  // hasResume for the whole page in ONE query rather than one per row — the
+  // difference between 2 queries and 1 + N, and this is the endpoint most
+  // likely to grow (see the NFR-01 note in TASKS.md).
+  const withResume = await Resume.find(
+    { candidateId: { $in: candidates.map((c) => c._id) }, isActive: true },
+    'candidateId',
+  );
+  const resumeOwners = new Set(withResume.map((r) => String(r.candidateId)));
+
+  return {
+    total,
+    items: candidates.map((candidate) => ({
+      candidate,
+      hasResume: resumeOwners.has(String(candidate._id)),
+    })),
+  };
 };
