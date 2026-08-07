@@ -160,16 +160,34 @@ describe('Interview scheduling — FR-30, FR-31, FR-32 (and FR-27)', () => {
       expect(candidate.save).toHaveBeenCalled();
     });
 
-    it('FR-27 / rule 4: the stage change is audited', async () => {
+    it('D-044 / rule 4: scheduling itself is audited against the Interview', async () => {
       await schedule(validBody());
 
-      expect(mockedAuditLog.create).toHaveBeenCalledTimes(1);
-      expect(mockedAuditLog.create.mock.calls[0][0]).toEqual({
+      expect(mockedAuditLog.create.mock.calls.map((c) => c[0])).toContainEqual({
+        userId: RECRUTEUR_ID,
+        action: AuditAction.EntretienPlanifie,
+        targetType: AuditTargetType.Interview,
+        targetId: INTERVIEW_ID,
+      });
+    });
+
+    it('FR-27 / rule 4: the stage change is audited against the Candidate', async () => {
+      await schedule(validBody());
+
+      expect(mockedAuditLog.create.mock.calls.map((c) => c[0])).toContainEqual({
         userId: RECRUTEUR_ID,
         action: AuditAction.EtapeCandidatModifiee,
         targetType: AuditTargetType.Candidate,
         targetId: CANDIDATE_ID,
       });
+    });
+
+    it('D-044: one scheduling writes exactly TWO entries, one per entity', async () => {
+      // Two distinct facts about two distinct entities, so an auditor
+      // filtering by targetType finds each under its own.
+      await schedule(validBody());
+
+      expect(mockedAuditLog.create).toHaveBeenCalledTimes(2);
     });
   });
 

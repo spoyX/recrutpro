@@ -66,6 +66,11 @@ export enum AuditAction {
   PosteModifie = 'PosteModifie',
   PosteCloture = 'PosteCloture',
   EtapeCandidatModifiee = 'EtapeCandidatModifiee',
+  // D-044: rule 4 names cancellation but not scheduling. Extended by human
+  // decision — scheduling changes a candidate's stage and commits another
+  // employee's time, which is exactly the "who did this, and when" question
+  // rule 4 exists to answer. Third extension, after D-034 and D-036.
+  EntretienPlanifie = 'EntretienPlanifie',
   EntretienAnnule = 'EntretienAnnule',
   EvaluationSoumise = 'EvaluationSoumise',
 }

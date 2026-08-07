@@ -3,8 +3,15 @@ import { Interview, IInterview } from '../models/Interview.model';
 import { Candidate, ICandidate } from '../models/Candidate.model';
 import { JobPosition } from '../models/JobPosition.model';
 import { User } from '../models/User.model';
-import { CandidateStage, InterviewStatus, Role } from '../common/constants';
+import {
+  CandidateStage,
+  InterviewStatus,
+  Role,
+  AuditAction,
+  AuditTargetType,
+} from '../common/constants';
 import { AppError } from '../common/errors';
+import { recordAudit } from '../common/audit';
 import { markInterviewScheduled } from './candidate.service';
 
 /** FR-31 / D-005 — 30 minutes before and after the requested slot. */
@@ -157,6 +164,17 @@ export const scheduleInterview = async (
     status: InterviewStatus.Planifie,
   });
 
+  // FR-11 / rule 4 / D-044 — scheduling is audited in its own right. Rule 4
+  // names only cancellation; extended by human decision, as D-034 and D-036
+  // did. Distinct from the stage-change entry below: two facts, two entities,
+  // so an auditor filtering by targetType finds each under its own.
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EntretienPlanifie,
+    targetType: AuditTargetType.Interview,
+    targetId: interview._id as Types.ObjectId,
+  });
+
   // FR-27 — the stage change is a side effect of THIS action (D-006). It also
   // writes the rule-4 audit entry for the stage change.
   await markInterviewScheduled(candidate, actorId);
@@ -166,4 +184,92 @@ export const scheduleInterview = async (
   // sites. See D-043.
 
   return interview;
+};
+
+/** FR-33 — the only sortable columns. Anything else is refused, not ignored. */
+export const INTERVIEW_SORT_FIELDS = ['scheduledAt', 'status'] as const;
+export type InterviewSortField = (typeof INTERVIEW_SORT_FIELDS)[number];
+
+export const DEFAULT_INTERVIEW_LIMIT = 25;
+export const MAX_INTERVIEW_LIMIT = 100;
+
+export interface ListInterviewsInput {
+  interviewerId?: string;
+  jobPositionId?: string;
+  fromDate?: Date;
+  toDate?: Date;
+  includeCancelled: boolean;
+  limit: number;
+  offset: number;
+  sortBy: InterviewSortField;
+  sortDir: 1 | -1;
+}
+
+export interface ListInterviewsResult {
+  items: IInterview[];
+  total: number;
+}
+
+/**
+ * FR-33 — the recruiter's interview list, filterable by date, responsable
+ * hiérarchique and poste. The same data backs a calendar view; that rendering
+ * is frontend work.
+ *
+ * D-045: `Planifié` only by default. FR-33 asks for « les entretiens
+ * planifiés », and a schedule padded with cancelled slots would misrepresent
+ * the interviewer's real load. `includeCancelled` reaches the history that
+ * FR-34 deliberately preserves.
+ */
+export const listInterviews = async (
+  input: ListInterviewsInput,
+): Promise<ListInterviewsResult> => {
+  const query: Record<string, unknown> = {};
+
+  if (!input.includeCancelled) {
+    query.status = InterviewStatus.Planifie;
+  }
+
+  if (input.interviewerId) {
+    if (!Types.ObjectId.isValid(input.interviewerId)) {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Identifiant de responsable invalide.');
+    }
+    query.interviewerId = input.interviewerId;
+  }
+
+  // D-045: Interview holds candidateId, and the position lives on the
+  // Candidate — so filtering by poste resolves the candidate ids first.
+  if (input.jobPositionId) {
+    if (!Types.ObjectId.isValid(input.jobPositionId)) {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Identifiant de poste invalide.');
+    }
+    const candidateIds = await Candidate.find({ jobPositionId: input.jobPositionId }, '_id');
+    query.candidateId = { $in: candidateIds.map((c) => c._id) };
+  }
+
+  if (input.fromDate || input.toDate) {
+    const range: Record<string, Date> = {};
+    if (input.fromDate) {
+      range.$gte = input.fromDate;
+    }
+    if (input.toDate) {
+      range.$lte = input.toDate;
+    }
+    query.scheduledAt = range;
+  }
+
+  // Counted against the SAME filter, before pagination.
+  const total = await Interview.countDocuments(query);
+
+  const items = await Interview.find(query)
+    .populate({
+      path: 'candidateId',
+      select: 'fullName jobPositionId',
+      populate: { path: 'jobPositionId', select: 'title' },
+    })
+    .populate('interviewerId', 'name')
+    .sort({ [input.sortBy]: input.sortDir })
+    .skip(input.offset)
+    .limit(input.limit);
+
+  return { items, total };
 };
