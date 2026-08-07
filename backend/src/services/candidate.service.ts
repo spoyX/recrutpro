@@ -171,10 +171,50 @@ export const reviewCandidateCv = async (
     targetId: candidate._id as Types.ObjectId,
   });
 
-  // FR-40 requires a notification on every stage change. The Notifications
-  // module (FR-40 to FR-44) is not built yet, so none is emitted here — see
-  // D-042 and the TASKS.md entry against FR-40.
+  // TODO(FR-40): emit a stage-change notification. The Notifications module
+  // (FR-40 to FR-44) is not built yet, so none is emitted here. Grep for
+  // TODO(FR-40) to find every stage-change site in one sweep — see D-042.
 
+  return candidate;
+};
+
+/**
+ * FR-27 — a successful interview scheduling moves the candidate to
+ * « Entretien planifié ».
+ *
+ * D-006 / D-043: this is a SIDE EFFECT of FR-30, never an action a client can
+ * invoke. It is exported for `interview.service.ts` alone and is deliberately
+ * not wired to any route.
+ *
+ * The stage gate is re-checked here rather than trusted to the caller, so the
+ * transition protects itself if a second caller ever appears.
+ */
+export const markInterviewScheduled = async (
+  candidate: ICandidate,
+  actorId: string,
+): Promise<ICandidate> => {
+  if (candidate.currentStage !== CandidateStage.PreselectionCvValidee) {
+    throw new AppError(
+      409,
+      'INVALID_STAGE_TRANSITION',
+      `Un entretien ne peut être planifié que pour un candidat à l'étape ` +
+        `« ${CandidateStage.PreselectionCvValidee} ». Ce candidat est à l'étape ` +
+        `« ${candidate.currentStage} ».`,
+    );
+  }
+
+  candidate.currentStage = CandidateStage.EntretienPlanifie;
+  await candidate.save();
+
+  // FR-11 / rule 4 — the stage change is audited, as with FR-25.
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EtapeCandidatModifiee,
+    targetType: AuditTargetType.Candidate,
+    targetId: candidate._id as Types.ObjectId,
+  });
+
+  // TODO(FR-40): emit a stage-change notification. See D-042.
   return candidate;
 };
 
