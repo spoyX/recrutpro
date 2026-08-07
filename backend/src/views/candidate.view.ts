@@ -11,6 +11,8 @@ export interface PublicCandidate {
   currentStage: CandidateStage;
   registeredBy: string;
   registeredAt: string;
+  /** FR-26 / D-042: present only once rejected at the CV stage. */
+  rejectionReason: string | null;
 }
 
 /**
@@ -62,4 +64,5 @@ export const toPublicCandidate = (candidate: ICandidate): PublicCandidate => ({
   currentStage: candidate.currentStage,
   registeredBy: String(candidate.registeredBy),
   registeredAt: candidate.registeredAt.toISOString(),
+  rejectionReason: candidate.rejectionReason ?? null,
 });

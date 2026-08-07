@@ -9,6 +9,7 @@ export interface ICandidate extends Document {
   currentStage: CandidateStage;
   registeredBy: Types.ObjectId;
   registeredAt: Date;
+  rejectionReason?: string;
 }
 
 const candidateSchema = new Schema<ICandidate>({
@@ -46,6 +47,14 @@ const candidateSchema = new Schema<ICandidate>({
   // Server-assigned, never client-supplied — see the pre-validate hook below.
   // Immutable so it cannot drift after creation and skew time-to-hire.
   registeredAt: { type: Date, required: true, default: Date.now, immutable: true },
+
+  // FR-26 / D-042: the mandatory motive for a rejection at the CV stage.
+  // Added beyond ARCHITECTURE.md Section 7's field list because FR-26 requires
+  // the motive to be entered, which is meaningless unless it is stored — and
+  // AuditLog cannot hold it, since D-033 fixes audit entries to who/what/when
+  // with no payload. Optional at the schema level because it applies only to
+  // the "Rejeté (CV)" transition; the service is what makes it mandatory there.
+  rejectionReason: { type: String, trim: true },
 });
 
 // D-018: stamp registeredAt on the server for every new candidate, overwriting

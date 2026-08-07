@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { register, list, putResume, getResume } from '../controllers/candidate.controller';
+import {
+  register,
+  list,
+  reviewCv,
+  putResume,
+  getResume,
+} from '../controllers/candidate.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
 import { uploadResume } from '../middleware/upload.middleware';
 import { Role } from '../common/constants';
@@ -103,6 +109,49 @@ router.post('/', register);
  *       403: { description: Rôle non autorisé — Recruteur uniquement., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.get('/', list);
+
+/**
+ * @openapi
+ * /candidates/{id}/stage:
+ *   patch:
+ *     summary: Décision de présélection CV (FR-25, FR-26) — Recruteur uniquement
+ *     description: >
+ *       Ce n'est PAS un endpoint générique de changement d'étape (D-006).
+ *       Il exécute uniquement la transition décrite par FR-25 : le candidat
+ *       doit être à l'étape « Candidature reçue », et `targetStage` ne peut
+ *       valoir que « Présélection CV validée » ou « Rejeté (CV) ». Toute autre
+ *       étape est refusée, même valide dans le pipeline.
+ *       La transition est à sens unique : un candidat déjà présélectionné ou
+ *       déjà rejeté est refusé avec un 409, jamais re-transitionné.
+ *       FR-26 : un motif est obligatoire pour un rejet, et interdit pour une
+ *       validation.
+ *     tags: [Candidates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [targetStage]
+ *             properties:
+ *               targetStage:
+ *                 type: string
+ *                 enum: ['Présélection CV validée', 'Rejeté (CV)']
+ *               rejectionReason:
+ *                 type: string
+ *                 description: FR-26 — obligatoire si targetStage vaut « Rejeté (CV) ».
+ *     responses:
+ *       200: { description: Étape mise à jour. }
+ *       400: { description: Étape cible non autorisée, ou motif manquant/en trop., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Candidat inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       409: { description: Le candidat n'est plus à l'étape « Candidature reçue »., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.patch('/:id/stage', reviewCv);
 
 /**
  * @openapi

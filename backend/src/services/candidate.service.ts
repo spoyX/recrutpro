@@ -1,8 +1,9 @@
 import { Types } from 'mongoose';
 import { Candidate, ICandidate } from '../models/Candidate.model';
 import { Resume } from '../models/Resume.model';
-import { CandidateStage } from '../common/constants';
+import { CandidateStage, AuditAction, AuditTargetType } from '../common/constants';
 import { AppError } from '../common/errors';
+import { recordAudit } from '../common/audit';
 import { assertAcceptsCandidates } from './jobPosition.service';
 
 export interface RegisterCandidateInput {
@@ -77,6 +78,104 @@ export const registerCandidate = async (
     registeredBy: new Types.ObjectId(actorId),
     // registeredAt is stamped server-side by the model's pre-validate hook (D-018).
   });
+};
+
+/**
+ * FR-25 — the ONLY two stages this action can move a candidate to.
+ *
+ * D-006 forbids a generic stage setter, and D-042 reconciles that with
+ * Section 9's `PATCH /candidates/:id/stage` by making this route perform
+ * exactly the one transition FR-25 describes and nothing else. Naming any
+ * other stage here — even a real pipeline stage like « Accepté » — is refused,
+ * so the pipeline cannot be skipped through this endpoint.
+ */
+export const CV_REVIEW_TARGET_STAGES = [
+  CandidateStage.PreselectionCvValidee,
+  CandidateStage.RejeteCv,
+] as const;
+export type CvReviewTargetStage = (typeof CV_REVIEW_TARGET_STAGES)[number];
+
+export interface ReviewCvInput {
+  targetStage: CvReviewTargetStage;
+  /** FR-26: mandatory when — and only when — rejecting. */
+  rejectionReason?: string;
+}
+
+/**
+ * FR-25 / FR-26 — the CV review decision.
+ *
+ * Stage-gated and one-way: the candidate must currently be at
+ * « Candidature reçue ». A candidate already reviewed, already rejected, or
+ * further down the pipeline is refused rather than re-transitioned, so
+ * "one-way" is a property the server guarantees instead of one the client is
+ * trusted to respect (ARCHITECTURE.md Section 8, D-006).
+ */
+export const reviewCandidateCv = async (
+  candidateId: string,
+  input: ReviewCvInput,
+  actorId: string,
+): Promise<ICandidate> => {
+  if (!Types.ObjectId.isValid(candidateId)) {
+    throw new AppError(404, 'NOT_FOUND', "Ce candidat n'existe pas.");
+  }
+
+  const candidate = await Candidate.findById(candidateId);
+  if (!candidate) {
+    throw new AppError(404, 'NOT_FOUND', "Ce candidat n'existe pas.");
+  }
+
+  if (candidate.currentStage !== CandidateStage.CandidatureRecue) {
+    throw new AppError(
+      409,
+      'INVALID_STAGE_TRANSITION',
+      `La présélection CV ne s'applique qu'à un candidat à l'étape ` +
+        `« ${CandidateStage.CandidatureRecue} ». Ce candidat est à l'étape ` +
+        `« ${candidate.currentStage} » : cette décision a déjà été prise.`,
+    );
+  }
+
+  const isRejection = input.targetStage === CandidateStage.RejeteCv;
+  const reason = input.rejectionReason?.trim();
+
+  // FR-26: the motive is mandatory on rejection.
+  if (isRejection && !reason) {
+    throw new AppError(
+      400,
+      'REJECTION_REASON_REQUIRED',
+      'Un motif de rejet est obligatoire pour rejeter un candidat à la présélection CV. Saisissez-le et renvoyez la demande.',
+    );
+  }
+
+  // Storing a rejection motive against a candidate who was NOT rejected would
+  // put a false statement in the record, so this is refused rather than dropped.
+  if (!isRejection && reason) {
+    throw new AppError(
+      400,
+      'VALIDATION_ERROR',
+      "Un motif de rejet ne peut pas accompagner une présélection validée. Retirez « rejectionReason ».",
+    );
+  }
+
+  candidate.currentStage = input.targetStage;
+  if (isRejection) {
+    candidate.rejectionReason = reason;
+  }
+  await candidate.save();
+
+  // FR-11 / rule 4 — "candidate stage change" is named explicitly in rule 4.
+  // D-033: the entry records THAT the stage changed, never the motive.
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EtapeCandidatModifiee,
+    targetType: AuditTargetType.Candidate,
+    targetId: candidate._id as Types.ObjectId,
+  });
+
+  // FR-40 requires a notification on every stage change. The Notifications
+  // module (FR-40 to FR-44) is not built yet, so none is emitted here — see
+  // D-042 and the TASKS.md entry against FR-40.
+
+  return candidate;
 };
 
 /** FR-24 — the only sortable columns. Anything else is refused, not ignored. */

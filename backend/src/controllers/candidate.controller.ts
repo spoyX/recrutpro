@@ -6,6 +6,9 @@ import {
   CandidateSortField,
   DEFAULT_CANDIDATE_LIMIT,
   MAX_CANDIDATE_LIMIT,
+  reviewCandidateCv,
+  CV_REVIEW_TARGET_STAGES,
+  CvReviewTargetStage,
 } from '../services/candidate.service';
 import { CandidateStage } from '../common/constants';
 import { toCandidateListItem } from '../views/candidate.view';
@@ -152,6 +155,42 @@ export const list: RequestHandler = async (req, res, next) => {
         toCandidateListItem(candidate as never, hasResume),
       ),
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** PATCH /api/v1/candidates/:id/stage — FR-25, FR-26 */
+export const reviewCv: RequestHandler = async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const { targetStage, rejectionReason } = body;
+
+    // D-042: only the two stages FR-25 names are accepted here. Any other
+    // value — including a real pipeline stage — is refused, so this route
+    // cannot be used as the generic stage setter D-006 forbids.
+    if (!CV_REVIEW_TARGET_STAGES.includes(targetStage as CvReviewTargetStage)) {
+      throw new AppError(
+        400,
+        'VALIDATION_ERROR',
+        `« targetStage » doit valoir « ${CV_REVIEW_TARGET_STAGES.join(' » ou « ')} ».`,
+      );
+    }
+    if (rejectionReason !== undefined && typeof rejectionReason !== 'string') {
+      throw new AppError(
+        400,
+        'VALIDATION_ERROR',
+        'Le motif de rejet doit être une valeur texte.',
+      );
+    }
+
+    const candidate = await reviewCandidateCv(
+      String(req.params.id),
+      { targetStage: targetStage as CvReviewTargetStage, rejectionReason },
+      String(req.currentUser?._id),
+    );
+
+    res.status(200).json(toPublicCandidate(candidate));
   } catch (error) {
     next(error);
   }
