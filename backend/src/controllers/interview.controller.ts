@@ -8,7 +8,9 @@ import {
   DEFAULT_INTERVIEW_LIMIT,
   MAX_INTERVIEW_LIMIT,
 } from '../services/interview.service';
+import { submitEvaluation } from '../services/evaluation.service';
 import { toPublicInterview, toInterviewListItem } from '../views/interview.view';
+import { toPublicEvaluation } from '../views/evaluation.view';
 import { AppError } from '../common/errors';
 
 const invalid = (message: string): AppError => new AppError(400, 'VALIDATION_ERROR', message);
@@ -32,6 +34,33 @@ const asRequiredDate = (value: unknown, label: string): Date => {
     );
   }
   return parsed;
+};
+
+/** POST /api/v1/interviews/:id/evaluation — FR-36, FR-37 */
+export const evaluate: RequestHandler = async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    if (body.scores !== undefined && (typeof body.scores !== 'object' || body.scores === null)) {
+      throw invalid('« scores » doit être un objet contenant les trois notes.');
+    }
+    if (body.comments !== undefined && typeof body.comments !== 'string') {
+      throw invalid('Le champ « comments » doit être une valeur texte.');
+    }
+
+    const { evaluation } = await submitEvaluation(
+      String(req.params.id),
+      {
+        scores: (body.scores ?? {}) as Record<string, unknown>,
+        comments: body.comments as string | undefined,
+      },
+      req.currentUser!,
+    );
+
+    res.status(201).json(toPublicEvaluation(evaluation));
+  } catch (error) {
+    next(error);
+  }
 };
 
 /** POST /api/v1/interviews/:id/cancel — FR-34 */

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { create, list, cancel } from '../controllers/interview.controller';
+import { create, list, cancel, evaluate } from '../controllers/interview.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
 import { Role } from '../common/constants';
 
@@ -160,5 +160,58 @@ router.get('/', requireRole(Role.Recruteur, Role.ResponsableHierarchique), list)
  *       409: { description: Entretien déjà annulé, ou candidat trop avancé pour revenir en arrière., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/:id/cancel', requireRole(Role.Recruteur), cancel);
+
+/**
+ * @openapi
+ * /interviews/{id}/evaluation:
+ *   post:
+ *     summary: Soumet l'évaluation d'un entretien (FR-36, FR-37)
+ *     description: >
+ *       Réservé au responsable hiérarchique ASSIGNÉ à cet entretien (D-048) —
+ *       même prédicat que sa liste FR-35 et que l'accès au CV, de sorte que
+ *       les entretiens qu'il voit, les CV qu'il lit et ceux qu'il peut évaluer
+ *       ne forment qu'un seul ensemble. Le recruteur planifie et annule, il
+ *       n'évalue pas.
+ *       FR-37 : les trois notes sont obligatoires, entières, de 1 à 5. Un
+ *       formulaire incomplet est refusé sans rien écrire.
+ *       L'entretien doit être « Planifié » et son créneau déjà passé
+ *       (FR-36 : « Après un entretien »). Un entretien annulé est refusé.
+ *       La soumission marque l'entretien « Réalisé » — c'est la seule chose
+ *       dans le système qui attribue ce statut. Une seule évaluation par
+ *       entretien.
+ *       NON CÂBLÉ ICI : le passage du candidat à « Évaluation complétée »
+ *       (FR-28) et la notification au recruteur (FR-41) arrivent avec FR-38.
+ *     tags: [Interviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [scores]
+ *             properties:
+ *               scores:
+ *                 type: object
+ *                 required: [technicalSkills, communication, overallFit]
+ *                 properties:
+ *                   technicalSkills: { type: integer, minimum: 1, maximum: 5 }
+ *                   communication: { type: integer, minimum: 1, maximum: 5 }
+ *                   overallFit: { type: integer, minimum: 1, maximum: 5 }
+ *               comments:
+ *                 type: string
+ *                 description: Facultatif (FR-36 fournit le champ, FR-37 n'impose que les notes).
+ *     responses:
+ *       201: { description: Évaluation enregistrée, entretien marqué « Réalisé ». }
+ *       400: { description: Note manquante, non entière ou hors échelle., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: Rôle non autorisé, ou entretien non assigné à ce responsable., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Entretien inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       409: { description: Entretien annulé, pas encore tenu, ou déjà évalué., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.post('/:id/evaluation', requireRole(Role.ResponsableHierarchique), evaluate);
 
 export default router;
