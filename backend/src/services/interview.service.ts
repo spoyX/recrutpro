@@ -12,7 +12,7 @@ import {
 } from '../common/constants';
 import { AppError } from '../common/errors';
 import { recordAudit } from '../common/audit';
-import { markInterviewScheduled } from './candidate.service';
+import { markInterviewScheduled, revertToPreselection } from './candidate.service';
 
 /** FR-31 / D-005 — 30 minutes before and after the requested slot. */
 export const CONFLICT_BUFFER_MS = 30 * 60 * 1000;
@@ -182,6 +182,87 @@ export const scheduleInterview = async (
   // TODO(FR-42): notify the interviewer that an interview was scheduled for
   // them. Notifications module not built yet — sweep with the TODO(FR-40)
   // sites. See D-043.
+
+  return interview;
+};
+
+/**
+ * FR-34 — cancel a planned interview.
+ *
+ * The motive is enforced HERE, not left to the schema's conditional `required`
+ * (D-016). That rule is a backstop: leaning on it would surface a Mongoose
+ * ValidationError as a generic 400 (D-020) and lose both the specific error
+ * code and the NFR-09 wording telling the recruiter what to do.
+ */
+export const cancelInterview = async (
+  interviewId: string,
+  cancellationReason: string | undefined,
+  actorId: string,
+): Promise<IInterview> => {
+  if (!Types.ObjectId.isValid(interviewId)) {
+    throw new AppError(404, 'NOT_FOUND', "Cet entretien n'existe pas.");
+  }
+
+  const interview = await Interview.findById(interviewId);
+  if (!interview) {
+    throw new AppError(404, 'NOT_FOUND', "Cet entretien n'existe pas.");
+  }
+
+  // Checked BEFORE the motive, so an already-cancelled interview reports the
+  // real problem rather than complaining about a missing reason.
+  if (interview.status !== InterviewStatus.Planifie) {
+    throw new AppError(
+      409,
+      'INTERVIEW_NOT_CANCELLABLE',
+      `Seul un entretien au statut « ${InterviewStatus.Planifie} » peut être annulé. ` +
+        `Celui-ci est au statut « ${interview.status} ».`,
+    );
+  }
+
+  const reason = cancellationReason?.trim();
+  if (!reason) {
+    throw new AppError(
+      400,
+      'CANCELLATION_REASON_REQUIRED',
+      "Un motif d'annulation est obligatoire. Saisissez-le et renvoyez la demande.",
+    );
+  }
+
+  const candidate = await Candidate.findById(interview.candidateId);
+  if (!candidate) {
+    throw new AppError(404, 'NOT_FOUND', "Le candidat de cet entretien n'existe plus.");
+  }
+
+  // D-046: the revert is gated, and the gate is checked BEFORE anything is
+  // written. Checking it only inside revertToPreselection would cancel the
+  // interview first and then throw, leaving a cancelled interview behind a
+  // failed request. FR-34 states the revert as part of what cancelling IS, so
+  // either both happen or neither does.
+  if (candidate.currentStage !== CandidateStage.EntretienPlanifie) {
+    throw new AppError(
+      409,
+      'INVALID_STAGE_TRANSITION',
+      `Ce candidat est à l'étape « ${candidate.currentStage} » et ne peut plus revenir à ` +
+        `« ${CandidateStage.PreselectionCvValidee} ». L'entretien n'a pas été annulé.`,
+    );
+  }
+
+  interview.status = InterviewStatus.Annule;
+  interview.cancellationReason = reason;
+  await interview.save();
+
+  // FR-11 / rule 4 — cancellation is named explicitly in rule 4's list, so
+  // unlike scheduling (D-044) this needs no extension of the rule.
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EntretienAnnule,
+    targetType: AuditTargetType.Interview,
+    targetId: interview._id as Types.ObjectId,
+  });
+
+  // FR-34 — the candidate returns to « Présélection CV validée ». Writes the
+  // second, separately-required audit entry against the Candidate (D-046).
+  await revertToPreselection(candidate, actorId);
 
   return interview;
 };

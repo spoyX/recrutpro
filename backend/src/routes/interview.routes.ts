@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { create, list } from '../controllers/interview.controller';
+import { create, list, cancel } from '../controllers/interview.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
 import { Role } from '../common/constants';
 
@@ -114,5 +114,47 @@ router.post('/', requireRole(Role.Recruteur), create);
  *       403: { description: Rôle non autorisé — Recruteur uniquement (FR-35 couvrira le responsable)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.get('/', requireRole(Role.Recruteur), list);
+
+/**
+ * @openapi
+ * /interviews/{id}/cancel:
+ *   post:
+ *     summary: Annule un entretien planifié (FR-34) — Recruteur uniquement
+ *     description: >
+ *       Le motif est obligatoire et vérifié par le service, pas seulement par
+ *       le schéma (D-046) : un motif vide ou absent renvoie 400
+ *       CANCELLATION_REASON_REQUIRED avant toute écriture.
+ *       Le candidat revient à « Présélection CV validée » — cette annulation
+ *       et ce retour en arrière forment une seule intention (FR-34) : si le
+ *       candidat a déjà dépassé « Entretien planifié », l'annulation entière
+ *       est refusée (409) plutôt que d'être appliquée à moitié.
+ *       Seul un entretien « Planifié » peut être annulé ; un entretien déjà
+ *       annulé renvoie 409 et n'est jamais retraité.
+ *       Deux entrées d'audit sont écrites : EntretienAnnule (Interview) et
+ *       EtapeCandidatModifiee (Candidate) — rule 4 nomme les deux.
+ *     tags: [Interviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [cancellationReason]
+ *             properties:
+ *               cancellationReason:
+ *                 type: string
+ *                 description: FR-34 — motif obligatoire, non vide.
+ *     responses:
+ *       200: { description: Entretien annulé, candidat revenu à « Présélection CV validée ». }
+ *       400: { description: Motif manquant ou vide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Entretien inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       409: { description: Entretien déjà annulé, ou candidat trop avancé pour revenir en arrière., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.post('/:id/cancel', requireRole(Role.Recruteur), cancel);
 
 export default router;

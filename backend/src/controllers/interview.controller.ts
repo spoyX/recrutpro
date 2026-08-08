@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express';
 import {
   scheduleInterview,
+  cancelInterview,
   listInterviews,
   INTERVIEW_SORT_FIELDS,
   InterviewSortField,
@@ -31,6 +32,28 @@ const asRequiredDate = (value: unknown, label: string): Date => {
     );
   }
   return parsed;
+};
+
+/** POST /api/v1/interviews/:id/cancel — FR-34 */
+export const cancel: RequestHandler = async (req, res, next) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const { cancellationReason } = body;
+
+    if (cancellationReason !== undefined && typeof cancellationReason !== 'string') {
+      throw invalid("Le motif d'annulation doit être une valeur texte.");
+    }
+
+    const interview = await cancelInterview(
+      String(req.params.id),
+      cancellationReason,
+      String(req.currentUser?._id),
+    );
+
+    res.status(200).json(toPublicInterview(interview));
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**

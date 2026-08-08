@@ -218,6 +218,45 @@ export const markInterviewScheduled = async (
   return candidate;
 };
 
+/**
+ * FR-34 — cancelling an interview returns the candidate to « Présélection CV
+ * validée », making them schedulable again.
+ *
+ * Like `markInterviewScheduled`, this is a side effect of an interview action
+ * and is exposed nowhere over HTTP (D-006). It re-checks the gate itself
+ * rather than trusting its caller.
+ */
+export const revertToPreselection = async (
+  candidate: ICandidate,
+  actorId: string,
+): Promise<ICandidate> => {
+  if (candidate.currentStage !== CandidateStage.EntretienPlanifie) {
+    throw new AppError(
+      409,
+      'INVALID_STAGE_TRANSITION',
+      `Seul un candidat à l'étape « ${CandidateStage.EntretienPlanifie} » peut revenir ` +
+        `à « ${CandidateStage.PreselectionCvValidee} ». Ce candidat est à l'étape ` +
+        `« ${candidate.currentStage} » : annuler l'entretien ne peut plus le ramener en arrière.`,
+    );
+  }
+
+  candidate.currentStage = CandidateStage.PreselectionCvValidee;
+  await candidate.save();
+
+  // FR-11 / rule 4 — "candidate stage change" is named explicitly, so this
+  // entry is required in its own right, independently of the EntretienAnnule
+  // entry the caller writes against the Interview (D-046).
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EtapeCandidatModifiee,
+    targetType: AuditTargetType.Candidate,
+    targetId: candidate._id as Types.ObjectId,
+  });
+
+  // TODO(FR-40): emit a stage-change notification. See D-042.
+  return candidate;
+};
+
 /** FR-24 — the only sortable columns. Anything else is refused, not ignored. */
 export const CANDIDATE_SORT_FIELDS = ['fullName', 'currentStage', 'registeredAt'] as const;
 export type CandidateSortField = (typeof CANDIDATE_SORT_FIELDS)[number];
