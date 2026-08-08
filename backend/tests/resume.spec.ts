@@ -5,6 +5,8 @@ import { app } from '../src/app';
 import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
 import { Resume } from '../src/models/Resume.model';
+import { Interview } from '../src/models/Interview.model';
+import { JobPosition } from '../src/models/JobPosition.model';
 import { cloudinary } from '../src/config/cloudinary';
 import { assertResumeSignature, MAX_RESUME_BYTES } from '../src/middleware/upload.middleware';
 import { Role } from '../src/common/constants';
@@ -14,10 +16,14 @@ import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
 jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
 jest.mock('../src/models/Resume.model');
+jest.mock('../src/models/Interview.model');
+jest.mock('../src/models/JobPosition.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
 const mockedResume = Resume as unknown as { create: jest.Mock; findOne: jest.Mock };
+const mockedInterview = Interview as unknown as { exists: jest.Mock };
+const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
 
 const PASSWORD = 'Adm1n!Passw0rd';
 const passwordHash = hashSync(PASSWORD, 4);
@@ -26,13 +32,15 @@ const CANDIDATE_ID = new Types.ObjectId().toString();
 const RESUME_ID = new Types.ObjectId().toString();
 const UPLOADED_AT = new Date('2026-08-06T10:00:00.000Z');
 
+const DEPT_ID = new Types.ObjectId().toString();
+
 const recruteur = {
   _id: RECRUTEUR_ID,
   name: 'Marie',
   email: 'marie@example.com',
   passwordHash,
   role: Role.Recruteur,
-  departmentId: new Types.ObjectId().toString(),
+  departmentId: DEPT_ID,
   isActive: true,
   mustChangePassword: false,
 };
@@ -74,7 +82,14 @@ beforeEach(async () => {
   jest.restoreAllMocks();
   loginRateLimitStore.resetAll?.();
 
-  mockedCandidate.findById.mockResolvedValue({ _id: CANDIDATE_ID });
+  mockedCandidate.findById.mockResolvedValue({
+    _id: CANDIDATE_ID,
+    jobPositionId: new Types.ObjectId().toString(),
+  });
+  // FR-35 defaults: the candidate's position is in the Responsable's
+  // department, and they ARE assigned an interview with them.
+  mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID });
+  mockedInterview.exists.mockResolvedValue({ _id: 'an-interview' });
   mockedResume.findOne.mockResolvedValue(null);
   mockedResume.create.mockResolvedValue({
     _id: RESUME_ID,
@@ -342,6 +357,90 @@ describe('Resume upload / replace / download — FR-21 to FR-23', () => {
         .set('Cookie', cookie);
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('FR-35 / D-047: the Responsable reaches only their own candidates’ CVs', () => {
+    const responsable = {
+      ...recruteur,
+      _id: new Types.ObjectId().toString(),
+      email: 'pierre@example.com',
+      role: Role.ResponsableHierarchique,
+      departmentId: DEPT_ID,
+    };
+
+    const download = async () => {
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        arrayBuffer: async () => pdfBuffer.buffer.slice(0) as ArrayBuffer,
+      } as never);
+      mockedResume.findOne.mockResolvedValue({
+        _id: RESUME_ID,
+        candidateId: CANDIDATE_ID,
+        publicId: 'recrutpro/resumes/abc.pdf',
+        uploadedAt: UPLOADED_AT,
+        isActive: true,
+      });
+      const responsableCookie = await signInAs(responsable);
+      return request(app)
+        .get(`/api/v1/candidates/${CANDIDATE_ID}/resume`)
+        .set('Cookie', responsableCookie);
+    };
+
+    it('FR-35: CAN download the CV of a candidate they interview', async () => {
+      const res = await download();
+
+      expect(res.status).toBe(200);
+    });
+
+    it('D-047: CANNOT download when no interview is assigned to them', async () => {
+      mockedInterview.exists.mockResolvedValue(null);
+
+      const res = await download();
+
+      expect(res.status).toBe(403);
+    });
+
+    it('D-047: CANNOT download across departments, even when assigned', async () => {
+      // rule 2's floor: the department clause is independent of assignment.
+      mockedJobPosition.findById.mockResolvedValue({
+        department: new Types.ObjectId().toString(),
+      });
+
+      const res = await download();
+
+      expect(res.status).toBe(403);
+    });
+
+    it('D-047: the check runs against the LOADED candidate, not the URL', async () => {
+      mockedInterview.exists.mockResolvedValue(null);
+
+      await download();
+
+      // exists() is called with the real candidate _id and the session user.
+      expect(mockedInterview.exists).toHaveBeenCalledWith({
+        candidateId: CANDIDATE_ID,
+        interviewerId: responsable._id,
+      });
+    });
+
+    it('D-047: a Responsable still cannot UPLOAD a CV', async () => {
+      const responsableCookie = await signInAs(responsable);
+
+      const res = await request(app)
+        .post(`/api/v1/candidates/${CANDIDATE_ID}/resume`)
+        .set('Cookie', responsableCookie)
+        .attach('file', pdfBuffer, { filename: 'cv.pdf', contentType: 'application/pdf' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('D-047: a Responsable still cannot list candidates', async () => {
+      const responsableCookie = await signInAs(responsable);
+
+      const res = await request(app).get('/api/v1/candidates').set('Cookie', responsableCookie);
+
+      expect(res.status).toBe(403);
     });
   });
 

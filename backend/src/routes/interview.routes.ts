@@ -113,7 +113,11 @@ router.post('/', requireRole(Role.Recruteur), create);
  *       400: { description: Filtre, tri ou pagination invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       403: { description: Rôle non autorisé — Recruteur uniquement (FR-35 couvrira le responsable)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
-router.get('/', requireRole(Role.Recruteur), list);
+// FR-33 (Recruteur, unscoped) and FR-35 (Responsable, scoped to their own
+// assigned interviews) are the same endpoint — Section 9 lists one GET and
+// sets no role. The scoping is applied server-side from the session, never
+// from the query (D-047).
+router.get('/', requireRole(Role.Recruteur, Role.ResponsableHierarchique), list);
 
 /**
  * @openapi

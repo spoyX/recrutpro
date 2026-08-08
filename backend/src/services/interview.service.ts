@@ -2,7 +2,9 @@ import { Types } from 'mongoose';
 import { Interview, IInterview } from '../models/Interview.model';
 import { Candidate, ICandidate } from '../models/Candidate.model';
 import { JobPosition } from '../models/JobPosition.model';
-import { User } from '../models/User.model';
+import { Resume } from '../models/Resume.model';
+import { User, IUser } from '../models/User.model';
+import { isDepartmentScoped } from '../middleware/rbac.middleware';
 import {
   CandidateStage,
   InterviewStatus,
@@ -267,6 +269,34 @@ export const cancelInterview = async (
   return interview;
 };
 
+/**
+ * FR-35 / D-047 — may this user reach this candidate's file?
+ *
+ * A Responsable hiérarchique may, but ONLY for a candidate they are actually
+ * interviewing, and only while the department floor holds. Deliberately the
+ * same predicate the FR-35 list applies, so a CV is reachable for exactly the
+ * interviews the caller can see and no others.
+ *
+ * Cancelled interviews still grant access: the Responsable may legitimately
+ * need to review a file for an interview that was called off, and hiding the
+ * CV would not hide the candidate's existence anyway.
+ */
+export const hasAssignedInterviewWith = async (
+  viewer: IUser,
+  candidate: ICandidate,
+): Promise<boolean> => {
+  const position = await JobPosition.findById(candidate.jobPositionId, 'department');
+  if (!position || String(position.department) !== String(viewer.departmentId)) {
+    return false;
+  }
+
+  const assigned = await Interview.exists({
+    candidateId: candidate._id,
+    interviewerId: viewer._id,
+  });
+  return Boolean(assigned);
+};
+
 /** FR-33 — the only sortable columns. Anything else is refused, not ignored. */
 export const INTERVIEW_SORT_FIELDS = ['scheduledAt', 'status'] as const;
 export type InterviewSortField = (typeof INTERVIEW_SORT_FIELDS)[number];
@@ -284,10 +314,12 @@ export interface ListInterviewsInput {
   offset: number;
   sortBy: InterviewSortField;
   sortDir: 1 | -1;
+  /** The authenticated caller. FR-35 scoping is derived from this, never from the query. */
+  viewer: IUser;
 }
 
 export interface ListInterviewsResult {
-  items: IInterview[];
+  items: Array<{ interview: IInterview; hasResume: boolean }>;
   total: number;
 }
 
@@ -317,13 +349,44 @@ export const listInterviews = async (
     query.interviewerId = input.interviewerId;
   }
 
-  // D-045: Interview holds candidateId, and the position lives on the
-  // Candidate — so filtering by poste resolves the candidate ids first.
-  if (input.jobPositionId) {
-    if (!Types.ObjectId.isValid(input.jobPositionId)) {
-      throw new AppError(400, 'VALIDATION_ERROR', 'Identifiant de poste invalide.');
+  // FR-35 / D-047 — scoping. A Responsable asking for someone else's
+  // interviews is REFUSED, not silently handed their own: overwriting the
+  // filter is safe but returns a confidently wrong answer, the same
+  // silent-wrong-result this codebase refuses everywhere else (D-041).
+  const scoped = isDepartmentScoped(input.viewer);
+  if (scoped) {
+    if (input.interviewerId && input.interviewerId !== String(input.viewer._id)) {
+      throw new AppError(
+        403,
+        'FORBIDDEN',
+        'Vous ne pouvez consulter que les entretiens qui vous sont assignés. Retirez le filtre « interviewerId » ou indiquez le vôtre.',
+      );
     }
-    const candidateIds = await Candidate.find({ jobPositionId: input.jobPositionId }, '_id');
+    query.interviewerId = input.viewer._id;
+  }
+
+  // D-045: Interview holds candidateId and the position lives on the
+  // Candidate, so filtering by poste resolves candidate ids first. D-047 adds
+  // rule 2's department floor through the same join — redundant with the
+  // interviewerId clause while FR-30 holds, but not after a Responsable is
+  // moved to another department.
+  if (input.jobPositionId || scoped) {
+    const positionFilter: Record<string, unknown> = {};
+    if (input.jobPositionId) {
+      if (!Types.ObjectId.isValid(input.jobPositionId)) {
+        throw new AppError(400, 'VALIDATION_ERROR', 'Identifiant de poste invalide.');
+      }
+      positionFilter._id = input.jobPositionId;
+    }
+    if (scoped) {
+      positionFilter.department = input.viewer.departmentId;
+    }
+
+    const positions = await JobPosition.find(positionFilter, '_id');
+    const candidateIds = await Candidate.find(
+      { jobPositionId: { $in: positions.map((p) => p._id) } },
+      '_id',
+    );
     query.candidateId = { $in: candidateIds.map((c) => c._id) };
   }
 
@@ -352,5 +415,24 @@ export const listInterviews = async (
     .skip(input.offset)
     .limit(input.limit);
 
-  return { items, total };
+  // FR-35 « un accès au CV » — one query for the whole page, not one per row,
+  // same shape as the FR-24 candidate list.
+  const candidateIdsOnPage = items
+    .map((i) => (i.candidateId as unknown as { _id?: Types.ObjectId })?._id)
+    .filter((id): id is Types.ObjectId => Boolean(id));
+  const withResume = await Resume.find(
+    { candidateId: { $in: candidateIdsOnPage }, isActive: true },
+    'candidateId',
+  );
+  const resumeOwners = new Set(withResume.map((r) => String(r.candidateId)));
+
+  return {
+    total,
+    items: items.map((interview) => ({
+      interview,
+      hasResume: resumeOwners.has(
+        String((interview.candidateId as unknown as { _id?: unknown })?._id),
+      ),
+    })),
+  };
 };

@@ -112,6 +112,22 @@ export const requireRole =
  * Throws rather than returning a boolean: a guard that can be ignored by
  * forgetting an `if` is not a guard.
  */
+/**
+ * D-027 / D-047 — is this user restricted to their own department?
+ *
+ * D-027 anticipated a generic `scopeFilter(user)` returning a query fragment.
+ * It is deliberately NOT that: the constraint is entity-specific (interviews
+ * scope through `interviewerId` plus a two-hop join to the position's
+ * department), so one generic helper would either be wrong or a bag of special
+ * cases. Each list service applies its own scoping and asks this which users
+ * to apply it to.
+ *
+ * Administrateur is global; Recruteur owns postings across departments
+ * (FR-17, FR-45). Only the Responsable hiérarchique is scoped (rule 2).
+ */
+export const isDepartmentScoped = (user: IUser): boolean =>
+  user.role === Role.ResponsableHierarchique;
+
 export const assertDepartmentAccess = (
   user: IUser,
   resourceDepartmentId: Types.ObjectId | string | null | undefined,

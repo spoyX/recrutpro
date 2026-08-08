@@ -5,6 +5,8 @@ import { app } from '../src/app';
 import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
 import { Interview } from '../src/models/Interview.model';
+import { JobPosition } from '../src/models/JobPosition.model';
+import { Resume } from '../src/models/Resume.model';
 import { Role, InterviewStatus } from '../src/common/constants';
 import { closeSessionStore } from '../src/config/session';
 import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
@@ -12,9 +14,13 @@ import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
 jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
 jest.mock('../src/models/Interview.model');
+jest.mock('../src/models/JobPosition.model');
+jest.mock('../src/models/Resume.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { find: jest.Mock };
+const mockedJobPosition = JobPosition as unknown as { find: jest.Mock };
+const mockedResume = Resume as unknown as { find: jest.Mock };
 const mockedInterview = Interview as unknown as { find: jest.Mock; countDocuments: jest.Mock };
 
 const PASSWORD = 'Adm1n!Passw0rd';
@@ -81,6 +87,8 @@ beforeEach(async () => {
   mockedInterview.find.mockReturnValue(chain);
   mockedInterview.countDocuments.mockResolvedValue(1);
   mockedCandidate.find.mockResolvedValue([{ _id: CANDIDATE_ID }]);
+  mockedJobPosition.find.mockResolvedValue([{ _id: POSITION_ID }]);
+  mockedResume.find.mockResolvedValue([]);
 
   cookie = await signInAs(recruteur);
 });
@@ -101,7 +109,12 @@ describe('Interview list — FR-33', () => {
         id: INTERVIEW_ID,
         scheduledAt: '2026-09-01T09:00:00.000Z',
         status: InterviewStatus.Planifie,
-        candidate: { id: CANDIDATE_ID, fullName: 'Jean Martin' },
+        candidate: {
+          id: CANDIDATE_ID,
+          fullName: 'Jean Martin',
+          hasResume: false,
+          resumeUrl: `/api/v1/candidates/${CANDIDATE_ID}/resume`,
+        },
         jobPosition: { id: POSITION_ID, title: 'Développeur backend' },
         interviewer: { id: INTERVIEWER_ID, name: 'Pierre' },
         cancellationReason: null,
@@ -182,7 +195,7 @@ describe('Interview list — FR-33', () => {
       await list(`?jobPositionId=${POSITION_ID}`);
 
       // Interview holds candidateId; the position lives on the Candidate.
-      expect(mockedCandidate.find).toHaveBeenCalledWith({ jobPositionId: POSITION_ID }, '_id');
+      expect(mockedJobPosition.find).toHaveBeenCalledWith({ _id: POSITION_ID }, '_id');
       expect(mockedInterview.find.mock.calls[0][0].candidateId).toEqual({ $in: [CANDIDATE_ID] });
     });
 
@@ -285,13 +298,116 @@ describe('Interview list — FR-33', () => {
       expect(res.status).toBe(403);
     });
 
-    it('FR-5: a Responsable hiérarchique is 403 here — FR-35 is their route', async () => {
+    it('FR-35: a Responsable hiérarchique CAN now read this list', async () => {
+      // FR-33 gave them a 403; that was "their FR hasn't landed", not a rule.
       const responsableCookie = await signInAs(responsable);
 
       const res = await request(app).get('/api/v1/interviews').set('Cookie', responsableCookie);
 
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('FR-35 / D-047: the Responsable sees ONLY their own assigned interviews', () => {
+    const asResponsable = async (qs = '') => {
+      const responsableCookie = await signInAs(responsable);
+      return request(app).get(`/api/v1/interviews${qs}`).set('Cookie', responsableCookie);
+    };
+
+    it('FR-35: the query is pinned to their own interviewerId', async () => {
+      await asResponsable();
+
+      expect(mockedInterview.find.mock.calls[0][0].interviewerId).toBe(INTERVIEWER_ID);
+    });
+
+    it('D-047: rule 2 department floor is applied ON TOP of the assignment', async () => {
+      await asResponsable();
+
+      // The two-hop join: positions in my department -> their candidates.
+      expect(mockedJobPosition.find).toHaveBeenCalledWith(
+        { department: responsable.departmentId },
+        '_id',
+      );
+      expect(mockedInterview.find.mock.calls[0][0].candidateId).toBeDefined();
+    });
+
+    it("D-047: asking for someone else's interviews is REFUSED, not silently rewritten", async () => {
+      // Overwriting the filter is safe but hands back the caller's OWN list —
+      // a confidently wrong answer. Live verification caught exactly that.
+      const someoneElse = new Types.ObjectId().toString();
+
+      const res = await asResponsable(`?interviewerId=${someoneElse}`);
+
       expect(res.status).toBe(403);
       expect(mockedInterview.find).not.toHaveBeenCalled();
+    });
+
+    it('D-047: filtering by their OWN interviewerId is allowed', async () => {
+      const res = await asResponsable(`?interviewerId=${INTERVIEWER_ID}`);
+
+      expect(res.status).toBe(200);
+      expect(mockedInterview.find.mock.calls[0][0].interviewerId).toBe(INTERVIEWER_ID);
+    });
+
+    it('D-047: a Responsable CANNOT reach another department via ?jobPositionId', async () => {
+      const foreignPosition = new Types.ObjectId().toString();
+
+      await asResponsable(`?jobPositionId=${foreignPosition}`);
+
+      // Both clauses present: the requested position AND my department, so a
+      // foreign position resolves to no candidates rather than to its own.
+      expect(mockedJobPosition.find).toHaveBeenCalledWith(
+        { _id: foreignPosition, department: responsable.departmentId },
+        '_id',
+      );
+    });
+
+    it('FR-33: a Recruteur is NOT scoped', async () => {
+      await list();
+
+      expect(mockedInterview.find.mock.calls[0][0].interviewerId).toBeUndefined();
+      expect(mockedInterview.find.mock.calls[0][0].candidateId).toBeUndefined();
+    });
+
+    it('D-045: the Responsable default also hides cancelled interviews', async () => {
+      await asResponsable();
+
+      expect(mockedInterview.find.mock.calls[0][0].status).toBe(InterviewStatus.Planifie);
+    });
+
+    it('FR-35: includeCancelled still works for them', async () => {
+      await asResponsable('?includeCancelled=true');
+
+      expect(mockedInterview.find.mock.calls[0][0].status).toBeUndefined();
+    });
+  });
+
+  describe('FR-35: the row carries CV access', () => {
+    it('FR-35: hasResume is true when the candidate has an active CV', async () => {
+      mockedResume.find.mockResolvedValue([{ candidateId: CANDIDATE_ID }]);
+
+      const res = await list();
+
+      expect(res.body[0].candidate.hasResume).toBe(true);
+    });
+
+    it('FR-35: resumeUrl points at OUR proxy, never at storage (D-040)', async () => {
+      const res = await list();
+
+      expect(res.body[0].candidate.resumeUrl).toBe(`/api/v1/candidates/${CANDIDATE_ID}/resume`);
+      expect(JSON.stringify(res.body)).not.toContain('cloudinary');
+    });
+
+    it('FR-35: hasResume counts only ACTIVE resumes', async () => {
+      await list();
+
+      expect(mockedResume.find.mock.calls[0][0]).toMatchObject({ isActive: true });
+    });
+
+    it('FR-35: CV lookup is ONE query for the page, not one per row', async () => {
+      await list();
+
+      expect(mockedResume.find).toHaveBeenCalledTimes(1);
     });
   });
 });

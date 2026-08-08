@@ -147,13 +147,16 @@ export const list: RequestHandler = async (req, res, next) => {
       includeCancelled: asBooleanFlag(includeCancelled, 'includeCancelled'),
       limit: asBoundedInt(limit, 'limit', DEFAULT_INTERVIEW_LIMIT, 1, MAX_INTERVIEW_LIMIT),
       offset: asBoundedInt(offset, 'offset', 0, 0, Number.MAX_SAFE_INTEGER),
+      viewer: req.currentUser!,
       sortBy: (sortBy as InterviewSortField) ?? 'scheduledAt',
       // A schedule reads forward by default, unlike the candidate list.
       sortDir: sortDir === 'desc' ? -1 : 1,
     });
 
     res.setHeader('X-Total-Count', total);
-    res.status(200).json(items.map((i) => toInterviewListItem(i as never)));
+    res.status(200).json(
+      items.map(({ interview, hasResume }) => toInterviewListItem(interview as never, hasResume)),
+    );
   } catch (error) {
     next(error);
   }

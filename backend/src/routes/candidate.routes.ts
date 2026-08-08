@@ -12,14 +12,46 @@ import { Role } from '../common/constants';
 
 const router = Router();
 
+// Every route needs a session (rule 1).
+router.use(requireAuth);
+
+/**
+ * @openapi
+ * /candidates/{id}/resume:
+ *   get:
+ *     summary: Télécharge le CV actif d'un candidat (FR-23, FR-35)
+ *     description: >
+ *       D-040 : le fichier transite PAR le backend (proxy), sans redirection
+ *       vers une URL de stockage. Les CV sont stockés en mode « authenticated » :
+ *       aucune URL publique n'existe, donc le contrôle d'accès de cette route
+ *       est le seul chemin vers un CV.
+ *       D-047 : le Responsable hiérarchique y accède UNIQUEMENT pour un
+ *       candidat dont il mène l'entretien, et dans son propre département —
+ *       le même prédicat que sa liste FR-35. Le Recruteur y accède sans
+ *       restriction.
+ *     tags: [Candidates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Le fichier CV.
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       403: { description: Responsable non assigné à ce candidat (D-047)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Candidat inexistant ou aucun CV téléversé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/:id/resume', requireRole(Role.Recruteur, Role.ResponsableHierarchique), getResume);
+
 // SRS.md heads this module "Gestion des candidats (Recruteur, sauf précision)",
-// and FR-19 reads "Le recruteur peut enregistrer". Router-wide so rule 1 holds
-// for any route added later.
-//
-// The "sauf précision" roles arrive with their own FRs — FR-28/FR-29 give the
-// Responsable hiérarchique evaluation and final-decision actions. Nothing is
-// granted here ahead of the FR that calls for it.
-router.use(requireAuth, requireRole(Role.Recruteur));
+// and FR-19 reads "Le recruteur peut enregistrer". Everything BELOW this line
+// is Recruteur-only, router-wide, so rule 1 holds for any route added later.
+// FR-35's CV read above is the one "sauf précision" granted so far; the rest
+// arrive with FR-28/FR-29.
+router.use(requireRole(Role.Recruteur));
 
 /**
  * @openapi
@@ -191,30 +223,7 @@ router.patch('/:id/stage', reviewCv);
  */
 router.post('/:id/resume', uploadResume, putResume);
 
-/**
- * @openapi
- * /candidates/{id}/resume:
- *   get:
- *     summary: Télécharge le CV actif d'un candidat (FR-23)
- *     description: >
- *       D-040 : le fichier transite PAR le backend (proxy), il n'y a pas de
- *       redirection vers une URL de stockage. Les CV sont stockés en mode
- *       « authenticated » : aucune URL publique n'existe, donc le contrôle
- *       d'accès de cette route est le seul chemin vers un CV.
- *     tags: [Candidates]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: Le fichier CV.
- *         content:
- *           application/pdf:
- *             schema: { type: string, format: binary }
- *       404: { description: Candidat inexistant ou aucun CV téléversé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.get('/:id/resume', getResume);
+// GET /:id/resume is registered ABOVE the Recruteur-only router.use, because
+// FR-35 grants it to the Responsable hiérarchique as well (D-047).
 
 export default router;

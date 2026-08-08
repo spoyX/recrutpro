@@ -211,7 +211,10 @@ export const getResume: RequestHandler = async (req, res, next) => {
   try {
     // D-040: proxied, not redirected. The bytes travel back through this
     // route so the RBAC that guarded it actually governs the download.
-    const { buffer, contentType, filename } = await downloadResume(String(req.params.id));
+    const { buffer, contentType, filename } = await downloadResume(
+      String(req.params.id),
+      req.currentUser!,
+    );
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

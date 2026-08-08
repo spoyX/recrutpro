@@ -19,7 +19,11 @@ export interface InterviewListItem {
   id: string;
   scheduledAt: string;
   status: InterviewStatus;
-  candidate: { id: string; fullName: string } | null;
+  /**
+   * FR-35 requires « le nom du candidat, le poste et un accès au CV ».
+   * `resumeUrl` is this API's own proxy route (D-040) — never a storage URL.
+   */
+  candidate: { id: string; fullName: string; hasResume: boolean; resumeUrl: string } | null;
   jobPosition: { id: string; title: string } | null;
   interviewer: { id: string; name: string } | null;
   cancellationReason: string | null;
@@ -33,7 +37,10 @@ type PopulatedInterview = Omit<IInterview, 'candidateId' | 'interviewerId'> & {
   interviewerId: { _id: unknown; name: string } | null;
 };
 
-export const toInterviewListItem = (interview: PopulatedInterview): InterviewListItem => {
+export const toInterviewListItem = (
+  interview: PopulatedInterview,
+  hasResume = false,
+): InterviewListItem => {
   const candidate = interview.candidateId;
   const position = candidate?.jobPositionId ?? null;
 
@@ -42,7 +49,14 @@ export const toInterviewListItem = (interview: PopulatedInterview): InterviewLis
     scheduledAt: interview.scheduledAt.toISOString(),
     status: interview.status,
     // Null-tolerant throughout: one odd row must not break the whole list.
-    candidate: candidate ? { id: String(candidate._id), fullName: candidate.fullName } : null,
+    candidate: candidate
+      ? {
+          id: String(candidate._id),
+          fullName: candidate.fullName,
+          hasResume,
+          resumeUrl: `/api/v1/candidates/${String(candidate._id)}/resume`,
+        }
+      : null,
     jobPosition: position ? { id: String(position._id), title: position.title } : null,
     interviewer: interview.interviewerId
       ? { id: String(interview.interviewerId._id), name: interview.interviewerId.name }

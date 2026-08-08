@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 import { Resume, IResume } from '../models/Resume.model';
 import { Candidate, ICandidate } from '../models/Candidate.model';
+import { IUser } from '../models/User.model';
+import { isDepartmentScoped } from '../middleware/rbac.middleware';
+import { hasAssignedInterviewWith } from './interview.service';
 import { AppError } from '../common/errors';
 import { cloudinary, isCloudinaryConfigured, RESUME_UPLOAD_OPTIONS } from '../config/cloudinary';
 import { assertResumeSignature } from '../middleware/upload.middleware';
@@ -136,8 +139,22 @@ const destroyAsset = async (publicId: string): Promise<void> => {
  */
 export const downloadResume = async (
   candidateId: string,
+  viewer: IUser,
 ): Promise<{ buffer: Buffer; contentType: string; filename: string }> => {
-  await findCandidateOr404(candidateId);
+  const candidate = await findCandidateOr404(candidateId);
+
+  // FR-35 / D-047 — a Responsable hiérarchique reaches a CV only for a
+  // candidate they are actually interviewing, in their own department.
+  // Checked against the LOADED candidate, never against a client-supplied
+  // value (rule 2, NFR-04).
+  if (isDepartmentScoped(viewer) && !(await hasAssignedInterviewWith(viewer, candidate))) {
+    throw new AppError(
+      403,
+      'FORBIDDEN',
+      "Vous ne pouvez consulter que les CV des candidats dont vous menez l'entretien.",
+    );
+  }
+
   assertConfigured();
 
   const resume = await findActiveResume(candidateId);
