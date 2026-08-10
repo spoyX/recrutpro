@@ -10,6 +10,7 @@ export interface ICandidate extends Document {
   registeredBy: Types.ObjectId;
   registeredAt: Date;
   rejectionReason?: string;
+  decisionComment?: string;
 }
 
 const candidateSchema = new Schema<ICandidate>({
@@ -55,6 +56,13 @@ const candidateSchema = new Schema<ICandidate>({
   // with no payload. Optional at the schema level because it applies only to
   // the "Rejeté (CV)" transition; the service is what makes it mandatory there.
   rejectionReason: { type: String, trim: true },
+
+  // FR-29 / FR-39 / D-051: the mandatory comment on the FINAL decision.
+  // Distinct from rejectionReason, which is the CV-stage motive: FR-29
+  // requires a comment for « Accepté » too, and a comment on an acceptance is
+  // not a rejection reason. Optional at the schema level because it applies
+  // only to the terminal transition; the service makes it mandatory there.
+  decisionComment: { type: String, trim: true },
 });
 
 // D-018: stamp registeredAt on the server for every new candidate, overwriting

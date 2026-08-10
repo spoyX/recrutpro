@@ -68,10 +68,11 @@ router.post('/', requireRole(Role.Recruteur), create);
  *       Filtrable par date, responsable hiérarchique et poste, avec pagination
  *       et tri. Les mêmes données alimentent une vue liste ou calendrier ; le
  *       rendu calendrier est un travail frontend.
- *       D-045 : seuls les entretiens au statut « Planifié » sont renvoyés par
- *       défaut — FR-33 parle des entretiens *planifiés*, et une vue encombrée
- *       de créneaux annulés donnerait une fausse image de la charge du
- *       responsable. `includeCancelled=true` renvoie tous les statuts.
+ *       D-045 (amendé par D-049) : seuls les entretiens au statut « Planifié »
+ *       sont renvoyés par défaut — FR-33 parle des entretiens *planifiés*, et
+ *       une vue encombrée de créneaux annulés ou déjà réalisés donnerait une
+ *       fausse image de la charge du responsable. `includeFinished=true`
+ *       renvoie tous les statuts, y compris « Annulé » et « Réalisé ».
  *       Le total avant pagination est renvoyé dans `X-Total-Count`.
  *       Une valeur de filtre inconnue est refusée avec un 400.
  *     tags: [Interviews]
@@ -89,7 +90,8 @@ router.post('/', requireRole(Role.Recruteur), create);
  *         name: toDate
  *         schema: { type: string, format: date }
  *       - in: query
- *         name: includeCancelled
+ *         name: includeFinished
+ *         description: Inclut les entretiens « Annulé » ET « Réalisé » (D-049).
  *         schema: { type: string, enum: ['true', 'false'], default: 'false' }
  *       - in: query
  *         name: limit

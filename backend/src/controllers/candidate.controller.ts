@@ -9,8 +9,11 @@ import {
   reviewCandidateCv,
   CV_REVIEW_TARGET_STAGES,
   CvReviewTargetStage,
+  FINAL_DECISION_STAGES,
+  FinalDecisionStage,
 } from '../services/candidate.service';
-import { CandidateStage } from '../common/constants';
+import { decideCandidateOutcome } from '../services/evaluation.service';
+import { CandidateStage, Role } from '../common/constants';
 import { toCandidateListItem } from '../views/candidate.view';
 import { uploadResumeForCandidate, downloadResume } from '../services/resume.service';
 import { toPublicCandidate } from '../views/candidate.view';
@@ -160,15 +163,51 @@ export const list: RequestHandler = async (req, res, next) => {
   }
 };
 
-/** PATCH /api/v1/candidates/:id/stage — FR-25, FR-26 */
-export const reviewCv: RequestHandler = async (req, res, next) => {
+/**
+ * PATCH /api/v1/candidates/:id/stage — FR-25/FR-26 (Recruteur) and
+ * FR-29/FR-39 (Responsable hiérarchique).
+ *
+ * D-051: still NOT a generic stage setter. The route performs the one
+ * transition the CALLER owns — CV review for a Recruteur, the final decision
+ * for a Responsable — and every other target stage is a 400 for both.
+ */
+export const changeStage: RequestHandler = async (req, res, next) => {
   try {
     const body = (req.body ?? {}) as Record<string, unknown>;
-    const { targetStage, rejectionReason } = body;
+    const { targetStage, rejectionReason, decisionComment } = body;
+    const actor = req.currentUser!;
 
-    // D-042: only the two stages FR-25 names are accepted here. Any other
-    // value — including a real pipeline stage — is refused, so this route
-    // cannot be used as the generic stage setter D-006 forbids.
+    if (rejectionReason !== undefined && typeof rejectionReason !== 'string') {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Le motif de rejet doit être une valeur texte.');
+    }
+    if (decisionComment !== undefined && typeof decisionComment !== 'string') {
+      throw new AppError(
+        400,
+        'VALIDATION_ERROR',
+        'Le commentaire de décision doit être une valeur texte.',
+      );
+    }
+
+    if (actor.role === Role.ResponsableHierarchique) {
+      if (!FINAL_DECISION_STAGES.includes(targetStage as FinalDecisionStage)) {
+        throw new AppError(
+          400,
+          'VALIDATION_ERROR',
+          `« targetStage » doit valoir « ${FINAL_DECISION_STAGES.join(' » ou « ')} ».`,
+        );
+      }
+
+      const candidate = await decideCandidateOutcome(
+        String(req.params.id),
+        targetStage as FinalDecisionStage,
+        decisionComment,
+        actor,
+      );
+      res.status(200).json(toPublicCandidate(candidate));
+      return;
+    }
+
+    // D-042: the Recruteur's transition.
     if (!CV_REVIEW_TARGET_STAGES.includes(targetStage as CvReviewTargetStage)) {
       throw new AppError(
         400,
@@ -176,18 +215,11 @@ export const reviewCv: RequestHandler = async (req, res, next) => {
         `« targetStage » doit valoir « ${CV_REVIEW_TARGET_STAGES.join(' » ou « ')} ».`,
       );
     }
-    if (rejectionReason !== undefined && typeof rejectionReason !== 'string') {
-      throw new AppError(
-        400,
-        'VALIDATION_ERROR',
-        'Le motif de rejet doit être une valeur texte.',
-      );
-    }
 
     const candidate = await reviewCandidateCv(
       String(req.params.id),
       { targetStage: targetStage as CvReviewTargetStage, rejectionReason },
-      String(req.currentUser?._id),
+      String(actor._id),
     );
 
     res.status(200).json(toPublicCandidate(candidate));

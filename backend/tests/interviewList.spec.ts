@@ -141,31 +141,49 @@ describe('Interview list — FR-33', () => {
     });
   });
 
-  describe('D-045: cancelled interviews are hidden by default', () => {
+  describe('D-045 / D-049: finished interviews are hidden by default', () => {
     it('D-045: the default list is "Planifié" only', async () => {
       await list();
 
       expect(mockedInterview.find).toHaveBeenCalledWith({ status: InterviewStatus.Planifie });
     });
 
-    it('D-045: includeCancelled=true returns every status', async () => {
-      await list('?includeCancelled=true');
+    it('D-049: includeFinished=true returns every status', async () => {
+      await list('?includeFinished=true');
 
       expect(mockedInterview.find).toHaveBeenCalledWith({});
     });
 
-    it('D-045: includeCancelled=false is explicit, not truthy-string', async () => {
+    it('D-049: the default hides BOTH Annulé and Réalisé', async () => {
+      // The rename exists because the single status:Planifié filter excludes
+      // two finished states, not just cancellation.
+      await list();
+
+      const status = mockedInterview.find.mock.calls[0][0].status;
+      expect(status).toBe(InterviewStatus.Planifie);
+      expect(status).not.toBe(InterviewStatus.Annule);
+      expect(status).not.toBe(InterviewStatus.Realise);
+    });
+
+    it('D-049: includeFinished=false is explicit, not truthy-string', async () => {
       // "false" is a truthy string — the classic silent inversion.
-      await list('?includeCancelled=false');
+      await list('?includeFinished=false');
 
       expect(mockedInterview.find).toHaveBeenCalledWith({ status: InterviewStatus.Planifie });
     });
 
-    it('D-045: a non-boolean includeCancelled is a 400', async () => {
-      const res = await list('?includeCancelled=maybe');
+    it('D-049: a non-boolean includeFinished is a 400', async () => {
+      const res = await list('?includeFinished=maybe');
 
       expect(res.status).toBe(400);
       expect(mockedInterview.find).not.toHaveBeenCalled();
+    });
+
+    it('D-049: the OLD includeCancelled name is no longer honoured', async () => {
+      // It must not silently keep working, or callers would never migrate.
+      await list('?includeCancelled=true');
+
+      expect(mockedInterview.find).toHaveBeenCalledWith({ status: InterviewStatus.Planifie });
     });
   });
 
@@ -375,8 +393,8 @@ describe('Interview list — FR-33', () => {
       expect(mockedInterview.find.mock.calls[0][0].status).toBe(InterviewStatus.Planifie);
     });
 
-    it('FR-35: includeCancelled still works for them', async () => {
-      await asResponsable('?includeCancelled=true');
+    it('FR-35: includeFinished still works for them', async () => {
+      await asResponsable('?includeFinished=true');
 
       expect(mockedInterview.find.mock.calls[0][0].status).toBeUndefined();
     });

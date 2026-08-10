@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   register,
   list,
-  reviewCv,
+  changeStage,
   putResume,
   getResume,
 } from '../controllers/candidate.controller';
@@ -45,6 +45,12 @@ router.use(requireAuth);
  *       404: { description: Candidat inexistant ou aucun CV téléversé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.get('/:id/resume', requireRole(Role.Recruteur, Role.ResponsableHierarchique), getResume);
+
+// D-051: the stage transition serves BOTH roles — CV review for a Recruteur
+// (FR-25/FR-26), the final decision for a Responsable (FR-29/FR-39) — so it
+// must sit above the Recruteur-only router.use below. The service decides
+// which transitions each role may perform. Documented further down the file.
+router.patch('/:id/stage', requireRole(Role.Recruteur, Role.ResponsableHierarchique), changeStage);
 
 // SRS.md heads this module "Gestion des candidats (Recruteur, sauf précision)",
 // and FR-19 reads "Le recruteur peut enregistrer". Everything BELOW this line
@@ -146,17 +152,21 @@ router.get('/', list);
  * @openapi
  * /candidates/{id}/stage:
  *   patch:
- *     summary: Décision de présélection CV (FR-25, FR-26) — Recruteur uniquement
+ *     summary: Transition d'étape (FR-25/FR-26 recruteur, FR-29/FR-39 responsable)
  *     description: >
- *       Ce n'est PAS un endpoint générique de changement d'étape (D-006).
- *       Il exécute uniquement la transition décrite par FR-25 : le candidat
- *       doit être à l'étape « Candidature reçue », et `targetStage` ne peut
- *       valoir que « Présélection CV validée » ou « Rejeté (CV) ». Toute autre
- *       étape est refusée, même valide dans le pipeline.
- *       La transition est à sens unique : un candidat déjà présélectionné ou
- *       déjà rejeté est refusé avec un 409, jamais re-transitionné.
- *       FR-26 : un motif est obligatoire pour un rejet, et interdit pour une
- *       validation.
+ *       Ce n'est PAS un endpoint générique de changement d'étape (D-006). Il
+ *       exécute la SEULE transition que l'appelant possède, selon son rôle
+ *       (D-051).
+ *       Recruteur — présélection CV : le candidat doit être à
+ *       « Candidature reçue » ; `targetStage` vaut « Présélection CV validée »
+ *       ou « Rejeté (CV) » ; un motif est obligatoire pour un rejet et interdit
+ *       pour une validation.
+ *       Responsable hiérarchique — décision finale : le candidat doit être à
+ *       « Évaluation complétée » ; `targetStage` vaut « Accepté » ou
+ *       « Rejeté » ; `decisionComment` est obligatoire dans les DEUX cas.
+ *       Réservé au responsable ASSIGNÉ à l'entretien du candidat.
+ *       Toute autre étape cible est refusée (400) pour les deux rôles, et les
+ *       étapes terminales sont définitives.
  *     tags: [Candidates]
  *     parameters:
  *       - in: path
@@ -173,17 +183,23 @@ router.get('/', list);
  *             properties:
  *               targetStage:
  *                 type: string
- *                 enum: ['Présélection CV validée', 'Rejeté (CV)']
+ *                 enum: ['Présélection CV validée', 'Rejeté (CV)', 'Accepté', 'Rejeté']
  *               rejectionReason:
  *                 type: string
  *                 description: FR-26 — obligatoire si targetStage vaut « Rejeté (CV) ».
+ *               decisionComment:
+ *                 type: string
+ *                 description: FR-29 — obligatoire pour « Accepté » ET « Rejeté ».
  *     responses:
  *       200: { description: Étape mise à jour. }
- *       400: { description: Étape cible non autorisée, ou motif manquant/en trop., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       400: { description: Étape cible non autorisée pour ce rôle, ou motif/commentaire manquant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: Responsable non assigné à ce candidat., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       404: { description: Candidat inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       409: { description: Le candidat n'est plus à l'étape « Candidature reçue »., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       409: { description: Le candidat n'est pas à l'étape requise pour cette transition., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
-router.patch('/:id/stage', reviewCv);
+// (registered above the Recruteur-only router.use — see near the top of this
+// file. The @openapi block stays here; swagger-jsdoc scans comments, not
+// registration order.)
 
 /**
  * @openapi

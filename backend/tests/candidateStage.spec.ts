@@ -306,7 +306,10 @@ describe('CV review transition — FR-25, FR-26', () => {
       expect(candidate.save).not.toHaveBeenCalled();
     });
 
-    it('FR-5: a Responsable hiérarchique is 403 — FR-25 says "le recruteur"', async () => {
+    it('D-051: a Responsable reaches this route but CANNOT perform the CV review', async () => {
+      // FR-25 says "le recruteur". Since D-051 the route serves both roles,
+      // so the refusal moved from the router to the per-role transition list:
+      // "Présélection CV validée" is not a stage a Responsable may set.
       const responsableCookie = await signInAs(responsable);
 
       const res = await request(app)
@@ -314,7 +317,20 @@ describe('CV review transition — FR-25, FR-26', () => {
         .set('Cookie', responsableCookie)
         .send({ targetStage: CandidateStage.PreselectionCvValidee });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(400);
+      expect(candidate.currentStage).toBe(CandidateStage.CandidatureRecue);
+      expect(candidate.save).not.toHaveBeenCalled();
+    });
+
+    it('D-051: a Recruteur cannot perform the FINAL decision either', async () => {
+      // The mirror image, so neither role can borrow the other's transition.
+      const res = await review({
+        targetStage: CandidateStage.Accepte,
+        decisionComment: 'Bon candidat',
+      });
+
+      expect(res.status).toBe(400);
+      expect(candidate.save).not.toHaveBeenCalled();
     });
   });
 });

@@ -309,7 +309,8 @@ export interface ListInterviewsInput {
   jobPositionId?: string;
   fromDate?: Date;
   toDate?: Date;
-  includeCancelled: boolean;
+  /** D-049: covers every non-`Planifié` status — cancelled AND completed. */
+  includeFinished: boolean;
   limit: number;
   offset: number;
   sortBy: InterviewSortField;
@@ -330,15 +331,19 @@ export interface ListInterviewsResult {
  *
  * D-045: `Planifié` only by default. FR-33 asks for « les entretiens
  * planifiés », and a schedule padded with cancelled slots would misrepresent
- * the interviewer's real load. `includeCancelled` reaches the history that
- * FR-34 deliberately preserves.
+ * the interviewer's real load. `includeFinished` reaches the history that
+ * FR-34 (cancellation) and D-048 (evaluation) deliberately preserve.
  */
 export const listInterviews = async (
   input: ListInterviewsInput,
 ): Promise<ListInterviewsResult> => {
   const query: Record<string, unknown> = {};
 
-  if (!input.includeCancelled) {
+  // D-045 as amended by D-049: the default is the OPEN schedule — only
+  // `Planifié`. That hides cancelled interviews and, since D-048 introduced
+  // `Réalisé`, completed ones too, which is why the flag is named for what it
+  // actually does rather than for cancellation alone.
+  if (!input.includeFinished) {
     query.status = InterviewStatus.Planifie;
   }
 

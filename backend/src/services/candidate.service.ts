@@ -257,6 +257,104 @@ export const revertToPreselection = async (
   return candidate;
 };
 
+/**
+ * FR-29 / FR-39 — the ONLY two stages the final decision can move a candidate
+ * to. Same shape as CV_REVIEW_TARGET_STAGES: naming any other stage, even a
+ * real one, is refused, so this cannot become a generic setter (D-006, D-051).
+ */
+export const FINAL_DECISION_STAGES = [CandidateStage.Accepte, CandidateStage.Rejete] as const;
+export type FinalDecisionStage = (typeof FINAL_DECISION_STAGES)[number];
+
+/**
+ * FR-29 / FR-39 — the final hire/reject decision.
+ *
+ * Gated on « Évaluation complétée »: FR-39's « peut **ensuite** émettre »
+ * makes this sequential, so a decision can neither skip the evaluation nor be
+ * re-issued once taken. The comment is mandatory for BOTH outcomes.
+ */
+export const decideFinalOutcome = async (
+  candidate: ICandidate,
+  targetStage: FinalDecisionStage,
+  decisionComment: string | undefined,
+  actorId: string,
+): Promise<ICandidate> => {
+  if (candidate.currentStage !== CandidateStage.EvaluationCompletee) {
+    throw new AppError(
+      409,
+      'INVALID_STAGE_TRANSITION',
+      `La décision finale n'est possible qu'à partir de l'étape ` +
+        `« ${CandidateStage.EvaluationCompletee} ». Ce candidat est à l'étape ` +
+        `« ${candidate.currentStage} ».`,
+    );
+  }
+
+  const comment = decisionComment?.trim();
+  if (!comment) {
+    throw new AppError(
+      400,
+      'DECISION_COMMENT_REQUIRED',
+      'Un commentaire est obligatoire pour la décision finale, qu\'elle soit favorable ou non. Saisissez-le et renvoyez la demande.',
+    );
+  }
+
+  candidate.currentStage = targetStage;
+  candidate.decisionComment = comment;
+  await candidate.save();
+
+  // FR-11 / rule 4 — consistent with every other transition.
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EtapeCandidatModifiee,
+    targetType: AuditTargetType.Candidate,
+    targetId: candidate._id as Types.ObjectId,
+  });
+
+  // TODO(FR-40): emit a stage-change notification. See D-042.
+  return candidate;
+};
+
+/**
+ * FR-28 / FR-38 — submitting an evaluation moves the candidate to
+ * « Évaluation complétée ».
+ *
+ * The third of the pipeline side effects, and shaped exactly like
+ * `markInterviewScheduled` and `revertToPreselection`: gated on the stage it
+ * comes from, audited, and exposed nowhere over HTTP (D-006).
+ */
+export const markEvaluationCompleted = async (
+  candidate: ICandidate,
+  actorId: string,
+): Promise<ICandidate> => {
+  if (candidate.currentStage !== CandidateStage.EntretienPlanifie) {
+    throw new AppError(
+      409,
+      'INVALID_STAGE_TRANSITION',
+      `Une évaluation ne peut être enregistrée que pour un candidat à l'étape ` +
+        `« ${CandidateStage.EntretienPlanifie} ». Ce candidat est à l'étape ` +
+        `« ${candidate.currentStage} ».`,
+    );
+  }
+
+  candidate.currentStage = CandidateStage.EvaluationCompletee;
+  await candidate.save();
+
+  // FR-11 / rule 4 — "candidate stage change" is named explicitly, exactly as
+  // for every other transition (FR-25, FR-27, FR-34).
+  await recordAudit({
+    userId: actorId,
+    action: AuditAction.EtapeCandidatModifiee,
+    targetType: AuditTargetType.Candidate,
+    targetId: candidate._id as Types.ObjectId,
+  });
+
+  // TODO(FR-40): emit a stage-change notification. See D-042.
+  // TODO(FR-41): notify the RECRUITER that an evaluation was submitted.
+  // Deferred to the Notifications module (FR-40 to FR-44), which does not
+  // exist yet — deliberately not stubbed, since an empty notification
+  // function would look built. See D-050.
+  return candidate;
+};
+
 /** FR-24 — the only sortable columns. Anything else is refused, not ignored. */
 export const CANDIDATE_SORT_FIELDS = ['fullName', 'currentStage', 'registeredAt'] as const;
 export type CandidateSortField = (typeof CANDIDATE_SORT_FIELDS)[number];

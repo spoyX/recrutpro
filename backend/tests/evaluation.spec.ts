@@ -57,6 +57,12 @@ const admin = { ...base, _id: new Types.ObjectId().toString(), email: 'admin@exa
 
 const VALID_SCORES = { technicalSkills: 4, communication: 5, overallFit: 3 };
 
+let candidate: {
+  _id: string;
+  jobPositionId: string;
+  currentStage: CandidateStage;
+  save: jest.Mock;
+};
 let interview: {
   _id: string;
   candidateId: string;
@@ -100,11 +106,13 @@ beforeEach(() => {
 
   mockedInterview.findById.mockResolvedValue(interview);
   mockedInterview.exists.mockResolvedValue({ _id: INTERVIEW_ID });
-  mockedCandidate.findById.mockResolvedValue({
+  candidate = {
     _id: CANDIDATE_ID,
     jobPositionId: new Types.ObjectId().toString(),
     currentStage: CandidateStage.EntretienPlanifie,
-  });
+    save: jest.fn().mockResolvedValue(undefined),
+  };
+  mockedCandidate.findById.mockResolvedValue(candidate);
   mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID });
   mockedEvaluation.findOne.mockResolvedValue(null);
   mockedEvaluation.create.mockImplementation(async (doc: Record<string, unknown>) => ({
@@ -340,7 +348,8 @@ describe('Evaluation submission — FR-36, FR-37', () => {
     it('rule 4: an audit entry names the submitting Responsable', async () => {
       await submitAs(pierre, { scores: VALID_SCORES });
 
-      expect(mockedAuditLog.create).toHaveBeenCalledTimes(1);
+      // Two entries since FR-38 landed — the submission and the stage change.
+      // The pairing itself is asserted in the FR-38 block below.
       expect(mockedAuditLog.create.mock.calls[0][0]).toEqual({
         userId: PIERRE_ID,
         action: AuditAction.EvaluationSoumise,
@@ -364,20 +373,58 @@ describe('Evaluation submission — FR-36, FR-37', () => {
     });
   });
 
-  describe('D-048: FR-28 is deliberately NOT wired yet', () => {
-    it('D-048: the candidate stage is untouched until FR-38 lands', async () => {
-      const candidate = {
-        _id: CANDIDATE_ID,
-        jobPositionId: new Types.ObjectId().toString(),
-        currentStage: CandidateStage.EntretienPlanifie,
-        save: jest.fn(),
-      };
-      mockedCandidate.findById.mockResolvedValue(candidate);
-
+  describe('FR-28 / FR-38: the stage transition (was the pinned D-048 gap)', () => {
+    it('FR-38: the candidate moves to "Évaluation complétée"', async () => {
       await submitAs(pierre, { scores: VALID_SCORES });
 
-      // Pinned so FR-38 has a failing expectation to flip, rather than this
-      // gap being discovered in production.
+      expect(candidate.currentStage).toBe(CandidateStage.EvaluationCompletee);
+      expect(candidate.save).toHaveBeenCalled();
+    });
+
+    it('FR-38: interview AND candidate both move in the SAME request', async () => {
+      await submitAs(pierre, { scores: VALID_SCORES });
+
+      expect(interview.status).toBe(InterviewStatus.Realise);
+      expect(candidate.currentStage).toBe(CandidateStage.EvaluationCompletee);
+    });
+
+    it('rule 4: the stage change is audited alongside the submission', async () => {
+      await submitAs(pierre, { scores: VALID_SCORES });
+
+      const entries = mockedAuditLog.create.mock.calls.map((c) => c[0]);
+      expect(entries).toContainEqual({
+        userId: PIERRE_ID,
+        action: AuditAction.EvaluationSoumise,
+        targetType: AuditTargetType.InterviewEvaluation,
+        targetId: EVALUATION_ID,
+      });
+      expect(entries).toContainEqual({
+        userId: PIERRE_ID,
+        action: AuditAction.EtapeCandidatModifiee,
+        targetType: AuditTargetType.Candidate,
+        targetId: CANDIDATE_ID,
+      });
+      expect(mockedAuditLog.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('D-050: a candidate in the wrong stage refuses the WHOLE submission', async () => {
+      // D-046's rule reused: gates before writes, so no evaluation is stored
+      // against a candidate who never moved.
+      candidate.currentStage = CandidateStage.EvaluationCompletee;
+
+      const res = await submitAs(pierre, { scores: VALID_SCORES });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('INVALID_STAGE_TRANSITION');
+      expect(mockedEvaluation.create).not.toHaveBeenCalled();
+      expect(interview.status).toBe(InterviewStatus.Planifie);
+      expect(candidate.save).not.toHaveBeenCalled();
+      expect(mockedAuditLog.create).not.toHaveBeenCalled();
+    });
+
+    it('D-050: a rejected form leaves the candidate stage untouched', async () => {
+      await submitAs(pierre, { scores: { technicalSkills: 4 } });
+
       expect(candidate.currentStage).toBe(CandidateStage.EntretienPlanifie);
       expect(candidate.save).not.toHaveBeenCalled();
     });
