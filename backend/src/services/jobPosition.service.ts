@@ -78,6 +78,8 @@ export const createJobPosition = async (
     requirements: input.requirements?.trim(),
     status,
     // createdAt is schema-defaulted and immutable (FR-14, FR-15).
+    // D-052: routing target for FR-40/FR-41 notifications, never an ACL.
+    createdBy: actorId,
   });
 
   // FR-11 / rule 4 / D-036

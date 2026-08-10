@@ -144,10 +144,37 @@ describe('Job positions — FR-14 to FR-18', () => {
         description: 'Conception et maintenance de nos API.',
         requirements: 'Node.js, MongoDB',
         status: JobPositionStatus.Ouvert,
+        createdBy: RECRUTEUR_ID,
       });
       // createdAt is never taken from the request — the schema stamps it.
       expect(mockedJobPosition.create.mock.calls[0][0]).not.toHaveProperty('createdAt');
       expect(res.body.createdAt).toBe(CREATED_AT.toISOString());
+    });
+
+    it('D-052: createdBy records the ACTING recruiter, for notification routing only', async () => {
+      await asRecruteur('post', '/api/v1/job-positions').send({
+        title: 'Poste',
+        departmentId: DEPT_ID,
+        description: 'Description',
+      });
+
+      // FR-40/FR-41's « le recruteur responsable du poste ». It is NOT an
+      // access-control field — D-037 stands, and the RBAC tests below still
+      // prove any Recruteur reaches any position regardless of this value.
+      expect(mockedJobPosition.create.mock.calls[0][0].createdBy).toBe(RECRUTEUR_ID);
+    });
+
+    it('D-052: createdBy is never taken from the request body', async () => {
+      const someoneElse = new Types.ObjectId().toString();
+
+      await asRecruteur('post', '/api/v1/job-positions').send({
+        title: 'Poste',
+        departmentId: DEPT_ID,
+        description: 'Description',
+        createdBy: someoneElse,
+      });
+
+      expect(mockedJobPosition.create.mock.calls[0][0].createdBy).toBe(RECRUTEUR_ID);
     });
 
     it('FR-14: the default status is Brouillon', async () => {
