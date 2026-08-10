@@ -4,23 +4,42 @@ import { Types } from 'mongoose';
 import { app } from '../src/app';
 import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
+import { JobPosition } from '../src/models/JobPosition.model';
+import { Notification } from '../src/models/Notification.model';
 import { AuditLog } from '../src/models/AuditLog.model';
-import { Role, CandidateStage, AuditAction, AuditTargetType } from '../src/common/constants';
+import {
+  Role,
+  CandidateStage,
+  AuditAction,
+  AuditTargetType,
+  NotificationType,
+} from '../src/common/constants';
 import { closeSessionStore } from '../src/config/session';
 import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
 
 jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
+jest.mock('../src/models/JobPosition.model');
+jest.mock('../src/models/Notification.model');
 jest.mock('../src/models/AuditLog.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
+const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
+const mockedNotification = Notification as unknown as { insertMany: jest.Mock };
 const mockedAuditLog = AuditLog as unknown as { create: jest.Mock };
 
 const PASSWORD = 'Adm1n!Passw0rd';
 const passwordHash = hashSync(PASSWORD, 4);
 const RECRUTEUR_ID = new Types.ObjectId().toString();
+const OWNER_ID = new Types.ObjectId().toString();
 const CANDIDATE_ID = new Types.ObjectId().toString();
+
+/** The single notification row written by the action under test. */
+const notifiedRows = (): Array<Record<string, unknown>> => {
+  expect(mockedNotification.insertMany).toHaveBeenCalledTimes(1);
+  return mockedNotification.insertMany.mock.calls[0][0];
+};
 
 const recruteur = {
   _id: RECRUTEUR_ID,
@@ -77,6 +96,9 @@ beforeEach(async () => {
   };
 
   mockedCandidate.findById.mockResolvedValue(candidate);
+  // D-052: the position carries the notification recipient.
+  mockedJobPosition.findById.mockResolvedValue({ createdBy: OWNER_ID });
+  mockedNotification.insertMany.mockResolvedValue([]);
   mockedAuditLog.create.mockResolvedValue({});
 
   cookie = await signInAs(recruteur);
@@ -331,6 +353,108 @@ describe('CV review transition — FR-25, FR-26', () => {
 
       expect(res.status).toBe(400);
       expect(candidate.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('FR-40: the CV review emits a stage-change notification', () => {
+    it('FR-40: notifies the recruiter responsible for the position', async () => {
+      await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].userId)).toBe(OWNER_ID);
+      expect(rows[0].type).toBe(NotificationType.ChangementEtape);
+      expect(rows[0].message).toContain('Jean Martin');
+      expect(rows[0].message).toContain(CandidateStage.PreselectionCvValidee);
+    });
+
+    it('FR-40: a rejection notifies too', async () => {
+      await review({
+        targetStage: CandidateStage.RejeteCv,
+        rejectionReason: 'Profil trop junior',
+      });
+
+      const rows = notifiedRows();
+      expect(rows[0].message).toContain(CandidateStage.RejeteCv);
+      // D-033's no-payload rule extends here in spirit: the motive is on the
+      // candidate, not broadcast into a notification.
+      expect(rows[0].message).not.toContain('Profil trop junior');
+    });
+
+    it('D-052: falls back to registeredBy when the position has no createdBy', async () => {
+      // The 14 legacy positions. `registeredBy` is the recruiter who created
+      // the candidate record — the closest real person to the position.
+      // A DIFFERENT recruiter from the actor, or the fallback would be
+      // invisible: it would resolve to Marie and then be dropped by the
+      // actor filter, which is correct but proves nothing.
+      const registrar = new Types.ObjectId().toString();
+      candidate.registeredBy = registrar;
+      mockedJobPosition.findById.mockResolvedValue({ createdBy: null });
+
+      await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].userId)).toBe(registrar);
+    });
+
+    it('D-052: falls back when the position itself is missing', async () => {
+      const registrar = new Types.ObjectId().toString();
+      candidate.registeredBy = registrar;
+      mockedJobPosition.findById.mockResolvedValue(null);
+
+      await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(String(notifiedRows()[0].userId)).toBe(registrar);
+    });
+
+    it('D-052/D-055: a fallback that lands on the actor notifies nobody', async () => {
+      // The fixture's registeredBy IS Marie, who is performing the review.
+      mockedJobPosition.findById.mockResolvedValue({ createdBy: null });
+
+      const res = await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(res.status).toBe(200);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
+    });
+
+    it('D-055: the ACTOR is never notified of their own action', async () => {
+      // Marie owns the position AND performs the review, so there is nobody
+      // left to tell — and no empty insert is issued either.
+      mockedJobPosition.findById.mockResolvedValue({ createdBy: RECRUTEUR_ID });
+
+      const res = await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(res.status).toBe(200);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
+    });
+
+    it('D-054: a notification failure does NOT fail the stage change', async () => {
+      // The deliberate opposite of D-033's rule for audit writes.
+      mockedNotification.insertMany.mockRejectedValue(new Error('mongo indisponible'));
+
+      const res = await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(res.status).toBe(200);
+      expect(candidate.currentStage).toBe(CandidateStage.PreselectionCvValidee);
+      expect(candidate.save).toHaveBeenCalled();
+      expect(mockedAuditLog.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('D-054: a recipient lookup failure does not fail it either', async () => {
+      mockedJobPosition.findById.mockRejectedValue(new Error('mongo indisponible'));
+
+      const res = await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(res.status).toBe(200);
+      expect(candidate.currentStage).toBe(CandidateStage.PreselectionCvValidee);
+    });
+
+    it('FR-40: a REFUSED transition notifies nobody', async () => {
+      const res = await review({ targetStage: CandidateStage.RejeteCv });
+
+      expect(res.status).toBe(400);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
     });
   });
 });

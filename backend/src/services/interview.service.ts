@@ -11,10 +11,12 @@ import {
   Role,
   AuditAction,
   AuditTargetType,
+  NotificationType,
 } from '../common/constants';
 import { AppError } from '../common/errors';
 import { recordAudit } from '../common/audit';
 import { markInterviewScheduled, revertToPreselection } from './candidate.service';
+import { notify } from './notification.service';
 
 /** FR-31 / D-005 — 30 minutes before and after the requested slot. */
 export const CONFLICT_BUFFER_MS = 30 * 60 * 1000;
@@ -181,9 +183,17 @@ export const scheduleInterview = async (
   // writes the rule-4 audit entry for the stage change.
   await markInterviewScheduled(candidate, actorId);
 
-  // TODO(FR-42): notify the interviewer that an interview was scheduled for
-  // them. Notifications module not built yet — sweep with the TODO(FR-40)
-  // sites. See D-043.
+  // FR-42 — notify the interviewer that an interview was scheduled for them.
+  // This is the reason `markInterviewScheduled` above does NOT pass them as
+  // FR-40's conditional second recipient: they get this more specific message
+  // instead of a generic stage change, so one action produces one row.
+  const when = input.scheduledAt.toISOString().replace('T', ' à ').slice(0, 19);
+  await notify(
+    [input.interviewerId],
+    NotificationType.EntretienPlanifie,
+    `Un entretien vous a été assigné avec « ${candidate.fullName} » le ${when} (UTC).`,
+    actorId,
+  );
 
   return interview;
 };
@@ -263,8 +273,11 @@ export const cancelInterview = async (
   });
 
   // FR-34 — the candidate returns to « Présélection CV validée ». Writes the
-  // second, separately-required audit entry against the Candidate (D-046).
-  await revertToPreselection(candidate, actorId);
+  // second, separately-required audit entry against the Candidate (D-046), and
+  // emits FR-40's stage-change notification. The interviewer is passed as
+  // FR-40's conditional recipient — an interview IS concerned, and a cancelled
+  // slot is exactly what they must not turn up for.
+  await revertToPreselection(candidate, actorId, interview.interviewerId);
 
   return interview;
 };

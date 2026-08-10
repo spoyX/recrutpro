@@ -5,6 +5,8 @@ import { app } from '../src/app';
 import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
 import { Interview } from '../src/models/Interview.model';
+import { JobPosition } from '../src/models/JobPosition.model';
+import { Notification } from '../src/models/Notification.model';
 import { AuditLog } from '../src/models/AuditLog.model';
 import {
   Role,
@@ -12,6 +14,7 @@ import {
   InterviewStatus,
   AuditAction,
   AuditTargetType,
+  NotificationType,
 } from '../src/common/constants';
 import { closeSessionStore } from '../src/config/session';
 import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
@@ -19,18 +22,29 @@ import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
 jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
 jest.mock('../src/models/Interview.model');
+jest.mock('../src/models/JobPosition.model');
+jest.mock('../src/models/Notification.model');
 jest.mock('../src/models/AuditLog.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
 const mockedInterview = Interview as unknown as { findById: jest.Mock };
+const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
+const mockedNotification = Notification as unknown as { insertMany: jest.Mock };
 const mockedAuditLog = AuditLog as unknown as { create: jest.Mock };
 
 const PASSWORD = 'Adm1n!Passw0rd';
 const passwordHash = hashSync(PASSWORD, 4);
 const RECRUTEUR_ID = new Types.ObjectId().toString();
+const OWNER_ID = new Types.ObjectId().toString();
+const INTERVIEWER_ID = new Types.ObjectId().toString();
 const CANDIDATE_ID = new Types.ObjectId().toString();
 const INTERVIEW_ID = new Types.ObjectId().toString();
+
+const notifiedRows = (): Array<Record<string, unknown>> => {
+  expect(mockedNotification.insertMany).toHaveBeenCalledTimes(1);
+  return mockedNotification.insertMany.mock.calls[0][0];
+};
 
 const recruteur = {
   _id: RECRUTEUR_ID,
@@ -54,7 +68,14 @@ let interview: {
   cancellationReason?: string;
   save: jest.Mock;
 };
-let candidate: { _id: string; currentStage: CandidateStage; save: jest.Mock };
+let candidate: {
+  _id: string;
+  fullName: string;
+  jobPositionId: string;
+  registeredBy: string;
+  currentStage: CandidateStage;
+  save: jest.Mock;
+};
 
 const signInAs = async (who: Record<string, unknown>): Promise<string[]> => {
   mockedUser.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(who) });
@@ -75,19 +96,24 @@ beforeEach(async () => {
   interview = {
     _id: INTERVIEW_ID,
     candidateId: CANDIDATE_ID,
-    interviewerId: new Types.ObjectId().toString(),
+    interviewerId: INTERVIEWER_ID,
     scheduledAt: new Date('2026-09-10T09:00:00.000Z'),
     status: InterviewStatus.Planifie,
     save: jest.fn().mockResolvedValue(undefined),
   };
   candidate = {
     _id: CANDIDATE_ID,
+    fullName: 'Jean Martin',
+    jobPositionId: new Types.ObjectId().toString(),
+    registeredBy: RECRUTEUR_ID,
     currentStage: CandidateStage.EntretienPlanifie,
     save: jest.fn().mockResolvedValue(undefined),
   };
 
   mockedInterview.findById.mockResolvedValue(interview);
   mockedCandidate.findById.mockResolvedValue(candidate);
+  mockedJobPosition.findById.mockResolvedValue({ createdBy: OWNER_ID });
+  mockedNotification.insertMany.mockResolvedValue([]);
   mockedAuditLog.create.mockResolvedValue({});
 
   cookie = await signInAs(recruteur);
@@ -329,6 +355,57 @@ describe('Interview cancellation — FR-34', () => {
         .send({ cancellationReason: 'Motif' });
 
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('FR-40: cancellation notifies BOTH the recruiter and the interviewer', () => {
+    it('FR-40: an interview IS concerned, so the assigned responsable is told', async () => {
+      await cancel({ cancellationReason: 'Candidat indisponible' });
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => String(r.userId)).sort()).toEqual([OWNER_ID, INTERVIEWER_ID].sort());
+      expect(rows.every((r) => r.type === NotificationType.ChangementEtape)).toBe(true);
+    });
+
+    it("FR-40: the message names the CANCELLATION, not just the new stage", async () => {
+      // « revenu à Présélection CV validée » alone would not tell an
+      // interviewer that the slot they were about to attend is gone.
+      await cancel({ cancellationReason: 'Candidat indisponible' });
+
+      const message = String(notifiedRows()[0].message);
+      expect(message).toContain('annulé');
+      expect(message).toContain('Jean Martin');
+      expect(message).toContain(CandidateStage.PreselectionCvValidee);
+      expect(message).not.toContain('Candidat indisponible');
+    });
+
+    it('D-055: the acting recruiter is dropped when they also own the position', async () => {
+      mockedJobPosition.findById.mockResolvedValue({ createdBy: RECRUTEUR_ID });
+
+      await cancel({ cancellationReason: 'Motif' });
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].userId)).toBe(INTERVIEWER_ID);
+    });
+
+    it('D-054: a notification failure does not fail the cancellation', async () => {
+      mockedNotification.insertMany.mockRejectedValue(new Error('mongo indisponible'));
+
+      const res = await cancel({ cancellationReason: 'Motif' });
+
+      expect(res.status).toBe(200);
+      expect(interview.status).toBe(InterviewStatus.Annule);
+      expect(candidate.currentStage).toBe(CandidateStage.PreselectionCvValidee);
+      expect(auditActions()).toHaveLength(2);
+    });
+
+    it('FR-40: a REFUSED cancellation notifies nobody', async () => {
+      const res = await cancel({});
+
+      expect(res.status).toBe(400);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
     });
   });
 });

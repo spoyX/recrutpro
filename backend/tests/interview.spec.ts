@@ -6,6 +6,7 @@ import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
 import { JobPosition } from '../src/models/JobPosition.model';
 import { Interview } from '../src/models/Interview.model';
+import { Notification } from '../src/models/Notification.model';
 import { AuditLog } from '../src/models/AuditLog.model';
 import { CONFLICT_BUFFER_MS } from '../src/services/interview.service';
 import {
@@ -14,6 +15,7 @@ import {
   InterviewStatus,
   AuditAction,
   AuditTargetType,
+  NotificationType,
 } from '../src/common/constants';
 import { closeSessionStore } from '../src/config/session';
 import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
@@ -22,17 +24,24 @@ jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
 jest.mock('../src/models/JobPosition.model');
 jest.mock('../src/models/Interview.model');
+jest.mock('../src/models/Notification.model');
 jest.mock('../src/models/AuditLog.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
 const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
 const mockedInterview = Interview as unknown as { create: jest.Mock; findOne: jest.Mock };
+const mockedNotification = Notification as unknown as { insertMany: jest.Mock };
 const mockedAuditLog = AuditLog as unknown as { create: jest.Mock };
+
+/** Every notification row written across the whole action, flattened. */
+const allNotified = (): Array<Record<string, unknown>> =>
+  mockedNotification.insertMany.mock.calls.flatMap((call) => call[0]);
 
 const PASSWORD = 'Adm1n!Passw0rd';
 const passwordHash = hashSync(PASSWORD, 4);
 const RECRUTEUR_ID = new Types.ObjectId().toString();
+const OWNER_ID = new Types.ObjectId().toString();
 const DEPT_ID = new Types.ObjectId().toString();
 const OTHER_DEPT_ID = new Types.ObjectId().toString();
 const CANDIDATE_ID = new Types.ObjectId().toString();
@@ -60,6 +69,7 @@ let candidate: {
   _id: string;
   fullName: string;
   jobPositionId: string;
+  registeredBy: string;
   currentStage: CandidateStage;
   save: jest.Mock;
 };
@@ -90,6 +100,7 @@ beforeEach(async () => {
     _id: CANDIDATE_ID,
     fullName: 'Jean Martin',
     jobPositionId: POSITION_ID,
+    registeredBy: RECRUTEUR_ID,
     currentStage: CandidateStage.PreselectionCvValidee,
     save: jest.fn().mockResolvedValue(undefined),
   };
@@ -101,7 +112,12 @@ beforeEach(async () => {
   };
 
   mockedCandidate.findById.mockResolvedValue(candidate);
-  mockedJobPosition.findById.mockResolvedValue({ _id: POSITION_ID, department: DEPT_ID });
+  mockedJobPosition.findById.mockResolvedValue({
+    _id: POSITION_ID,
+    department: DEPT_ID,
+    createdBy: OWNER_ID,
+  });
+  mockedNotification.insertMany.mockResolvedValue([]);
   mockedInterview.findOne.mockReturnValue({ populate: jest.fn().mockResolvedValue(null) });
   mockedInterview.create.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: INTERVIEW_ID,
@@ -413,6 +429,71 @@ describe('Interview scheduling — FR-30, FR-31, FR-32 (and FR-27)', () => {
       // The CV-review route accepts only its own two stages (D-042).
       expect(res.status).toBe(400);
       expect(candidate.currentStage).toBe(CandidateStage.PreselectionCvValidee);
+    });
+  });
+
+  describe('FR-42 / FR-40: scheduling notifies the interviewer and the recruiter', () => {
+    it('FR-42: the interviewer is told an interview was assigned to them', async () => {
+      await schedule(validBody());
+
+      const forInterviewer = allNotified().filter(
+        (r) => String(r.userId) === INTERVIEWER_ID,
+      );
+      expect(forInterviewer).toHaveLength(1);
+      expect(forInterviewer[0].type).toBe(NotificationType.EntretienPlanifie);
+      expect(forInterviewer[0].message).toContain('Jean Martin');
+    });
+
+    it('FR-40: the responsible recruiter gets the stage-change notification', async () => {
+      await schedule(validBody());
+
+      const forOwner = allNotified().filter((r) => String(r.userId) === OWNER_ID);
+      expect(forOwner).toHaveLength(1);
+      expect(forOwner[0].type).toBe(NotificationType.ChangementEtape);
+      expect(forOwner[0].message).toContain(CandidateStage.EntretienPlanifie);
+    });
+
+    it('D-055: the interviewer gets exactly ONE row, not a stage change as well', async () => {
+      // FR-40's conditional second recipient is deliberately not passed at this
+      // site, because FR-42's message is the more specific of the two.
+      await schedule(validBody());
+
+      const rows = allNotified();
+      expect(rows).toHaveLength(2);
+      expect(rows.filter((r) => String(r.userId) === INTERVIEWER_ID)).toHaveLength(1);
+    });
+
+    it('D-055: the acting recruiter is not notified when they own the position', async () => {
+      mockedJobPosition.findById.mockResolvedValue({
+        _id: POSITION_ID,
+        department: DEPT_ID,
+        createdBy: RECRUTEUR_ID,
+      });
+
+      await schedule(validBody());
+
+      const rows = allNotified();
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].userId)).toBe(INTERVIEWER_ID);
+    });
+
+    it('D-054: a notification failure does not fail the scheduling', async () => {
+      mockedNotification.insertMany.mockRejectedValue(new Error('mongo indisponible'));
+
+      const res = await schedule(validBody());
+
+      expect(res.status).toBe(201);
+      expect(mockedInterview.create).toHaveBeenCalled();
+      expect(candidate.currentStage).toBe(CandidateStage.EntretienPlanifie);
+    });
+
+    it('FR-42: a REFUSED scheduling notifies nobody', async () => {
+      candidate.currentStage = CandidateStage.CandidatureRecue;
+
+      const res = await schedule(validBody());
+
+      expect(res.status).toBe(409);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
     });
   });
 });

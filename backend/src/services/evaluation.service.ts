@@ -251,8 +251,9 @@ export const submitEvaluation = async (
   });
 
   // FR-28 / FR-38 — the stage transition, a side effect of THIS action
-  // (D-006). Writes its own rule-4 audit entry, and carries the TODO(FR-41)
-  // marker for the recruiter notification that lands with Notifications.
+  // (D-006). Writes its own rule-4 audit entry, and emits FR-40/FR-41's
+  // notification to the responsible recruiter (one row, not two — see the
+  // note in `markEvaluationCompleted`).
   // D-050: last of the three writes, so the worst crash interleaving leaves
   // visibly un-processed work a retry completes, rather than a candidate
   // advanced past an interview with no evaluation behind it.

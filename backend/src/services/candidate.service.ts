@@ -1,10 +1,44 @@
 import { Types } from 'mongoose';
 import { Candidate, ICandidate } from '../models/Candidate.model';
 import { Resume } from '../models/Resume.model';
-import { CandidateStage, AuditAction, AuditTargetType } from '../common/constants';
+import {
+  CandidateStage,
+  AuditAction,
+  AuditTargetType,
+  NotificationType,
+} from '../common/constants';
 import { AppError } from '../common/errors';
 import { recordAudit } from '../common/audit';
 import { assertAcceptsCandidates } from './jobPosition.service';
+import { notify, resolveResponsibleRecruiter } from './notification.service';
+
+/**
+ * FR-40 — « À chaque changement d'étape d'un candidat (hors inscription
+ * initiale), une notification in-app est générée pour le recruteur responsable
+ * du poste et pour le responsable hiérarchique assigné (si un entretien est
+ * concerné). »
+ *
+ * One helper for all five transition sites, so a transition added later gets
+ * the notification by calling it rather than by remembering to reimplement it.
+ *
+ * `alsoNotify` carries FR-40's conditional second recipient — the assigned
+ * responsable, passed only by the sites where an interview really is concerned.
+ * At the two sites where the responsable IS the actor (evaluation submission,
+ * final decision) they are dropped by `notify`'s actor filter rather than by a
+ * special case here.
+ *
+ * Never throws: D-054 makes delivery best-effort, and this runs only after the
+ * stage change and its rule-4 audit entry have both succeeded.
+ */
+const notifyStageChange = async (
+  candidate: ICandidate,
+  message: string,
+  actorId: string,
+  alsoNotify?: Types.ObjectId | string | null,
+): Promise<void> => {
+  const recruiter = await resolveResponsibleRecruiter(candidate).catch(() => null);
+  await notify([recruiter, alsoNotify], NotificationType.ChangementEtape, message, actorId);
+};
 
 export interface RegisterCandidateInput {
   fullName: string;
@@ -171,9 +205,14 @@ export const reviewCandidateCv = async (
     targetId: candidate._id as Types.ObjectId,
   });
 
-  // TODO(FR-40): emit a stage-change notification. The Notifications module
-  // (FR-40 to FR-44) is not built yet, so none is emitted here. Grep for
-  // TODO(FR-40) to find every stage-change site in one sweep — see D-042.
+  // FR-40 — no interview is concerned at CV review, so the responsible
+  // recruiter is the only recipient. Closes the debt D-042 recorded here.
+  await notifyStageChange(
+    candidate,
+    `La candidature de « ${candidate.fullName} » est passée à l'étape ` +
+      `« ${candidate.currentStage} ».`,
+    actorId,
+  );
 
   return candidate;
 };
@@ -214,7 +253,17 @@ export const markInterviewScheduled = async (
     targetId: candidate._id as Types.ObjectId,
   });
 
-  // TODO(FR-40): emit a stage-change notification. See D-042.
+  // FR-40 — the assigned responsable is NOT passed here: they receive the more
+  // specific FR-42 « un entretien vous a été assigné » notification from the
+  // interview service instead. Sending both would put two rows in one panel
+  // for a single action.
+  await notifyStageChange(
+    candidate,
+    `Un entretien a été planifié pour « ${candidate.fullName} » : la candidature ` +
+      `passe à l'étape « ${CandidateStage.EntretienPlanifie} ».`,
+    actorId,
+  );
+
   return candidate;
 };
 
@@ -229,6 +278,8 @@ export const markInterviewScheduled = async (
 export const revertToPreselection = async (
   candidate: ICandidate,
   actorId: string,
+  /** FR-40's conditional recipient — an interview IS concerned here (D-046). */
+  interviewerId?: Types.ObjectId | string | null,
 ): Promise<ICandidate> => {
   if (candidate.currentStage !== CandidateStage.EntretienPlanifie) {
     throw new AppError(
@@ -253,7 +304,18 @@ export const revertToPreselection = async (
     targetId: candidate._id as Types.ObjectId,
   });
 
-  // TODO(FR-40): emit a stage-change notification. See D-042.
+  // FR-40 — an interview IS concerned, so the assigned responsable is told too:
+  // a cancelled interview is exactly the kind of thing they must not turn up
+  // for. The message names the cancellation rather than only the new stage,
+  // because "revenu à Présélection CV validée" alone would not tell them that.
+  await notifyStageChange(
+    candidate,
+    `L'entretien avec « ${candidate.fullName} » a été annulé : la candidature ` +
+      `revient à l'étape « ${CandidateStage.PreselectionCvValidee} ».`,
+    actorId,
+    interviewerId,
+  );
+
   return candidate;
 };
 
@@ -309,7 +371,16 @@ export const decideFinalOutcome = async (
     targetId: candidate._id as Types.ObjectId,
   });
 
-  // TODO(FR-40): emit a stage-change notification. See D-042.
+  // FR-40 — the decision is the assigned responsable's own action, so they are
+  // dropped by the actor filter and the responsible recruiter is informed of
+  // the outcome they did not take.
+  await notifyStageChange(
+    candidate,
+    `Décision finale pour « ${candidate.fullName} » : la candidature passe à ` +
+      `l'étape « ${candidate.currentStage} ».`,
+    actorId,
+  );
+
   return candidate;
 };
 
@@ -347,11 +418,25 @@ export const markEvaluationCompleted = async (
     targetId: candidate._id as Types.ObjectId,
   });
 
-  // TODO(FR-40): emit a stage-change notification. See D-042.
-  // TODO(FR-41): notify the RECRUITER that an evaluation was submitted.
-  // Deferred to the Notifications module (FR-40 to FR-44), which does not
-  // exist yet — deliberately not stubbed, since an empty notification
-  // function would look built. See D-050.
+  // FR-40 AND FR-41 are ONE notification here, not two.
+  //
+  // Both name the same recipient (the responsible recruiter) for the same
+  // event, so two rows would say the same thing twice in one panel. The type
+  // is the MORE SPECIFIC of the two — `EvaluationSoumise` rather than
+  // `ChangementEtape` — and the message carries both facts, so FR-40's "a
+  // notification is generated for the recruiter on a stage change" and FR-41's
+  // "a notification is sent to the recruiter when an evaluation is submitted"
+  // are each satisfied by it. The submitting responsable is the actor and is
+  // filtered out. Closes the debt D-050 recorded here.
+  const recruiter = await resolveResponsibleRecruiter(candidate).catch(() => null);
+  await notify(
+    [recruiter],
+    NotificationType.EvaluationSoumise,
+    `Une évaluation a été soumise pour « ${candidate.fullName} » : la candidature ` +
+      `passe à l'étape « ${CandidateStage.EvaluationCompletee} ».`,
+    actorId,
+  );
+
   return candidate;
 };
 

@@ -6,8 +6,15 @@ import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
 import { Interview } from '../src/models/Interview.model';
 import { JobPosition } from '../src/models/JobPosition.model';
+import { Notification } from '../src/models/Notification.model';
 import { AuditLog } from '../src/models/AuditLog.model';
-import { Role, CandidateStage, AuditAction, AuditTargetType } from '../src/common/constants';
+import {
+  Role,
+  CandidateStage,
+  AuditAction,
+  AuditTargetType,
+  NotificationType,
+} from '../src/common/constants';
 import { closeSessionStore } from '../src/config/session';
 import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
 
@@ -15,19 +22,27 @@ jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
 jest.mock('../src/models/Interview.model');
 jest.mock('../src/models/JobPosition.model');
+jest.mock('../src/models/Notification.model');
 jest.mock('../src/models/AuditLog.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
 const mockedInterview = Interview as unknown as { exists: jest.Mock };
 const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
+const mockedNotification = Notification as unknown as { insertMany: jest.Mock };
 const mockedAuditLog = AuditLog as unknown as { create: jest.Mock };
 
 const PASSWORD = 'Adm1n!Passw0rd';
 const passwordHash = hashSync(PASSWORD, 4);
 const DEPT_ID = new Types.ObjectId().toString();
 const PIERRE_ID = new Types.ObjectId().toString();
+const OWNER_ID = new Types.ObjectId().toString();
 const CANDIDATE_ID = new Types.ObjectId().toString();
+
+const notifiedRows = (): Array<Record<string, unknown>> => {
+  expect(mockedNotification.insertMany).toHaveBeenCalledTimes(1);
+  return mockedNotification.insertMany.mock.calls[0][0];
+};
 
 const base = { name: 'X', passwordHash, isActive: true, mustChangePassword: false, departmentId: DEPT_ID };
 const pierre = { ...base, _id: PIERRE_ID, email: 'pierre@example.com', role: Role.ResponsableHierarchique };
@@ -82,7 +97,8 @@ beforeEach(() => {
   };
 
   mockedCandidate.findById.mockResolvedValue(candidate);
-  mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID });
+  mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID, createdBy: OWNER_ID });
+  mockedNotification.insertMany.mockResolvedValue([]);
   mockedInterview.exists.mockResolvedValue({ _id: 'an-interview' });
   mockedAuditLog.create.mockResolvedValue({});
 });
@@ -322,6 +338,52 @@ describe('Final decision — FR-29, FR-39', () => {
       await decideAs(pierre, { targetStage: CandidateStage.Accepte });
 
       expect(mockedAuditLog.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('FR-40: the final decision notifies the recruiter', () => {
+    const decision = {
+      targetStage: CandidateStage.Accepte,
+      decisionComment: 'Excellent profil.',
+    };
+
+    it('FR-40: the responsible recruiter learns the outcome', async () => {
+      await decideAs(pierre, decision);
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].userId)).toBe(OWNER_ID);
+      expect(rows[0].type).toBe(NotificationType.ChangementEtape);
+      expect(rows[0].message).toContain(CandidateStage.Accepte);
+    });
+
+    it('D-055: the deciding responsable is not notified of their own decision', async () => {
+      await decideAs(pierre, decision);
+
+      expect(notifiedRows().filter((r) => String(r.userId) === PIERRE_ID)).toHaveLength(0);
+    });
+
+    it('D-033/D-055: the decision COMMENT is never put in the notification', async () => {
+      await decideAs(pierre, decision);
+
+      expect(String(notifiedRows()[0].message)).not.toContain('Excellent profil.');
+    });
+
+    it('D-054: a notification failure does not fail the decision', async () => {
+      mockedNotification.insertMany.mockRejectedValue(new Error('mongo indisponible'));
+
+      const res = await decideAs(pierre, decision);
+
+      expect(res.status).toBe(200);
+      expect(candidate.currentStage).toBe(CandidateStage.Accepte);
+      expect(mockedAuditLog.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('FR-40: a refused decision notifies nobody', async () => {
+      const res = await decideAs(pierre, { targetStage: CandidateStage.Accepte });
+
+      expect(res.status).toBe(400);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
     });
   });
 });

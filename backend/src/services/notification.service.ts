@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 import { Notification, INotification } from '../models/Notification.model';
+import { JobPosition } from '../models/JobPosition.model';
+import { ICandidate } from '../models/Candidate.model';
 import { IUser } from '../models/User.model';
+import { NotificationType } from '../common/constants';
 import { AppError } from '../common/errors';
 
 /**
@@ -26,6 +29,73 @@ import { AppError } from '../common/errors';
  */
 const notFound = (): AppError =>
   new AppError(404, 'NOT_FOUND', "Cette notification n'existe pas.");
+
+type RecipientId = Types.ObjectId | string | null | undefined;
+
+/**
+ * FR-40 to FR-42 — generate notifications for an action that has just
+ * succeeded.
+ *
+ * **This never throws (D-054).** It is the deliberate opposite of D-033's rule
+ * for audit writes, and the difference is the point: an unaudited action breaks
+ * rule 4's guarantee that every sensitive action is traceable, so it must fail
+ * loudly. A missing notification is a missed *convenience* — refusing to cancel
+ * an interview because a notification insert failed would turn a cosmetic fault
+ * into a workflow outage. Every caller therefore invokes this AFTER its audit
+ * write and after the domain write has succeeded.
+ *
+ * Two filters are applied to the recipient list, both anti-noise:
+ *
+ *  - **The actor is removed.** Nobody is told about something they just did
+ *    themselves. FR-40 names the roles to inform, not a rule to notify the
+ *    person who performed the action; user story 21's « afin de suivre
+ *    l'avancement sans vérifier manuellement » is about learning what you did
+ *    NOT do. Same reasoning D-052 used to reject broadcasting.
+ *  - **Recipients are de-duplicated**, so one action never puts two rows in one
+ *    person's panel.
+ */
+export const notify = async (
+  recipients: RecipientId[],
+  type: NotificationType,
+  message: string,
+  actorId?: RecipientId,
+): Promise<void> => {
+  try {
+    const userIds = [...new Set(recipients.filter(Boolean).map(String))].filter(
+      (id) => id !== String(actorId ?? ''),
+    );
+
+    if (userIds.length === 0) {
+      return;
+    }
+
+    await Notification.insertMany(userIds.map((userId) => ({ userId, type, message })));
+  } catch (error) {
+    // Swallowed on purpose — see the D-054 note above. Logged loudly so a
+    // systematic failure is still visible in the container logs.
+    console.error('[notifications] génération échouée (action non affectée) :', error);
+  }
+};
+
+/**
+ * FR-40 / FR-41 — « le recruteur responsable du poste ».
+ *
+ * D-052: `JobPosition.createdBy` is the recipient, with a fallback to
+ * `Candidate.registeredBy` where it is null. The fallback exists because the
+ * positions created before that field did cannot be backfilled — a live check
+ * on 2026-08-10 found zero `PosteCree` audit entries to recover a creator from.
+ * A notification path that silently sends nothing is worse than one that picks
+ * the second-best recipient.
+ *
+ * **This is routing, never authorisation.** D-037 stands: any Recruteur may
+ * still create, read, edit and close any position regardless of `createdBy`.
+ */
+export const resolveResponsibleRecruiter = async (
+  candidate: ICandidate,
+): Promise<RecipientId> => {
+  const position = await JobPosition.findById(candidate.jobPositionId, 'createdBy');
+  return position?.createdBy ?? candidate.registeredBy;
+};
 
 /** Pagination bounds follow D-041, like every other list endpoint. */
 export const DEFAULT_NOTIFICATION_LIMIT = 25;

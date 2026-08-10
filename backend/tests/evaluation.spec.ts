@@ -7,6 +7,7 @@ import { Candidate } from '../src/models/Candidate.model';
 import { Interview } from '../src/models/Interview.model';
 import { InterviewEvaluation } from '../src/models/InterviewEvaluation.model';
 import { JobPosition } from '../src/models/JobPosition.model';
+import { Notification } from '../src/models/Notification.model';
 import { AuditLog } from '../src/models/AuditLog.model';
 import {
   Role,
@@ -14,6 +15,7 @@ import {
   InterviewStatus,
   AuditAction,
   AuditTargetType,
+  NotificationType,
 } from '../src/common/constants';
 import { closeSessionStore } from '../src/config/session';
 import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
@@ -23,6 +25,7 @@ jest.mock('../src/models/Candidate.model');
 jest.mock('../src/models/Interview.model');
 jest.mock('../src/models/InterviewEvaluation.model');
 jest.mock('../src/models/JobPosition.model');
+jest.mock('../src/models/Notification.model');
 jest.mock('../src/models/AuditLog.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
@@ -30,7 +33,15 @@ const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
 const mockedInterview = Interview as unknown as { findById: jest.Mock; exists: jest.Mock };
 const mockedEvaluation = InterviewEvaluation as unknown as { findOne: jest.Mock; create: jest.Mock };
 const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
+const mockedNotification = Notification as unknown as { insertMany: jest.Mock };
 const mockedAuditLog = AuditLog as unknown as { create: jest.Mock };
+
+const OWNER_ID = new Types.ObjectId().toString();
+
+const notifiedRows = (): Array<Record<string, unknown>> => {
+  expect(mockedNotification.insertMany).toHaveBeenCalledTimes(1);
+  return mockedNotification.insertMany.mock.calls[0][0];
+};
 
 const PASSWORD = 'Adm1n!Passw0rd';
 const passwordHash = hashSync(PASSWORD, 4);
@@ -59,6 +70,7 @@ const VALID_SCORES = { technicalSkills: 4, communication: 5, overallFit: 3 };
 
 let candidate: {
   _id: string;
+  fullName: string;
   jobPositionId: string;
   currentStage: CandidateStage;
   save: jest.Mock;
@@ -108,12 +120,14 @@ beforeEach(() => {
   mockedInterview.exists.mockResolvedValue({ _id: INTERVIEW_ID });
   candidate = {
     _id: CANDIDATE_ID,
+    fullName: 'Jean Martin',
     jobPositionId: new Types.ObjectId().toString(),
     currentStage: CandidateStage.EntretienPlanifie,
     save: jest.fn().mockResolvedValue(undefined),
   };
   mockedCandidate.findById.mockResolvedValue(candidate);
-  mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID });
+  mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID, createdBy: OWNER_ID });
+  mockedNotification.insertMany.mockResolvedValue([]);
   mockedEvaluation.findOne.mockResolvedValue(null);
   mockedEvaluation.create.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: EVALUATION_ID,
@@ -427,6 +441,66 @@ describe('Evaluation submission — FR-36, FR-37', () => {
 
       expect(candidate.currentStage).toBe(CandidateStage.EntretienPlanifie);
       expect(candidate.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('FR-41: the recruiter is notified that an evaluation was submitted', () => {
+    const validScores = {
+      scores: { technicalSkills: 4, communication: 5, overallFit: 4 },
+    };
+
+    it('FR-41: notifies the recruiter responsible for the position', async () => {
+      await submitAs(pierre, validScores);
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].userId)).toBe(OWNER_ID);
+      expect(rows[0].message).toContain('Jean Martin');
+    });
+
+    it('D-055: FR-40 and FR-41 collapse into ONE row with the more specific type', async () => {
+      // Both name the same recipient for the same event, so two rows would say
+      // the same thing twice. The message still carries the stage change.
+      await submitAs(pierre, validScores);
+
+      const rows = notifiedRows();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].type).toBe(NotificationType.EvaluationSoumise);
+      expect(rows[0].message).toContain(CandidateStage.EvaluationCompletee);
+    });
+
+    it('D-055: the submitting responsable is not notified of their own action', async () => {
+      await submitAs(pierre, validScores);
+
+      expect(
+        notifiedRows().filter((r) => String(r.userId) === PIERRE_ID),
+      ).toHaveLength(0);
+    });
+
+    it('D-052: falls back to registeredBy when the position has no createdBy', async () => {
+      mockedJobPosition.findById.mockResolvedValue({ department: DEPT_ID, createdBy: null });
+      (candidate as Record<string, unknown>).registeredBy = String(marie._id);
+
+      await submitAs(pierre, validScores);
+
+      expect(String(notifiedRows()[0].userId)).toBe(String(marie._id));
+    });
+
+    it('D-054: a notification failure does not fail the submission', async () => {
+      mockedNotification.insertMany.mockRejectedValue(new Error('mongo indisponible'));
+
+      const res = await submitAs(pierre, validScores);
+
+      expect(res.status).toBe(201);
+      expect(candidate.currentStage).toBe(CandidateStage.EvaluationCompletee);
+      expect(interview.status).toBe(InterviewStatus.Realise);
+    });
+
+    it('FR-41: a REFUSED submission notifies nobody', async () => {
+      const res = await submitAs(pierre, { scores: { technicalSkills: 4 } });
+
+      expect(res.status).toBe(400);
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
     });
   });
 });
