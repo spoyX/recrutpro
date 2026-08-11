@@ -1,0 +1,223 @@
+// RecrutPro theme — the DESIGN.md design system, applied once.
+//
+// Closes D-012, which deferred the real palette "until the first UI page is
+// built". Every value below is copied verbatim from docs/DESIGN.md; nothing
+// here is invented. See _tokens.scss for the spacing/radius scale.
+//
+// APPROACH: `mat.theme()` supplies the M3 structure (typography ramp, density,
+// component styles), and the exact DESIGN.md role colours are then bound to
+// Angular Material's own system variables (`--mat-sys-*`). Hand-deriving M3
+// tonal palettes from a base hue would have produced role colours CLOSE to
+// DESIGN.md's but not equal to them, and DESIGN.md states its roles exactly —
+// so they are set exactly.
+
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme(
+    (
+      // Structural only. Every role colour is overridden below with the exact
+      // DESIGN.md value, so this palette choice affects nothing visible.
+      color: (primary: mat.$azure-palette, tertiary: mat.$blue-palette),
+      typography: Inter,
+      density: 0,
+    )
+  );
+}
+
+:root {
+  // ---------------------------------------------------------------- surfaces
+  --mat-sys-surface: #f9f9ff;
+  --mat-sys-surface-dim: #d0daef;
+  --mat-sys-surface-bright: #f9f9ff;
+  --mat-sys-surface-container-lowest: #ffffff;
+  --mat-sys-surface-container-low: #eff3ff;
+  --mat-sys-surface-container: #e6eeff;
+  --mat-sys-surface-container-high: #dee9fd;
+  --mat-sys-surface-container-highest: #d9e3f7;
+  --mat-sys-surface-variant: #d9e3f7;
+  --mat-sys-on-surface: #121c2a;
+  --mat-sys-on-surface-variant: #434655;
+  --mat-sys-inverse-surface: #273140;
+  --mat-sys-inverse-on-surface: #ebf1ff;
+  --mat-sys-background: #f9f9ff;
+  --mat-sys-on-background: #121c2a;
+
+  // ----------------------------------------------------------------- outlines
+  --mat-sys-outline: #747686;
+  --mat-sys-outline-variant: #c4c5d7;
+
+  // ------------------------------------------------------------------ primary
+  // DESIGN.md's token block lists primary #0037b0 and primary-container
+  // #1d4ed8, while its prose says "Primary (#1D4ED8) — used for high-emphasis
+  // actions" and "Primary buttons use a solid #1D4ED8 fill". Material fills
+  // buttons from --mat-sys-primary, so #1d4ed8 is bound here to satisfy the
+  // prose's explicit, checkable component rule. #0037b0 is kept below as the
+  // darker tone for hover/pressed. FLAGGED to the human — one line to swap.
+  --mat-sys-primary: #1d4ed8;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #1d4ed8;
+  --mat-sys-on-primary-container: #cad3ff;
+  --mat-sys-inverse-primary: #b7c4ff;
+  --mat-sys-surface-tint: #2151da;
+  --mat-sys-primary-fixed: #dce1ff;
+  --mat-sys-primary-fixed-dim: #b7c4ff;
+  --mat-sys-on-primary-fixed: #001551;
+  --mat-sys-on-primary-fixed-variant: #0039b5;
+  // The token block's own `primary`, kept for pressed/hover states.
+  --recrutpro-primary-dark: #0037b0;
+
+  // ---------------------------------------------------------------- secondary
+  --mat-sys-secondary: #0058be;
+  --mat-sys-on-secondary: #ffffff;
+  --mat-sys-secondary-container: #2170e4;
+  --mat-sys-on-secondary-container: #fefcff;
+  --mat-sys-secondary-fixed: #d8e2ff;
+  --mat-sys-secondary-fixed-dim: #adc6ff;
+  --mat-sys-on-secondary-fixed: #001a42;
+  --mat-sys-on-secondary-fixed-variant: #004395;
+  // DESIGN.md prose: "Secondary (#3B82F6) — focus indicators". Used by the
+  // focus ring in _tokens.scss.
+  --recrutpro-focus: #3b82f6;
+
+  // ----------------------------------------------------------------- tertiary
+  --mat-sys-tertiary: #7f2500;
+  --mat-sys-on-tertiary: #ffffff;
+  --mat-sys-tertiary-container: #a73400;
+  --mat-sys-on-tertiary-container: #ffc9b7;
+  --mat-sys-tertiary-fixed: #ffdbcf;
+  --mat-sys-tertiary-fixed-dim: #ffb59c;
+  --mat-sys-on-tertiary-fixed: #390c00;
+  --mat-sys-on-tertiary-fixed-variant: #832700;
+
+  // -------------------------------------------------------------------- error
+  --mat-sys-error: #ba1a1a;
+  --mat-sys-on-error: #ffffff;
+  --mat-sys-error-container: #ffdad6;
+  --mat-sys-on-error-container: #93000a;
+  // DESIGN.md prose: "Error (#EF4444) — destructive actions or validation
+  // failures". Kept alongside the token block's #ba1a1a rather than replacing
+  // it; both are stated in DESIGN.md. FLAGGED with the primary question above.
+  --recrutpro-error-bright: #ef4444;
+
+  // ------------------------------------------------------------- typography
+  // DESIGN.md's ramp, mapped onto the M3 typescale slots Material actually
+  // renders. Shorthand order: weight size/line-height family.
+  --mat-sys-headline-large: 700 36px/44px Inter, sans-serif;
+  --mat-sys-headline-medium: 600 28px/36px Inter, sans-serif;
+  --mat-sys-headline-small: 600 24px/32px Inter, sans-serif; // headline-lg-mobile
+  --mat-sys-title-large: 600 20px/28px Inter, sans-serif;
+  --mat-sys-title-medium: 600 20px/28px Inter, sans-serif;
+  --mat-sys-body-large: 400 18px/28px Inter, sans-serif;
+  --mat-sys-body-medium: 400 16px/24px Inter, sans-serif;
+  --mat-sys-body-small: 400 14px/20px Inter, sans-serif;
+  --mat-sys-label-large: 500 14px/20px Inter, sans-serif;
+  --mat-sys-label-medium: 500 14px/20px Inter, sans-serif;
+  --mat-sys-label-small: 600 12px/16px Inter, sans-serif;
+
+  // DESIGN.md headline tracking, which the `font` shorthand cannot carry.
+  --recrutpro-tracking-headline-xl: -0.02em;
+  --recrutpro-tracking-headline-lg: -0.01em;
+  --recrutpro-tracking-label-sm: 0.05em;
+
+  // The DECOMPOSED typography tokens. These are NOT redundant with the
+  // shorthands above: Angular Material's component tokens read the individual
+  // parts (`--mat-sys-body-medium-size`, `-weight`, …), not the `font`
+  // shorthand. Setting only the shorthand leaves every Material component on
+  // the default Roboto ramp while hand-written CSS looks correct — the theme
+  // would appear applied everywhere it was checked and nowhere else.
+  --mat-sys-headline-large-font: Inter, sans-serif;
+  --mat-sys-headline-large-size: 36px;
+  --mat-sys-headline-large-line-height: 44px;
+  --mat-sys-headline-large-weight: 700;
+  --mat-sys-headline-large-tracking: -0.02em;
+
+  --mat-sys-headline-medium-font: Inter, sans-serif;
+  --mat-sys-headline-medium-size: 28px;
+  --mat-sys-headline-medium-line-height: 36px;
+  --mat-sys-headline-medium-weight: 600;
+  --mat-sys-headline-medium-tracking: -0.01em;
+
+  --mat-sys-headline-small-font: Inter, sans-serif;
+  --mat-sys-headline-small-size: 24px;
+  --mat-sys-headline-small-line-height: 32px;
+  --mat-sys-headline-small-weight: 600;
+  --mat-sys-headline-small-tracking: 0;
+
+  --mat-sys-title-large-font: Inter, sans-serif;
+  --mat-sys-title-large-size: 20px;
+  --mat-sys-title-large-line-height: 28px;
+  --mat-sys-title-large-weight: 600;
+  --mat-sys-title-large-tracking: 0;
+
+  --mat-sys-title-medium-font: Inter, sans-serif;
+  --mat-sys-title-medium-size: 20px;
+  --mat-sys-title-medium-line-height: 28px;
+  --mat-sys-title-medium-weight: 600;
+  --mat-sys-title-medium-tracking: 0;
+
+  --mat-sys-body-large-font: Inter, sans-serif;
+  --mat-sys-body-large-size: 18px;
+  --mat-sys-body-large-line-height: 28px;
+  --mat-sys-body-large-weight: 400;
+  --mat-sys-body-large-tracking: 0;
+
+  --mat-sys-body-medium-font: Inter, sans-serif;
+  --mat-sys-body-medium-size: 16px;
+  --mat-sys-body-medium-line-height: 24px;
+  --mat-sys-body-medium-weight: 400;
+  --mat-sys-body-medium-tracking: 0;
+
+  --mat-sys-body-small-font: Inter, sans-serif;
+  --mat-sys-body-small-size: 14px;
+  --mat-sys-body-small-line-height: 20px;
+  --mat-sys-body-small-weight: 400;
+  --mat-sys-body-small-tracking: 0;
+
+  --mat-sys-label-large-font: Inter, sans-serif;
+  --mat-sys-label-large-size: 14px;
+  --mat-sys-label-large-line-height: 20px;
+  --mat-sys-label-large-weight: 500;
+  --mat-sys-label-large-tracking: 0;
+
+  --mat-sys-label-medium-font: Inter, sans-serif;
+  --mat-sys-label-medium-size: 14px;
+  --mat-sys-label-medium-line-height: 20px;
+  --mat-sys-label-medium-weight: 500;
+  --mat-sys-label-medium-tracking: 0;
+
+  --mat-sys-label-small-font: Inter, sans-serif;
+  --mat-sys-label-small-size: 12px;
+  --mat-sys-label-small-line-height: 16px;
+  --mat-sys-label-small-weight: 600;
+  --mat-sys-label-small-tracking: 0.05em;
+
+  // ----------------------------------------------------------------- corners
+  // DESIGN.md's shape language, bound to the tokens Material components use.
+  // Left at Material defaults these are 4/8/12/16/28px, so `extra-large` alone
+  // disagrees with DESIGN.md (24px).
+  --mat-sys-corner-none: 0;
+  --mat-sys-corner-extra-small: 0.25rem; // 4px  — checkboxes, tags
+  --mat-sys-corner-small: 0.5rem; // 8px  — buttons, inputs, cards
+  --mat-sys-corner-medium: 0.75rem; // 12px
+  --mat-sys-corner-large: 1rem; // 16px — modals
+  --mat-sys-corner-extra-large: 1.5rem; // 24px — DESIGN.md xl
+  --mat-sys-corner-full: 9999px;
+}
+
+// DESIGN.md: "Standard Elements (Buttons, Inputs, Cards) use ... 8px".
+// M3's default button shape is `corner-full`, i.e. a PILL — visibly wrong
+// against that rule, and it would have applied to every button in the app
+// while the hand-styled login button looked correct. Set through Material's
+// own overrides API rather than by fighting component CSS.
+// Shape is per-variant in Material's token set, so every variant is named —
+// missing one would leave that button style a pill.
+@include mat.button-overrides(
+  (
+    filled-container-shape: 0.5rem,
+    outlined-container-shape: 0.5rem,
+    protected-container-shape: 0.5rem,
+    text-container-shape: 0.5rem,
+    tonal-container-shape: 0.5rem,
+  )
+);

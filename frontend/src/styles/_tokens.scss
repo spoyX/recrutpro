@@ -1,0 +1,54 @@
+// DESIGN.md's non-colour scales: spacing, radius, elevation, layout.
+// Copied verbatim from docs/DESIGN.md. Pages consume these rather than
+// hard-coding pixels, so "all margins and paddings must be multiples of 4px"
+// is enforced by there being nothing else to reach for.
+
+:root {
+  // ------------------------------------------------------------------ spacing
+  --sp-base: 4px;
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 16px;
+  --sp-lg: 24px; // DESIGN.md: standard container padding
+  --sp-xl: 32px;
+  --sp-2xl: 48px;
+  --sp-gutter: 24px;
+  --sp-margin-mobile: 16px;
+  --sp-margin-desktop: 40px;
+
+  // ------------------------------------------------------------------- radius
+  // NOTE: DESIGN.md's token block and its prose disagree on the NAMES here.
+  // The token block has DEFAULT 0.5rem (8px) and md 0.75rem (12px); the prose
+  // says "Standard Elements (Buttons, Inputs, Cards) use rounded-md (8px)".
+  // The VALUES the prose attaches to components are what a user can see, so
+  // components below use 8px. Both scales are exposed under their token-block
+  // names so nothing is lost. FLAGGED to the human.
+  --radius-sm: 0.25rem; // 4px  — checkboxes, tags
+  --radius-default: 0.5rem; // 8px  — buttons, inputs, cards (the prose's "md")
+  --radius-md: 0.75rem; // 12px
+  --radius-lg: 1rem; // 16px — modals, feature sections
+  --radius-xl: 1.5rem; // 24px
+  --radius-full: 9999px;
+
+  // ---------------------------------------------------------------- elevation
+  // DESIGN.md: tonal layers plus ambient shadows, no heavy gradients.
+  --elevation-1: 0 1px 3px rgb(0 0 0 / 0.1); // cards, sidebar
+  --elevation-2: 0 10px 15px -3px rgb(0 0 0 / 0.1); // modals, dropdowns
+  --border-level-1: 1px solid #e5e7eb; // DESIGN.md: 1px border on all L1 containers
+
+  // ------------------------------------------------------------------- layout
+  --layout-max-width: 1440px;
+  --layout-sidebar-width: 280px;
+  --layout-row-height: 56px; // DESIGN.md: data table row height
+  --input-border: #d1d5db;
+  --text-slate: #374151; // DESIGN.md prose: high-contrast slate for dense tables
+}
+
+// DESIGN.md: "Focus states should mirror the element's roundedness with a 2px
+// offset ring in the secondary blue." Defined once so every page inherits an
+// accessible focus indicator rather than each re-inventing one.
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--recrutpro-focus);
+  outline-offset: 2px;
+  border-radius: inherit;
+}

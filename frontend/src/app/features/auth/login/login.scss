@@ -1,0 +1,109 @@
+// DESIGN.md: Level 0 canvas, a Level 1 card, 24px container padding, 8px
+// radius on standard elements, generous whitespace as a functional separator.
+
+.login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-md);
+  background-color: var(--mat-sys-background);
+}
+
+.login__card {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+
+  // DESIGN.md Elevation Level 1: white surface, subtle shadow, and a 1px
+  // border on ALL Level 1 containers to hold definition against the canvas.
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-lg); // a modal-scale surface
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+}
+
+.login__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-xl);
+}
+
+.login__logo {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  mat-icon {
+    // Material's default icon sizing is 24px; keep it centred in the tile.
+    display: block;
+  }
+}
+
+.login__title {
+  font: var(--mat-sys-headline-medium);
+  letter-spacing: var(--recrutpro-tracking-headline-lg);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.login__subtitle {
+  font: var(--mat-sys-body-sm, var(--mat-sys-body-small));
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+// Both messages share a layout; only the colour role differs.
+.login__error,
+.login__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-default);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    flex: none;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// DESIGN.md: "Chips/Badges use low-saturation background tints with
+// high-saturation text of the same hue." The same treatment reads well for
+// inline messaging, and keeps error styling off a pure-red block.
+.login__error {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.login__notice {
+  background-color: var(--mat-sys-secondary-fixed);
+  color: var(--mat-sys-on-secondary-fixed);
+}
+
+.login__submit {
+  // DESIGN.md: high-priority actions remain solid; full width reads as the
+  // single obvious next step on a one-action screen.
+  width: 100%;
+  height: 48px;
+  border-radius: var(--radius-default);
+  font: var(--mat-sys-label-large);
+}

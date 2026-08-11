@@ -1,0 +1,79 @@
+<main class="login">
+  <section class="login__card" aria-labelledby="login-title">
+    <header class="login__header">
+      <span class="login__logo" aria-hidden="true">
+        <mat-icon>groups</mat-icon>
+      </span>
+      <h1 id="login-title" class="login__title">RecrutPro</h1>
+      <p class="login__subtitle">Connectez-vous pour accéder à votre espace de recrutement.</p>
+    </header>
+
+    @if (submitting()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Connexion en cours" />
+    }
+
+    <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <!-- FR-1: an email field and a password field. -->
+      <mat-form-field appearance="outline">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          formControlName="email"
+          autocomplete="username"
+          placeholder="prenom.nom@entreprise.fr"
+        />
+        @if (form.controls.email.touched && form.controls.email.hasError('required')) {
+          <mat-error>L'email est requis.</mat-error>
+        } @else if (form.controls.email.touched && form.controls.email.hasError('email')) {
+          <mat-error>Saisissez une adresse email valide, par exemple prenom.nom&#64;entreprise.fr.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Mot de passe</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+        />
+        @if (form.controls.password.touched && form.controls.password.hasError('required')) {
+          <mat-error>Le mot de passe est requis.</mat-error>
+        }
+      </mat-form-field>
+
+      <!--
+        FR-3: ONE message for every credential failure, sent by the server so
+        a wrong password, an unknown address and a deactivated account are
+        indistinguishable. role="alert" so a screen reader announces it.
+      -->
+      @if (errorMessage()) {
+        <p class="login__error" role="alert">
+          <mat-icon aria-hidden="true">error_outline</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </p>
+      }
+
+      <!-- FR-10: authenticated, but locked out until the password is changed. -->
+      @if (mustChangePassword()) {
+        <p class="login__notice" role="alert">
+          <mat-icon aria-hidden="true">lock_reset</mat-icon>
+          <span>
+            Votre mot de passe temporaire doit être changé avant de continuer.
+            L'écran de changement de mot de passe n'est pas encore disponible.
+          </span>
+        </p>
+      }
+
+      <button
+        matButton="filled"
+        type="submit"
+        class="login__submit"
+        [disabled]="submitting()"
+      >
+        {{ submitting() ? 'Connexion…' : 'Se connecter' }}
+      </button>
+    </form>
+  </section>
+</main>

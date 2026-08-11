@@ -1,5 +1,6 @@
-import { Role, CandidateStage, InterviewStatus, AuditAction, AuditTargetType } from '../common/constants';
+import { Role, CandidateStage, InterviewStatus } from '../common/constants';
 import { DashboardData } from '../services/dashboard.service';
+import { PublicAuditLog, toPublicAuditLog } from './auditLog.view';
 
 /**
  * The "V" of MVC (D-003): the JSON shape each role's dashboard takes on the
@@ -33,15 +34,12 @@ export interface DashboardInterviewRow {
   jobPosition: { id: string; title: string } | null;
 }
 
-export interface DashboardAuditRow {
-  id: string;
-  action: AuditAction;
-  targetType: AuditTargetType;
-  targetId: string;
-  timestamp: string;
-  /** The ACTOR. Populated to a name because an ObjectId is unreadable (NFR-09). */
-  user: { id: string; name: string } | null;
-}
+/**
+ * FR-47's audit rows are the SAME shape `GET /audit-logs` (UC-04) returns —
+ * shared rather than redeclared, so the dashboard and the audit view can never
+ * drift into showing the same entry differently.
+ */
+export type DashboardAuditRow = PublicAuditLog;
 
 export type PublicDashboard =
   | {
@@ -115,19 +113,6 @@ export const toPublicDashboard = (data: DashboardData): PublicDashboard => {
   return {
     role: Role.Administrateur,
     activeUsers: data.activeUsers,
-    recentAuditEntries: data.recentAuditEntries.map((entry) => {
-      const actor = entry.userId as Ref;
-      return {
-        id: String(entry._id),
-        action: entry.action,
-        targetType: entry.targetType,
-        targetId: String(entry.targetId),
-        timestamp: entry.timestamp.toISOString(),
-        user:
-          actor && typeof actor === 'object' && 'name' in actor
-            ? { id: String(actor._id), name: String(actor.name) }
-            : null,
-      };
-    }),
+    recentAuditEntries: data.recentAuditEntries.map(toPublicAuditLog),
   };
 };

@@ -1,39 +1,47 @@
+// RecrutPro global styles.
+//
+// The design system lives in styles/_theme.scss (DESIGN.md colours +
+// typography, bound to Angular Material's system variables) and
+// styles/_tokens.scss (spacing, radius, elevation, layout). D-012 is closed:
+// the placeholder azure-blue palette is gone.
 
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
-@use '@angular/material' as mat;
+@use 'styles/theme';
+@use 'styles/tokens';
 
-html {
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Inter, // DESIGN.md: Inter throughout
-    density: 0,
-  ));
+html,
+body {
+  height: 100%;
 }
 
-html, body { height: 100%; }
-
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
+  // DESIGN.md defines one light palette. No dark scheme is specified, so the
+  // app commits to light rather than inventing a second set of tokens.
   color-scheme: light;
 
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
+  background-color: var(--mat-sys-background);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
 }
 
-/* Global styles go here. Full DESIGN.md palette lands with the first UI task. */
+// DESIGN.md: headlines carry slight negative tracking, which the `font`
+// shorthand cannot express.
+h1 {
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--recrutpro-tracking-headline-xl);
+  margin: 0;
+}
+
+h2 {
+  font: var(--mat-sys-headline-medium);
+  letter-spacing: var(--recrutpro-tracking-headline-lg);
+  margin: 0;
+}
+
+// DESIGN.md: "Small labels use an uppercase treatment with increased tracking
+// to differentiate functional UI text from content-heavy body text."
+.label-sm {
+  font: var(--mat-sys-label-small);
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+  text-transform: uppercase;
+}
