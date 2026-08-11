@@ -361,6 +361,13 @@ export const decideFinalOutcome = async (
 
   candidate.currentStage = targetStage;
   candidate.decisionComment = comment;
+  // D-058: stamped on BOTH terminal outcomes, not only « Accepté ». The field
+  // records WHEN the decision was taken, so a null value must mean exactly one
+  // thing — "not yet decided". Stamping only acceptances would make null
+  // ambiguous between that and "decided negatively", which is how a metric
+  // quietly goes wrong. The time-to-hire report filters to « Accepté » itself.
+  // Server-stamped here, never from the request (the same rule as D-018).
+  candidate.decidedAt = new Date();
   await candidate.save();
 
   // FR-11 / rule 4 — consistent with every other transition.

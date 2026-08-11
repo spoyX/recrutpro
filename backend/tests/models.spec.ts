@@ -143,6 +143,57 @@ describe('Mongoose schemas — ARCHITECTURE.md Section 7', () => {
     expect(Candidate.schema.path('registeredAt').options.immutable).toBe(true);
   });
 
+  it('D-058: decidedAt is unset on a new candidate', async () => {
+    const candidate = new Candidate({
+      fullName: 'Jean Martin',
+      email: 'jean@example.com',
+      phone: '0600000000',
+      jobPositionId: oid(),
+      registeredBy: oid(),
+    });
+    expect(await validationError(candidate)).toBeUndefined();
+    expect(candidate.decidedAt).toBeUndefined();
+  });
+
+  it('D-058: decidedAt CAN be set on an existing candidate (immutable:true would not allow this)', () => {
+    // The whole point of using a function rather than `immutable: true`.
+    // Mongoose's `immutable: true` silently ignores a set on an already-saved
+    // document — which is exactly when this field is written — so `true` would
+    // leave it permanently null and the time-to-hire report permanently empty.
+    const candidate = new Candidate({
+      fullName: 'Jean Martin',
+      email: 'jean@example.com',
+      phone: '0600000000',
+      jobPositionId: oid(),
+      registeredBy: oid(),
+    });
+    candidate.isNew = false;
+
+    const stamped = new Date('2026-08-11T10:00:00.000Z');
+    candidate.decidedAt = stamped;
+
+    expect(candidate.decidedAt?.getTime()).toBe(stamped.getTime());
+  });
+
+  it('D-058: decidedAt is set-once — a second write cannot move it', () => {
+    const candidate = new Candidate({
+      fullName: 'Jean Martin',
+      email: 'jean@example.com',
+      phone: '0600000000',
+      jobPositionId: oid(),
+      registeredBy: oid(),
+    });
+    candidate.isNew = false;
+
+    const first = new Date('2026-08-11T10:00:00.000Z');
+    candidate.decidedAt = first;
+    candidate.decidedAt = new Date('2030-01-01T00:00:00.000Z');
+
+    // A rewritten decision date would silently falsify every time-to-hire
+    // figure already reported.
+    expect(candidate.decidedAt?.getTime()).toBe(first.getTime());
+  });
+
   it('ARCHITECTURE.md Section 8: currentStage accepts only the fixed stages', async () => {
     const err = await validationError(
       new Candidate({

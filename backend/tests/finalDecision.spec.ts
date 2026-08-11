@@ -59,6 +59,7 @@ let candidate: {
   registeredBy: string;
   registeredAt: Date;
   decisionComment?: string;
+  decidedAt?: Date;
   save: jest.Mock;
 };
 
@@ -338,6 +339,66 @@ describe('Final decision — FR-29, FR-39', () => {
       await decideAs(pierre, { targetStage: CandidateStage.Accepte });
 
       expect(mockedAuditLog.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('D-058: decidedAt, the time-to-hire end date', () => {
+    it('D-058: stamped on ACCEPTANCE', async () => {
+      const before = Date.now();
+
+      const res = await decideAs(pierre, {
+        targetStage: CandidateStage.Accepte,
+        decisionComment: 'Excellent profil.',
+      });
+
+      expect(res.status).toBe(200);
+      expect(candidate.decidedAt).toBeInstanceOf(Date);
+      expect(candidate.decidedAt!.getTime()).toBeGreaterThanOrEqual(before);
+      expect(res.body.decidedAt).toBe(candidate.decidedAt!.toISOString());
+    });
+
+    it('D-058: stamped on REJECTION too, so null means exactly "not yet decided"', async () => {
+      await decideAs(pierre, {
+        targetStage: CandidateStage.Rejete,
+        decisionComment: 'Profil insuffisant.',
+      });
+
+      // Stamping only acceptances would make a null decidedAt ambiguous
+      // between "undecided" and "decided negatively".
+      expect(candidate.decidedAt).toBeInstanceOf(Date);
+    });
+
+    it('D-058: null before any decision is taken', async () => {
+      candidate.currentStage = CandidateStage.EntretienPlanifie;
+
+      const res = await decideAs(pierre, {
+        targetStage: CandidateStage.Accepte,
+        decisionComment: 'Trop tôt',
+      });
+
+      expect(res.status).toBe(409);
+      expect(candidate.decidedAt).toBeUndefined();
+    });
+
+    it('D-018 rule reused: a client-supplied decidedAt is ignored', async () => {
+      const forged = new Date('2000-01-01T00:00:00.000Z');
+
+      await decideAs(pierre, {
+        targetStage: CandidateStage.Accepte,
+        decisionComment: 'Excellent profil.',
+        decidedAt: forged,
+      });
+
+      // A forged end date would falsify the time-to-hire report at will.
+      expect(candidate.decidedAt!.getTime()).not.toBe(forged.getTime());
+      expect(candidate.decidedAt!.getTime()).toBeGreaterThan(forged.getTime());
+    });
+
+    it('D-058: a REFUSED decision stamps nothing', async () => {
+      const res = await decideAs(pierre, { targetStage: CandidateStage.Accepte });
+
+      expect(res.status).toBe(400);
+      expect(candidate.decidedAt).toBeUndefined();
     });
   });
 

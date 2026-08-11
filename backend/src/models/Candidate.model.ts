@@ -11,6 +11,7 @@ export interface ICandidate extends Document {
   registeredAt: Date;
   rejectionReason?: string;
   decisionComment?: string;
+  decidedAt?: Date;
 }
 
 const candidateSchema = new Schema<ICandidate>({
@@ -63,6 +64,25 @@ const candidateSchema = new Schema<ICandidate>({
   // not a rejection reason. Optional at the schema level because it applies
   // only to the terminal transition; the service makes it mandatory there.
   decisionComment: { type: String, trim: true },
+
+  // D-058: WHEN the FR-29/FR-39 final decision was taken. The end date of the
+  // time-to-hire report, whose start date is `registeredAt` (D-018, added for
+  // exactly this purpose). Server-stamped by `decideFinalOutcome` and never
+  // accepted from a request — the controller destructures named fields, so
+  // there is no path by which a client value reaches here.
+  //
+  // NOT derived from AuditLog: D-052 established that the audit trail must not
+  // become load-bearing for business logic, and there is no index on
+  // (action, targetId) to derive it efficiently anyway.
+  //
+  // `immutable` is a FUNCTION, not `true`. Mongoose's `immutable: true` only
+  // permits a value at CREATION — it silently ignores a set on an already-saved
+  // document, which is precisely when this field is written, so `true` would
+  // make the field permanently null. As a function it is mutable while unset
+  // and immutable once written: set-once semantics, which is what "immutable"
+  // means for a field stamped mid-life. (`registeredAt` can use `true` because
+  // it is stamped at creation.)
+  decidedAt: { type: Date, immutable: (doc: ICandidate) => doc.decidedAt != null },
 });
 
 // D-018: stamp registeredAt on the server for every new candidate, overwriting
