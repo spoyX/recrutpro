@@ -12,6 +12,7 @@ import jobPositionRoutes from './routes/jobPosition.routes';
 import candidateRoutes from './routes/candidate.routes';
 import interviewRoutes from './routes/interview.routes';
 import notificationRoutes from './routes/notification.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 export const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/v1/job-positions', jobPositionRoutes);
 app.use('/api/v1/candidates', candidateRoutes);
 app.use('/api/v1/interviews', interviewRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
 
 // Must stay last, and in this order: unmatched routes become an AppError,
 // which the error handler then serialises as {error:{code,message}}.
