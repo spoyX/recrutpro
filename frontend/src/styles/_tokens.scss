@@ -17,15 +17,15 @@
   --sp-margin-desktop: 40px;
 
   // ------------------------------------------------------------------- radius
-  // NOTE: DESIGN.md's token block and its prose disagree on the NAMES here.
-  // The token block has DEFAULT 0.5rem (8px) and md 0.75rem (12px); the prose
-  // says "Standard Elements (Buttons, Inputs, Cards) use rounded-md (8px)".
-  // The VALUES the prose attaches to components are what a user can see, so
-  // components below use 8px. Both scales are exposed under their token-block
-  // names so nothing is lost. FLAGGED to the human.
+  // DESIGN.md's `rounded` scale. Note it is a DIFFERENT namespace from the
+  // `spacing` scale above, which also has sm/md/lg/xl at other values — hence
+  // the separate --radius-* / --sp-* prefixes here.
+  // DESIGN.md briefly called the 8px step "rounded-md" in prose while the
+  // token block named it DEFAULT; corrected in DESIGN.md on 2026-08-12 (D-063).
+  // Standard elements are 8px = --radius-default.
   --radius-sm: 0.25rem; // 4px  — checkboxes, tags
-  --radius-default: 0.5rem; // 8px  — buttons, inputs, cards (the prose's "md")
-  --radius-md: 0.75rem; // 12px
+  --radius-default: 0.5rem; // 8px  — buttons, inputs, cards
+  --radius-md: 0.75rem; // 12px — larger panels
   --radius-lg: 1rem; // 16px — modals, feature sections
   --radius-xl: 1.5rem; // 24px
   --radius-full: 9999px;
