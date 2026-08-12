@@ -1,0 +1,155 @@
+<header class="topbar">
+  <div class="topbar__inner">
+    <span class="topbar__brand">
+      <span class="topbar__logo" aria-hidden="true"><mat-icon>groups</mat-icon></span>
+      RecrutPro
+    </span>
+
+    @if (auth.currentUser(); as user) {
+      <span class="topbar__identity">
+        <span class="topbar__name">{{ user.name }}</span>
+        <span class="topbar__role label-sm">{{ user.role }}</span>
+      </span>
+    }
+
+    <button matButton type="button" (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      Se déconnecter
+    </button>
+  </div>
+</header>
+
+<main class="page">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement du tableau de bord" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      <button matButton type="button" (click)="load()">Réessayer</button>
+    </p>
+  }
+
+  @if (data(); as dashboard) {
+    <h1 class="page__title">Tableau de bord</h1>
+
+    <!--
+      The role decides the SHAPE, never access — that is settled server-side
+      (D-057, NFR-04). This switch is presentation only.
+    -->
+    @switch (dashboard.role) {
+      <!-- ---------------------------------------------------- FR-45 -->
+      @case ('Recruteur') {
+        <section class="grid grid--tiles" aria-label="Indicateurs">
+          <app-stat-tile
+            label="Postes ouverts"
+            [value]="dashboard.openPositions"
+            hint="Statut « Ouvert » uniquement"
+          />
+        </section>
+
+        <section class="card" aria-labelledby="pipeline-title">
+          <h2 id="pipeline-title" class="card__title">Répartition des candidats par étape</h2>
+          <app-pipeline-breakdown [breakdown]="dashboard.candidatesByStage" />
+        </section>
+
+        <section class="card" aria-labelledby="recent-title">
+          <h2 id="recent-title" class="card__title">Derniers candidats ajoutés</h2>
+          @if (dashboard.recentCandidates.length) {
+            <ul class="rows">
+              @for (candidate of dashboard.recentCandidates; track candidate.id) {
+                <li class="rows__row">
+                  <span class="rows__primary">{{ candidate.fullName }}</span>
+                  <span class="rows__secondary">
+                    {{ candidate.jobPosition?.title ?? 'Poste inconnu' }}
+                  </span>
+                  <app-stage-chip [stage]="candidate.currentStage" />
+                  <span class="rows__meta">{{ candidate.registeredAt | date: 'dd/MM/yyyy' }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty">Aucun candidat enregistré pour le moment.</p>
+          }
+        </section>
+      }
+
+      <!-- ---------------------------------------------------- FR-46 -->
+      @case ('ResponsableHierarchique') {
+        <section class="grid grid--tiles" aria-label="Indicateurs">
+          <app-stat-tile
+            label="Candidats en cours"
+            [value]="dashboard.departmentCandidatesInProgress"
+            hint="Dans votre département, hors étapes terminales"
+          />
+          <app-stat-tile
+            label="Évaluations en attente"
+            [value]="dashboard.pendingEvaluations"
+            hint="Entretiens passés restant à évaluer"
+          />
+        </section>
+
+        <section class="card" aria-labelledby="dept-pipeline-title">
+          <h2 id="dept-pipeline-title" class="card__title">Pipeline de votre département</h2>
+          <app-pipeline-breakdown [breakdown]="dashboard.candidatesByStage" />
+        </section>
+
+        <section class="card" aria-labelledby="upcoming-title">
+          <h2 id="upcoming-title" class="card__title">Entretiens à venir</h2>
+          @if (dashboard.upcomingInterviews.length) {
+            <ul class="rows">
+              @for (interview of dashboard.upcomingInterviews; track interview.id) {
+                <li class="rows__row">
+                  <span class="rows__primary">
+                    {{ interview.candidate?.fullName ?? 'Candidat inconnu' }}
+                  </span>
+                  <span class="rows__secondary">
+                    {{ interview.jobPosition?.title ?? 'Poste inconnu' }}
+                  </span>
+                  <span class="rows__meta rows__meta--strong">
+                    {{ interview.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}
+                  </span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty">Aucun entretien à venir.</p>
+          }
+        </section>
+      }
+
+      <!-- ---------------------------------------------------- FR-47 -->
+      @case ('Administrateur') {
+        <section class="grid grid--tiles" aria-label="Indicateurs">
+          <app-stat-tile
+            label="Utilisateurs actifs"
+            [value]="dashboard.activeUsers"
+            hint="Comptes non désactivés"
+          />
+        </section>
+
+        <section class="card" aria-labelledby="audit-title">
+          <h2 id="audit-title" class="card__title">Dernières entrées du journal d'audit</h2>
+          @if (dashboard.recentAuditEntries.length) {
+            <ul class="rows">
+              @for (entry of dashboard.recentAuditEntries; track entry.id) {
+                <li class="rows__row">
+                  <span class="rows__primary">{{ humanise(entry.action) }}</span>
+                  <span class="rows__secondary">{{ entry.targetType }}</span>
+                  <span class="rows__secondary">
+                    {{ entry.user?.name ?? 'Utilisateur supprimé' }}
+                  </span>
+                  <span class="rows__meta">{{ entry.timestamp | date: 'dd/MM/yyyy HH:mm' }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty">Aucune action enregistrée.</p>
+          }
+        </section>
+      }
+    }
+  }
+</main>

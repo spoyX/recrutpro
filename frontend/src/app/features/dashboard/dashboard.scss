@@ -1,0 +1,188 @@
+// DESIGN.md: 1440px max content width, 12-column feel with 24px gutters,
+// 40px desktop / 16px mobile side margins, Level 1 cards on a Level 0 canvas.
+//
+// NOTE: DESIGN.md also specifies a 280px fixed sidebar for dashboard layouts.
+// It is deliberately NOT built yet — every other page is still unbuilt, so a
+// sidebar would be a column of dead links. It lands with the second page,
+// when there is somewhere to navigate to.
+
+.topbar {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border-bottom: var(--border-level-1);
+  box-shadow: var(--elevation-1);
+}
+
+.topbar__inner {
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: var(--sp-md) var(--sp-margin-desktop);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  // Pushes identity + logout to the right.
+  margin-right: auto;
+}
+
+.topbar__logo {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.topbar__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.topbar__name {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface);
+}
+
+.topbar__role {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+.page {
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: var(--sp-xl) var(--sp-margin-desktop) var(--sp-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-lg); // DESIGN.md gutter
+}
+
+.page__title {
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--recrutpro-tracking-headline-xl);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.page__error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-small);
+}
+
+// A fluid tile row rather than a hard 12-column grid: the three roles have
+// one, one and two tiles, and auto-fit keeps every case sensible.
+.grid--tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-gutter);
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+}
+
+.card__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0 0 var(--sp-md);
+}
+
+// DESIGN.md: "Lists & Tables … subtle dividers. Row height 56px."
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rows__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  min-height: var(--layout-row-height);
+  padding: var(--sp-sm) 0;
+  border-bottom: var(--border-level-1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.rows__primary {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+.rows__secondary {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+  flex: 1 1 30%;
+  min-width: 0;
+}
+
+.rows__meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rows__meta--strong {
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-label-large);
+}
+
+.empty {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+// DESIGN.md: "Mobile Transition to a single-column layout with 16px side
+// margins."
+@media (max-width: 700px) {
+  .topbar__inner,
+  .page {
+    padding-left: var(--sp-margin-mobile);
+    padding-right: var(--sp-margin-mobile);
+  }
+
+  .rows__row {
+    flex-wrap: wrap;
+    gap: var(--sp-sm);
+  }
+
+  .rows__primary,
+  .rows__secondary {
+    flex-basis: 100%;
+  }
+}

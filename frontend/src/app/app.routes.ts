@@ -8,12 +8,10 @@ export const routes: Routes = [
     title: 'Connexion — RecrutPro',
   },
   {
-    // PLACEHOLDER. The real FR-45/FR-46/FR-47 dashboard is the next task; this
-    // exists only so the login flow has a real destination to navigate to and
-    // can be tested end to end. Replace it, do not build on it.
+    // FR-45 / FR-46 / FR-47. The role-scoped payload is decided server-side
+    // (D-057), so one route serves all three dashboards.
     path: 'dashboard',
-    loadComponent: () =>
-      import('./features/dashboard/dashboard-placeholder').then((m) => m.DashboardPlaceholder),
+    loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
     title: 'Tableau de bord — RecrutPro',
   },
   { path: '**', redirectTo: 'login' },
