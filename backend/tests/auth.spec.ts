@@ -324,3 +324,86 @@ describe('POST /auth/login — FR-1, FR-2, FR-3', () => {
     expect(mockedFindOne).not.toHaveBeenCalled();
   });
 });
+
+describe('GET /auth/me — session rehydration (D-070, closes D-065)', () => {
+  const signIn = async (user: Record<string, unknown>): Promise<string[]> => {
+    findOneResolves(user);
+    (User.findById as unknown as jest.Mock).mockResolvedValue(user);
+    const res = await login({ email: user.email, password: PASSWORD });
+    expect(res.status).toBe(200);
+    return res.headers['set-cookie'] as unknown as string[];
+  };
+
+  const me = (cookie?: string[]) => {
+    const req = request(app).get('/api/v1/auth/me');
+    return cookie ? req.set('Cookie', cookie) : req;
+  };
+
+  it('returns the signed-in user for a valid session cookie', async () => {
+    const user = makeUser();
+    const cookie = await signIn(user);
+
+    const res = await me(cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      id: String(user._id),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      departmentId: String(user.departmentId),
+      mustChangePassword: false,
+    });
+  });
+
+  it('rule 3: never returns the password hash', async () => {
+    const cookie = await signIn(makeUser());
+
+    const res = await me(cookie);
+
+    expect(res.body.passwordHash).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain('$2');
+  });
+
+  it('401s an anonymous caller — that is the normal "signed out" answer', async () => {
+    const res = await me();
+
+    expect(res.status).toBe(401);
+  });
+
+  it('D-027: reflects a role changed AFTER login, because the user is reloaded per request', async () => {
+    const user = makeUser();
+    const cookie = await signIn(user);
+
+    // An administrator changes the role mid-session (FR-7). The session stores
+    // only userId/role (D-024), so a stale copy would keep the old answer.
+    (User.findById as unknown as jest.Mock).mockResolvedValue(
+      makeUser({ role: Role.Administrateur, departmentId: undefined }),
+    );
+
+    const res = await me(cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe(Role.Administrateur);
+    expect(res.body.departmentId).toBeNull();
+  });
+
+  it('FR-8: a session whose account was deactivated is refused', async () => {
+    const cookie = await signIn(makeUser());
+    (User.findById as unknown as jest.Mock).mockResolvedValue(makeUser({ isActive: false }));
+
+    const res = await me(cookie);
+
+    expect(res.status).toBe(401);
+  });
+
+  it('FR-10: reachable while a password change is forced — a locked-out user still has an identity', async () => {
+    const user = makeUser({ mustChangePassword: true });
+    const cookie = await signIn(user);
+
+    const res = await me(cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.mustChangePassword).toBe(true);
+  });
+});

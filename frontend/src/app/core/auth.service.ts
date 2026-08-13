@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap, catchError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 /** The public user shape the API returns (backend views/user.view.ts). */
@@ -45,6 +45,30 @@ export class AuthService {
         { withCredentials: true },
       )
       .pipe(tap((user) => this.currentUser.set(user)));
+  }
+
+  /**
+   * Rehydrate `currentUser` from the session cookie (D-070, closes D-065).
+   *
+   * `login()` is the only other writer, and its response arrives exactly once
+   * — so before this existed a browser refresh left the app signed in on the
+   * server while the client believed nobody was there: a blank topbar, and
+   * role-gated navigation hidden from users entitled to it.
+   *
+   * A 401 is the NORMAL anonymous answer, not an error: it resolves to null so
+   * the app boots for signed-out visitors too. It never rejects, because it
+   * runs during bootstrap and a rejection would fail the whole app.
+   */
+  restoreSession(): Observable<AuthenticatedUser | null> {
+    return this.http
+      .get<AuthenticatedUser>(`${environment.apiUrl}/auth/me`, { withCredentials: true })
+      .pipe(
+        tap((user) => this.currentUser.set(user)),
+        catchError(() => {
+          this.currentUser.set(null);
+          return of(null);
+        }),
+      );
   }
 
   /** FR-4 — sign out. Idempotent server-side (D-026), so no error handling here. */

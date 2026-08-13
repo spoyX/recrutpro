@@ -1,7 +1,8 @@
 import { Component, computed, input } from '@angular/core';
 
 /**
- * A pipeline-stage badge.
+ * A status badge — pipeline stages (Section 8) and job-position statuses
+ * (FR-14/FR-16), which are two vocabularies of the same thing.
  *
  * DESIGN.md: "Chips/Badges … Use low-saturation background tints with
  * high-saturation text of the same hue for maximum professional clarity", at
@@ -20,6 +21,7 @@ import { Component, computed, input } from '@angular/core';
 type StageTone = 'neutral' | 'info' | 'progress' | 'attention' | 'positive' | 'negative';
 
 const TONES: Record<string, StageTone> = {
+  // ARCHITECTURE.md Section 8's seven pipeline stages.
   'Candidature reçue': 'neutral',
   'Présélection CV validée': 'info',
   'Entretien planifié': 'progress',
@@ -27,6 +29,15 @@ const TONES: Record<string, StageTone> = {
   Accepté: 'positive',
   Rejeté: 'negative',
   'Rejeté (CV)': 'negative',
+
+  // FR-14/FR-16 job-position statuses. Added rather than duplicating this
+  // component: the job is identical — render a labelled status with a tone —
+  // and the three values cannot collide with a pipeline stage.
+  // NOT 'positive': D-066 reserves `success` for a settled positive OUTCOME,
+  // and an open posting is an ongoing state, not a good result.
+  Brouillon: 'neutral',
+  Ouvert: 'info',
+  Clôturé: 'attention',
 };
 
 @Component({

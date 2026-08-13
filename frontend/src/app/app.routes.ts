@@ -33,5 +33,16 @@ export const routes: Routes = [
       ),
     title: 'Dossier candidat — RecrutPro',
   },
+  {
+    // FR-14 to FR-17. `GET /job-positions/:id` already existed (D-038); there
+    // is no positions LIST page yet, so this is reached from a poste title on
+    // the candidate pages.
+    path: 'job-positions/:id',
+    loadComponent: () =>
+      import('./features/job-positions/job-position-details/job-position-details').then(
+        (m) => m.JobPositionDetails,
+      ),
+    title: 'Poste — RecrutPro',
+  },
   { path: '**', redirectTo: 'login' },
 ];

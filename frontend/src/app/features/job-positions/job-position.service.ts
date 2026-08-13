@@ -13,6 +13,30 @@ export interface JobPositionOption {
   status: string;
 }
 
+/**
+ * The full `PublicJobPosition`. Note what it does NOT carry: the department
+ * NAME (only `departmentId`) and any candidate count. The details page
+ * resolves the first from `GET /departments` and the second from
+ * `GET /candidates?jobPositionId=…`, both existing endpoints.
+ *
+ * `createdBy` is deliberately absent from the API (D-052/D-055): it is
+ * notification routing only and must never be rendered as an owner.
+ */
+export interface JobPosition {
+  id: string;
+  title: string;
+  departmentId: string;
+  description: string;
+  requirements: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface DepartmentOption {
+  id: string;
+  name: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class JobPositionService {
   private readonly http = inject(HttpClient);
@@ -33,5 +57,29 @@ export class JobPositionService {
         withCredentials: true,
       })
       .pipe(map((positions) => positions ?? []));
+  }
+
+  /** FR-17 — one position (D-038: Recruteur full, Administrateur read-only). */
+  getJobPosition(id: string): Observable<JobPosition> {
+    return this.http.get<JobPosition>(
+      `${environment.apiUrl}/job-positions/${encodeURIComponent(id)}`,
+      { withCredentials: true },
+    );
+  }
+
+  /**
+   * FR-13's department list, used here only to turn a `departmentId` into a
+   * NAME. Open to any authenticated role (D-035), and returns active
+   * departments by default — a position may reference a deactivated one, so
+   * `includeInactive` is set or its name would render as "unknown" on exactly
+   * the postings most likely to need explaining.
+   */
+  listDepartments(): Observable<DepartmentOption[]> {
+    return this.http
+      .get<DepartmentOption[]>(`${environment.apiUrl}/departments`, {
+        params: { includeInactive: 'true' },
+        withCredentials: true,
+      })
+      .pipe(map((departments) => departments ?? []));
   }
 }

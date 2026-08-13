@@ -146,7 +146,15 @@
                        DESIGN.md's explicit 56px. -->
                   <td class="table__contact">{{ candidate.email }}</td>
                   <td class="table__phone">{{ candidate.phone }}</td>
-                  <td>{{ candidate.jobPosition?.title ?? 'Poste inconnu' }}</td>
+                  <td>
+                    @if (candidate.jobPosition; as position) {
+                      <a class="table__link" [routerLink]="['/job-positions', position.id]">
+                        {{ position.title }}
+                      </a>
+                    } @else {
+                      Poste inconnu
+                    }
+                  </td>
                   <td><app-stage-chip [stage]="candidate.currentStage" /></td>
                   <td>
                     @if (candidate.hasResume) {

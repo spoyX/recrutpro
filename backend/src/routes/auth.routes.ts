@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, logout, changePassword } from '../controllers/auth.controller';
+import { login, logout, changePassword, me } from '../controllers/auth.controller';
 import { loginRateLimiter } from '../middleware/rateLimit.middleware';
 import { requireAuthAllowingPasswordChange } from '../middleware/rbac.middleware';
 
@@ -86,5 +86,26 @@ router.post('/logout', logout);
 // Uses the variant that tolerates mustChangePassword — this is the one route a
 // locked-out user must be able to reach.
 router.post('/change-password', requireAuthAllowingPasswordChange, changePassword);
+
+/**
+ * @openapi
+ * /auth/me:
+ *   get:
+ *     summary: L'utilisateur de la session courante (D-070)
+ *     description: >
+ *       Permet au client de retrouver son identité après un rechargement de
+ *       page : la réponse de connexion n'est reçue qu'une fois, alors que le
+ *       cookie de session survit au rafraîchissement (D-065).
+ *       L'utilisateur est RELU en base à chaque requête (D-027), donc un compte
+ *       désactivé ou un rôle modifié est reflété immédiatement.
+ *       Accessible même lorsque le changement de mot de passe est imposé
+ *       (FR-10) : un utilisateur bloqué doit pouvoir savoir qui il est.
+ *       Le mot de passe n'est jamais renvoyé (règle 3).
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: L'utilisateur connecté. }
+ *       401: { description: Aucune session valide — le client se considère anonyme., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/me', requireAuthAllowingPasswordChange, me);
 
 export default router;

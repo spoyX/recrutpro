@@ -34,6 +34,15 @@
   margin: var(--sp-xs) 0 0;
 }
 
+.head__link {
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 // DESIGN.md's 12-column feel: a wide main column beside a narrower rail.
 .columns {
   display: grid;

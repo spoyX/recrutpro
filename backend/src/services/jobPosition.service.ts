@@ -210,7 +210,15 @@ export const listJobPositions = async (
     query.department = filters.departmentId;
   }
 
-  return JobPosition.find(query).sort({ createdAt: -1 });
+  // `_id` tiebreaker, same reasoning as D-069 but a WEAKER case, recorded so
+  // the difference is clear: this list is UNPAGINATED, so an unstable sort
+  // could never duplicate or drop a row here — it could only reshuffle
+  // positions sharing a `createdAt` between one load and the next, which is
+  // reachable whenever several are seeded together. One line buys a
+  // deterministic order for the FR-17 list and the FR-24 poste picker.
+  // (`Department.name` is unique per D-016, so that list cannot tie at all
+  // and was deliberately left alone.)
+  return JobPosition.find(query).sort({ createdAt: -1, _id: 1 });
 };
 
 /** FR-17 — read one. */

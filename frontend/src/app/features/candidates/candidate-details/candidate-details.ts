@@ -1,5 +1,5 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,7 +25,15 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
  */
 @Component({
   selector: 'app-candidate-details',
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatProgressBarModule, AppShell, StageChip],
+  imports: [
+    DatePipe,
+    RouterLink,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    AppShell,
+    StageChip,
+  ],
   templateUrl: './candidate-details.html',
   styleUrl: './candidate-details.scss',
 })

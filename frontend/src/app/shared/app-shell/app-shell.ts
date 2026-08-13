@@ -14,11 +14,10 @@ import { AuthService } from '../../core/auth.service';
  * with one destination is a column of dead links. With the Candidate Details
  * page there is finally somewhere to navigate between, so it lands here.
  *
- * SHARED, not per-page, for a specific reason beyond reuse: the topbar renders
- * the signed-in user's name and role, and D-065's known gap is that
- * `AuthService.currentUser` is populated only by `login()`, so it is blank
- * after a browser refresh. Keeping that markup in ONE component means closing
- * D-065 is a change to one file rather than a retrofit across every page.
+ * SHARED, not per-page: the topbar renders the signed-in user's name and role,
+ * and the sidebar gates entries on that role. Keeping both in ONE component is
+ * what made closing D-065 a single-file change (D-070) rather than a retrofit
+ * across every page.
  */
 type Role = 'Administrateur' | 'Recruteur' | 'ResponsableHierarchique';
 
@@ -108,10 +107,9 @@ interface ResolvedNavItem {
         <header class="topbar">
           <div class="topbar__inner">
             <!--
-              D-065: blank after a browser refresh, because currentUser is set
-              only by login(). Data still loads — the session cookie is valid.
-              Unfixed pending the human's choice; it lives here so the fix is
-              one file.
+              Populated on every load since D-070: the app asks GET /auth/me
+              during bootstrap, so a refresh no longer empties this. Still
+              guarded, because an anonymous visitor legitimately has no user.
             -->
             @if (auth.currentUser(); as user) {
               <span class="topbar__identity">
@@ -333,14 +331,14 @@ export class AppShell {
   /**
    * The nav resolved against the signed-in role.
    *
-   * KNOWN CONSEQUENCE OF D-065: `currentUser` is populated only by `login()`,
-   * so after a browser REFRESH the role is unknown and every role-gated entry
-   * renders disabled — « Candidats » included, even for a Recruteur who may
-   * genuinely use it. Nothing breaks and nothing leaks (the page itself still
-   * works if reached by URL, and the server is the authority either way), but
-   * this is the point at which D-065 stops being purely cosmetic. Showing the
-   * link on an unknown role was rejected: it would 403 for two of the three
-   * roles, and a link that fails is what the disabled state exists to avoid.
+   * The role survives a refresh since D-070: `restoreSession()` runs as an app
+   * initializer, so `currentUser` is set before the first render rather than
+   * only by `login()`. That was D-065's escalation — a Recruteur who reloaded
+   * lost the « Candidats » link to a page they were entitled to use.
+   *
+   * An UNKNOWN role (a genuinely anonymous visitor) still disables role-gated
+   * entries rather than showing them: the link would 403 for two of the three
+   * roles, and a link that fails is exactly what the disabled state avoids.
    */
   protected readonly nav = computed<ResolvedNavItem[]>(() => {
     const role = this.auth.currentUser()?.role ?? null;

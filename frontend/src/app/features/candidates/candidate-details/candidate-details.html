@@ -16,7 +16,13 @@
       <div class="head__identity">
         <h1 class="page__title">{{ candidate.fullName }}</h1>
         <p class="head__position">
-          {{ candidate.jobPosition?.title ?? 'Poste inconnu' }}
+          @if (candidate.jobPosition; as position) {
+            <a class="head__link" [routerLink]="['/job-positions', position.id]">
+              {{ position.title }}
+            </a>
+          } @else {
+            Poste inconnu
+          }
         </p>
       </div>
       <app-stage-chip [stage]="candidate.currentStage" />

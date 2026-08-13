@@ -1,0 +1,116 @@
+<app-shell>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement du poste" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      <button matButton type="button" (click)="load()">Réessayer</button>
+    </p>
+  }
+
+  @if (position(); as position) {
+    <header class="head">
+      <div>
+        <h1 class="page__title">{{ position.title }}</h1>
+        <p class="head__department">
+          {{ departmentName() ?? 'Département inconnu' }}
+        </p>
+      </div>
+      <!-- FR-14/FR-16 status, through the shared badge. -->
+      <app-stage-chip [stage]="position.status" />
+    </header>
+
+    <div class="columns">
+      <div class="columns__main">
+        <section class="card" aria-labelledby="description-title">
+          <h2 id="description-title" class="card__title">Description</h2>
+          <p class="prose">{{ position.description }}</p>
+        </section>
+
+        @if (position.requirements) {
+          <section class="card" aria-labelledby="requirements-title">
+            <h2 id="requirements-title" class="card__title">Exigences</h2>
+            <p class="prose">{{ position.requirements }}</p>
+          </section>
+        }
+
+        <!-- FR-24 scoped to this poste. Recruteur-only (D-068). -->
+        <section class="card" aria-labelledby="candidates-title">
+          <h2 id="candidates-title" class="card__title">
+            Candidats
+            @if (!candidatesForbidden()) {
+              <span class="card__count">{{ candidateTotal() }}</span>
+            }
+          </h2>
+
+          @if (candidatesForbidden()) {
+            <p class="empty">
+              La liste des candidats n'est pas accessible à votre rôle. Le poste lui-même
+              reste consultable.
+            </p>
+          } @else if (candidateRows().length) {
+            <ul class="rows">
+              @for (candidate of candidateRows(); track candidate.id) {
+                <li class="rows__row">
+                  <a class="rows__link" [routerLink]="['/candidates', candidate.id]">
+                    {{ candidate.fullName }}
+                  </a>
+                  <app-stage-chip [stage]="candidate.currentStage" />
+                  <span class="rows__meta">
+                    {{ candidate.registeredAt | date: 'dd/MM/yyyy' }}
+                  </span>
+                </li>
+              }
+            </ul>
+
+            <!--
+              Only offered when the page is NOT showing everything, so the link
+              never implies there is more when there is not.
+            -->
+            @if (!showingAll()) {
+              <a
+                class="rows__more"
+                [routerLink]="['/candidates']"
+                [queryParams]="{ jobPositionId: position.id }"
+              >
+                Voir les {{ candidateTotal() }} candidats de ce poste
+              </a>
+            }
+          } @else {
+            <p class="empty">Aucun candidat n'est rattaché à ce poste.</p>
+          }
+        </section>
+      </div>
+
+      <div class="columns__side">
+        <section class="card" aria-labelledby="facts-title">
+          <h2 id="facts-title" class="card__title">Informations</h2>
+          <dl class="facts">
+            <div class="facts__row">
+              <dt>Statut</dt>
+              <dd>{{ position.status }}</dd>
+            </div>
+            <div class="facts__row">
+              <dt>Département</dt>
+              <dd>{{ departmentName() ?? 'Inconnu' }}</dd>
+            </div>
+            <div class="facts__row">
+              <dt>Créé le</dt>
+              <dd>{{ position.createdAt | date: 'dd/MM/yyyy' }}</dd>
+            </div>
+          </dl>
+
+          @if (position.status === 'Clôturé') {
+            <p class="note">
+              <mat-icon aria-hidden="true">lock</mat-icon>
+              <span>Ce poste est clôturé : aucun nouveau candidat ne peut y être rattaché.</span>
+            </p>
+          }
+        </section>
+      </div>
+    </div>
+  }
+</app-shell>

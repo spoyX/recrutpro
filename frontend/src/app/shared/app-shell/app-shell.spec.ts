@@ -132,11 +132,9 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       }
     });
 
-    it('D-065: an UNKNOWN role disables the role-gated entry rather than offering a 403 link', () => {
-      // currentUser is null after a browser refresh. Showing the link would
-      // 403 for two of the three roles, which is what the disabled state
-      // exists to avoid — so it stays disabled. Recorded because it is the
-      // point at which D-065 stops being purely cosmetic.
+    it('an ANONYMOUS visitor gets the entry disabled rather than a link that would 403', () => {
+      // Since D-070 a signed-in user's role survives a refresh, so this is now
+      // only the genuinely-anonymous case.
       create();
 
       expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
@@ -160,10 +158,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(text()).toContain('Recruteur');
     });
 
-    it('D-065: renders no identity block when currentUser is null, without erroring', () => {
-      // This is the known post-refresh gap: the session cookie is still valid
-      // and the page's data loads, but currentUser was only ever set by
-      // login(). The shell must degrade quietly rather than throw.
+    it('renders no identity block for an anonymous visitor, without erroring', () => {
       create();
 
       expect(fixture.nativeElement.querySelector('.topbar__identity')).toBeNull();

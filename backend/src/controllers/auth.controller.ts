@@ -51,6 +51,24 @@ export const login: RequestHandler = async (req, res, next) => {
  * error would only strand a user whose session had just expired on a page they
  * cannot leave cleanly.
  */
+/**
+ * GET /api/v1/auth/me — who is this session? (D-070)
+ *
+ * Exists so a browser REFRESH can rehydrate the client's identity. Before it,
+ * the SPA only ever learned who it was from the login response, so after a
+ * reload it rendered a blank topbar and hid role-gated navigation from users
+ * entitled to it (D-065).
+ *
+ * No service layer: there is no business logic here at all. `requireAuth`
+ * has already RELOADED the user from the database for this request (D-027),
+ * so the answer is current by construction — a deactivated account or a
+ * changed role is reflected immediately rather than served from a stale
+ * session copy. The controller only shapes the response.
+ */
+export const me: RequestHandler = (req, res) => {
+  res.json(toPublicUser(req.currentUser!));
+};
+
 export const logout: RequestHandler = async (req, res, next) => {
   try {
     await terminateSession(req);
