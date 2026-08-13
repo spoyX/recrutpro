@@ -139,7 +139,13 @@ export const listNotifications = async (
   }
 
   const [items, total] = await Promise.all([
-    Notification.find(query).sort({ createdAt: -1 }).skip(input.offset).limit(input.limit),
+    // `_id` tiebreaker (D-069). Ties on `createdAt` are not hypothetical here:
+    // one cancellation writes two notifications in the same operation (D-046),
+    // so same-millisecond rows are routine.
+    Notification.find(query)
+      .sort({ createdAt: -1, _id: 1 })
+      .skip(input.offset)
+      .limit(input.limit),
     Notification.countDocuments(query),
   ]);
 

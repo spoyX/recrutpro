@@ -612,7 +612,15 @@ export const listCandidates = async (input: ListCandidatesInput): Promise<ListCa
 
   const candidates = await Candidate.find(query)
     .populate('jobPositionId', 'title')
-    .sort({ [input.sortBy]: input.sortDir })
+    // `_id` is a TIEBREAKER, not a second sort the caller asked for (D-069).
+    // MongoDB's sort is not stable, so rows tied on the sort key may come back
+    // in a different relative order for each query. With skip/limit that means
+    // a row can appear on page 1 AND page 2 while another is never returned at
+    // all — silently, with a correct-looking total. `currentStage` has only
+    // seven distinct values, so ties there are the normal case, not an edge
+    // one. Appending the unique `_id` makes the ordering total and therefore
+    // pagination stable. Found in live verification, not by the unit tests.
+    .sort({ [input.sortBy]: input.sortDir, _id: 1 })
     .skip(input.offset)
     .limit(input.limit);
 

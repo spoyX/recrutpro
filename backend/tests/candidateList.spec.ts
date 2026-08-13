@@ -266,28 +266,46 @@ describe('Candidate list — FR-24', () => {
   });
 
   describe('FR-24: sorting', () => {
+    it('D-069: EVERY sort carries the _id tiebreaker, so pagination is stable', async () => {
+      // Without it, rows tied on the sort key can reorder between the page-1
+      // and page-2 queries, so one row is returned twice and another never —
+      // with a correct-looking total. `currentStage` has seven distinct
+      // values, so ties are the normal case there, not an edge case.
+      for (const query of [
+        '',
+        '?sortBy=fullName&sortDir=asc',
+        '?sortBy=currentStage&sortDir=desc',
+        '?sortBy=registeredAt&sortDir=asc',
+      ]) {
+        chain.sort.mockClear();
+        await list(query);
+        const sortArg = chain.sort.mock.calls[0][0] as Record<string, number>;
+        expect(Object.keys(sortArg).at(-1)).toBe('_id');
+      }
+    });
+
     it('FR-24: defaults to newest first', async () => {
       await list();
 
-      expect(chain.sort).toHaveBeenCalledWith({ registeredAt: -1 });
+      expect(chain.sort).toHaveBeenCalledWith({ registeredAt: -1, _id: 1 });
     });
 
     it('FR-24: sorts by fullName ascending', async () => {
       await list('?sortBy=fullName&sortDir=asc');
 
-      expect(chain.sort).toHaveBeenCalledWith({ fullName: 1 });
+      expect(chain.sort).toHaveBeenCalledWith({ fullName: 1, _id: 1 });
     });
 
     it('FR-24: sorts by currentStage', async () => {
       await list('?sortBy=currentStage&sortDir=desc');
 
-      expect(chain.sort).toHaveBeenCalledWith({ currentStage: -1 });
+      expect(chain.sort).toHaveBeenCalledWith({ currentStage: -1, _id: 1 });
     });
 
     it('FR-24: sorts by registeredAt ascending', async () => {
       await list('?sortBy=registeredAt&sortDir=asc');
 
-      expect(chain.sort).toHaveBeenCalledWith({ registeredAt: 1 });
+      expect(chain.sort).toHaveBeenCalledWith({ registeredAt: 1, _id: 1 });
     });
   });
 

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,27 +20,50 @@ import { AuthService } from '../../core/auth.service';
  * after a browser refresh. Keeping that markup in ONE component means closing
  * D-065 is a change to one file rather than a retrofit across every page.
  */
+type Role = 'Administrateur' | 'Recruteur' | 'ResponsableHierarchique';
+
 interface NavItem {
   label: string;
   icon: string;
   /** Null until that page is built — rendered disabled rather than as a link. */
   route: string | null;
+  /** Omitted = every role. Otherwise only these roles get a live link. */
+  roles?: readonly Role[];
 }
 
 /**
  * Unbuilt destinations are shown DISABLED rather than hidden or linked.
  * Hiding them would misrepresent the product's shape in a demo; linking them
  * would 404. Each becomes a live link as its page lands.
+ *
+ * A destination the CURRENT ROLE cannot use is disabled the same way, and for
+ * the same reason — it would 403 rather than 404. The two cases carry
+ * different hints ("à venir" vs "réservé"), because "not built yet" and "not
+ * yours" are different facts and a user should not have to guess which.
+ *
+ * This is presentation, NOT authorisation. NFR-04 puts access control on the
+ * server, which refuses these routes regardless of what the sidebar renders.
  */
 const NAV: readonly NavItem[] = [
+  // FR-45/FR-46/FR-47 give all three roles a dashboard.
   { label: 'Tableau de bord', icon: 'dashboard', route: '/dashboard' },
-  { label: 'Candidats', icon: 'group', route: null },
+  // FR-24 is Recruteur-only (D-041), and D-068 deliberately did not widen it.
+  { label: 'Candidats', icon: 'group', route: '/candidates', roles: ['Recruteur'] },
   { label: 'Postes', icon: 'work', route: null },
   { label: 'Entretiens', icon: 'event', route: null },
   { label: 'Rapports', icon: 'insights', route: null },
   { label: 'Utilisateurs', icon: 'manage_accounts', route: null },
   { label: "Journal d'audit", icon: 'receipt_long', route: null },
 ];
+
+/** What the sidebar actually renders for one entry. */
+interface ResolvedNavItem {
+  label: string;
+  icon: string;
+  /** Non-null only when this role can actually reach the page. */
+  href: string | null;
+  hint: 'à venir' | 'réservé' | null;
+}
 
 @Component({
   selector: 'app-shell',
@@ -54,12 +77,12 @@ const NAV: readonly NavItem[] = [
         </span>
 
         <ul class="sidebar__nav">
-          @for (item of nav; track item.label) {
+          @for (item of nav(); track item.label) {
             <li>
-              @if (item.route) {
+              @if (item.href) {
                 <a
                   class="sidebar__link"
-                  [routerLink]="item.route"
+                  [routerLink]="item.href"
                   routerLinkActive="sidebar__link--active"
                   #active="routerLinkActive"
                   [attr.aria-current]="active.isActive ? 'page' : null"
@@ -71,7 +94,9 @@ const NAV: readonly NavItem[] = [
                 <span class="sidebar__link sidebar__link--disabled" aria-disabled="true">
                   <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
                   {{ item.label }}
-                  <span class="sidebar__soon label-sm">à venir</span>
+                  @if (item.hint) {
+                    <span class="sidebar__soon label-sm">{{ item.hint }}</span>
+                  }
                 </span>
               }
             </li>
@@ -113,6 +138,12 @@ const NAV: readonly NavItem[] = [
       display: flex;
       min-height: 100vh;
       align-items: stretch;
+      // Nothing in this app scrolls the PAGE sideways; wide data tables scroll
+      // inside their own wrapper. Even with every container measuring clean,
+      // the root scroller still reveals a nested table's layout overflow, so
+      // the outermost container clips it. clip rather than hidden: it does
+      // not create a scroll container, so position:sticky still works inside.
+      overflow-x: clip;
     }
 
     // DESIGN.md: sidebar FIXED at 280px, main content fluid.
@@ -221,6 +252,13 @@ const NAV: readonly NavItem[] = [
     .topbar__inner {
       max-width: var(--layout-max-width);
       margin: 0 auto;
+      // width:100% is REQUIRED, not redundant. margin:0 auto sets auto
+      // cross-axis margins, which disables flex stretch — without an explicit
+      // width the item sizes to its content and takes the 1440px max-width
+      // even inside a narrower column. It is only safe alongside the global
+      // border-box in styles.scss; under content-box it measured 100% + 80px
+      // of padding and pushed the page into horizontal scroll.
+      // NOTE: never use backticks in this styles literal — they close it.
       width: 100%;
       padding: var(--sp-md) var(--sp-margin-desktop);
       display: flex;
@@ -248,8 +286,8 @@ const NAV: readonly NavItem[] = [
 
     .page {
       max-width: var(--layout-max-width);
-      width: 100%;
       margin: 0 auto;
+      width: 100%; // same reason as .topbar__inner above
       padding: var(--sp-xl) var(--sp-margin-desktop) var(--sp-2xl);
       display: flex;
       flex-direction: column;
@@ -292,7 +330,34 @@ export class AppShell {
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  protected readonly nav = NAV;
+  /**
+   * The nav resolved against the signed-in role.
+   *
+   * KNOWN CONSEQUENCE OF D-065: `currentUser` is populated only by `login()`,
+   * so after a browser REFRESH the role is unknown and every role-gated entry
+   * renders disabled — « Candidats » included, even for a Recruteur who may
+   * genuinely use it. Nothing breaks and nothing leaks (the page itself still
+   * works if reached by URL, and the server is the authority either way), but
+   * this is the point at which D-065 stops being purely cosmetic. Showing the
+   * link on an unknown role was rejected: it would 403 for two of the three
+   * roles, and a link that fails is what the disabled state exists to avoid.
+   */
+  protected readonly nav = computed<ResolvedNavItem[]>(() => {
+    const role = this.auth.currentUser()?.role ?? null;
+
+    return NAV.map((item) => {
+      if (item.route === null) {
+        return { label: item.label, icon: item.icon, href: null, hint: 'à venir' as const };
+      }
+      const allowed = !item.roles || (role !== null && item.roles.includes(role));
+      return {
+        label: item.label,
+        icon: item.icon,
+        href: allowed ? item.route : null,
+        hint: allowed ? null : ('réservé' as const),
+      };
+    });
+  });
 
   logout(): void {
     // FR-4. Idempotent server-side (D-026), so navigate regardless of outcome.

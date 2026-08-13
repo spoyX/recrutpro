@@ -8,9 +8,27 @@
 @use 'styles/theme';
 @use 'styles/tokens';
 
+// Border-box everywhere. Without it a declared width means CONTENT width, so
+// `flex: 0 0 280px` plus 16px padding renders a 313px sidebar and DESIGN.md's
+// "fixed at 280px" is quietly wrong — which is also what pushed the candidates
+// table into horizontal page scroll. login.scss already opted into this
+// locally; making it global stops the next component rediscovering it.
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
+  // Nothing in this app scrolls the PAGE sideways — wide data tables scroll
+  // inside their own wrapper (FR-24's candidate table). Even when every
+  // container measures clean, the ROOT scroller still reveals a nested
+  // table's layout overflow, so it is clipped here, at the only element that
+  // owns the viewport. `clip` not `hidden`: it creates no scroll container,
+  // so position:sticky keeps working.
+  overflow-x: clip;
 }
 
 body {
@@ -40,8 +58,26 @@ h2 {
 
 // DESIGN.md: "Small labels use an uppercase treatment with increased tracking
 // to differentiate functional UI text from content-heavy body text."
+//
+// NOTE for anyone asserting on rendered text: `text-transform` here means
+// `innerText` reports these labels UPPERCASED, while `textContent` returns the
+// source casing. Compare case-insensitively.
 .label-sm {
   font: var(--mat-sys-label-small);
   letter-spacing: var(--recrutpro-tracking-label-sm);
   text-transform: uppercase;
+}
+
+// Available to screen readers, invisible on screen. Used where an icon carries
+// the meaning (a CV present/absent cell) and a sighted user reads the icon.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

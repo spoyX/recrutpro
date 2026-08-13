@@ -15,6 +15,14 @@ export const routes: Routes = [
     title: 'Tableau de bord — RecrutPro',
   },
   {
+    // FR-24. Registered BEFORE `candidates/:id` for readability only — the two
+    // patterns have different segment counts and cannot shadow each other.
+    path: 'candidates',
+    loadComponent: () =>
+      import('./features/candidates/candidates-list/candidates-list').then((m) => m.CandidatesList),
+    title: 'Candidats — RecrutPro',
+  },
+  {
     // D-067. `:id` binds to the component's `id` input via
     // `withComponentInputBinding`. There is no /candidates list page yet, so
     // this route is reached from the dashboard's recent-candidate rows.

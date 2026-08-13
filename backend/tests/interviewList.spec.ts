@@ -275,19 +275,22 @@ describe('Interview list — FR-33', () => {
       // Unlike the candidate list, which is newest-first.
       await list();
 
-      expect(chain.sort).toHaveBeenCalledWith({ scheduledAt: 1 });
+      expect(chain.sort).toHaveBeenCalledWith({ scheduledAt: 1, _id: 1 });
     });
 
     it('FR-33: sortDir=desc reverses it', async () => {
       await list('?sortDir=desc');
 
-      expect(chain.sort).toHaveBeenCalledWith({ scheduledAt: -1 });
+      expect(chain.sort).toHaveBeenCalledWith({ scheduledAt: -1, _id: 1 });
     });
 
     it('FR-33: sorts by status', async () => {
       await list('?sortBy=status');
 
-      expect(chain.sort).toHaveBeenCalledWith({ status: 1 });
+      expect(chain.sort).toHaveBeenCalledWith({ status: 1, _id: 1 });
+      // D-069: the tiebreaker matters MOST here — `status` has three distinct
+      // values, so without it paging duplicates and drops rows.
+      expect(Object.keys(chain.sort.mock.calls.at(-1)![0]).at(-1)).toBe('_id');
     });
 
     it('FR-33: the count uses the same filter, before pagination', async () => {

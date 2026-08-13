@@ -221,7 +221,7 @@ describe('FR-43: notification panel — list', () => {
     const res = await request(app).get('/api/v1/notifications').set('Cookie', marieCookie);
 
     expect(res.body.map((n: { id: string }) => n.id)).toEqual([MARIE_NEW, MARIE_READ, MARIE_OLD]);
-    expect(lastSort).toEqual({ createdAt: -1 });
+    expect(lastSort).toEqual({ createdAt: -1, _id: 1 });
   });
 
   test('FR-43: each row carries the read/unread state', async () => {

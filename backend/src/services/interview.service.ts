@@ -429,7 +429,11 @@ export const listInterviews = async (
       populate: { path: 'jobPositionId', select: 'title' },
     })
     .populate('interviewerId', 'name')
-    .sort({ [input.sortBy]: input.sortDir })
+    // `_id` tiebreaker (D-069) — same defect as the candidate list, and worse
+    // here: `sortBy=status` has only THREE distinct values, so ties are
+    // guaranteed rather than merely likely, and an unstable sort under
+    // skip/limit duplicates one row across pages while dropping another.
+    .sort({ [input.sortBy]: input.sortDir, _id: 1 })
     .skip(input.offset)
     .limit(input.limit);
 
