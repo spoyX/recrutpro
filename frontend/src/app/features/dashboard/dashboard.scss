@@ -1,77 +1,10 @@
 // DESIGN.md: 1440px max content width, 12-column feel with 24px gutters,
 // 40px desktop / 16px mobile side margins, Level 1 cards on a Level 0 canvas.
 //
-// NOTE: DESIGN.md also specifies a 280px fixed sidebar for dashboard layouts.
-// It is deliberately NOT built yet — every other page is still unbuilt, so a
-// sidebar would be a column of dead links. It lands with the second page,
-// when there is somewhere to navigate to.
-
-.topbar {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border-bottom: var(--border-level-1);
-  box-shadow: var(--elevation-1);
-}
-
-.topbar__inner {
-  max-width: var(--layout-max-width);
-  margin: 0 auto;
-  padding: var(--sp-md) var(--sp-margin-desktop);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-}
-
-.topbar__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  // Pushes identity + logout to the right.
-  margin-right: auto;
-}
-
-.topbar__logo {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-}
-
-.topbar__identity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  line-height: 1.1;
-}
-
-.topbar__name {
-  font: var(--mat-sys-label-large);
-  color: var(--mat-sys-on-surface);
-}
-
-.topbar__role {
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
-}
-
-.page {
-  max-width: var(--layout-max-width);
-  margin: 0 auto;
-  padding: var(--sp-xl) var(--sp-margin-desktop) var(--sp-2xl);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-lg); // DESIGN.md gutter
-}
+// The sidebar, topbar, page width and side margins moved to
+// shared/app-shell when the Candidate Details page landed (D-067) — DESIGN.md's
+// 280px sidebar finally had somewhere to navigate to. This file now styles
+// only the dashboard's own content.
 
 .page__title {
   font: var(--mat-sys-headline-large);
@@ -141,6 +74,17 @@
   min-width: 0;
 }
 
+// The candidate name is the row's affordance into the details page. Underlined
+// on hover only, so a dense list does not read as a wall of links.
+.rows__link {
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .rows__secondary {
   font: var(--mat-sys-body-small);
   color: var(--text-slate);
@@ -167,15 +111,9 @@
   margin: 0;
 }
 
-// DESIGN.md: "Mobile Transition to a single-column layout with 16px side
-// margins."
+// DESIGN.md: single-column below the mobile breakpoint. Page margins are the
+// shell's job now; only the row layout is this file's concern.
 @media (max-width: 700px) {
-  .topbar__inner,
-  .page {
-    padding-left: var(--sp-margin-mobile);
-    padding-right: var(--sp-margin-mobile);
-  }
-
   .rows__row {
     flex-wrap: wrap;
     gap: var(--sp-sm);

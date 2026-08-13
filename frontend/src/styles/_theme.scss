@@ -97,6 +97,20 @@ html {
   // validation messaging. Both are stated in DESIGN.md (D-063).
   --recrutpro-error-bright: #ef4444;
 
+  // ------------------------------------------------------------------ success
+  // DESIGN.md's `success` role (D-066) — the positive-terminal counterpart of
+  // `error` above, and used identically: container tint as background,
+  // on-container tone as text. Prefixed `--recrutpro-` rather than
+  // `--mat-sys-` because M3 has NO success role; inventing a `--mat-sys-*`
+  // name would look like a Material token and silently do nothing in any
+  // Material component that reads the real ones.
+  // NOT the brand primary: an outcome that is settled must not wear the
+  // colour of a thing to click.
+  --recrutpro-success: #006b5b;
+  --recrutpro-on-success: #ffffff;
+  --recrutpro-success-container: #a0f2dd;
+  --recrutpro-on-success-container: #005045;
+
   // ------------------------------------------------------------- typography
   // DESIGN.md's ramp, mapped onto the M3 typescale slots Material actually
   // renders. Shorthand order: weight size/line-height family.

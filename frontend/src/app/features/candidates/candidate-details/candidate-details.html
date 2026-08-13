@@ -1,0 +1,210 @@
+<app-shell>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement du dossier candidat" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      <button matButton type="button" (click)="load()">Réessayer</button>
+    </p>
+  }
+
+  @if (candidate(); as candidate) {
+    <header class="head">
+      <div class="head__identity">
+        <h1 class="page__title">{{ candidate.fullName }}</h1>
+        <p class="head__position">
+          {{ candidate.jobPosition?.title ?? 'Poste inconnu' }}
+        </p>
+      </div>
+      <app-stage-chip [stage]="candidate.currentStage" />
+    </header>
+
+    <div class="columns">
+      <div class="columns__main">
+        <!-- ------------------------------------------- interview history -->
+        <section class="card" aria-labelledby="interviews-title">
+          <h2 id="interviews-title" class="card__title">Entretiens</h2>
+
+          @if (candidate.interviews.length) {
+            <ul class="interviews">
+              @for (interview of candidate.interviews; track interview.id) {
+                <li class="interview">
+                  <div class="interview__head">
+                    <span class="interview__when">
+                      {{ interview.scheduledAt | date: 'dd/MM/yyyy à HH:mm' }}
+                    </span>
+                    <span class="interview__status label-sm">{{ interview.status }}</span>
+                    <span class="interview__who">
+                      {{ interview.interviewer?.name ?? 'Responsable inconnu' }}
+                    </span>
+                  </div>
+
+                  <!-- FR-34: a cancelled interview keeps its row and its motive. -->
+                  @if (interview.cancellationReason) {
+                    <p class="interview__note">
+                      <mat-icon aria-hidden="true">event_busy</mat-icon>
+                      <span>Annulé — {{ interview.cancellationReason }}</span>
+                    </p>
+                  }
+
+                  <!-- FR-36: the evaluation belongs to THIS interview (D-067). -->
+                  @if (interview.evaluation; as evaluation) {
+                    <div class="evaluation">
+                      <h3 class="evaluation__title label-sm">
+                        Évaluation — {{ evaluation.submittedBy?.name ?? 'Auteur inconnu' }}
+                      </h3>
+
+                      <dl class="scores">
+                        <div class="scores__row">
+                          <dt>Compétences techniques</dt>
+                          <dd>
+                            <span class="scores__dots" aria-hidden="true">
+                              @for (step of scaleMax; track step) {
+                                <span
+                                  class="scores__dot"
+                                  [class.scores__dot--on]="
+                                    step <= evaluation.scores.technicalSkills
+                                  "
+                                ></span>
+                              }
+                            </span>
+                            <span class="scores__value">
+                              {{ evaluation.scores.technicalSkills }}/5
+                            </span>
+                          </dd>
+                        </div>
+                        <div class="scores__row">
+                          <dt>Communication</dt>
+                          <dd>
+                            <span class="scores__dots" aria-hidden="true">
+                              @for (step of scaleMax; track step) {
+                                <span
+                                  class="scores__dot"
+                                  [class.scores__dot--on]="step <= evaluation.scores.communication"
+                                ></span>
+                              }
+                            </span>
+                            <span class="scores__value">
+                              {{ evaluation.scores.communication }}/5
+                            </span>
+                          </dd>
+                        </div>
+                        <div class="scores__row">
+                          <dt>Adéquation globale</dt>
+                          <dd>
+                            <span class="scores__dots" aria-hidden="true">
+                              @for (step of scaleMax; track step) {
+                                <span
+                                  class="scores__dot"
+                                  [class.scores__dot--on]="step <= evaluation.scores.overallFit"
+                                ></span>
+                              }
+                            </span>
+                            <span class="scores__value">{{ evaluation.scores.overallFit }}/5</span>
+                          </dd>
+                        </div>
+                      </dl>
+
+                      @if (evaluation.comments) {
+                        <p class="evaluation__comments">{{ evaluation.comments }}</p>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty">Aucun entretien planifié pour ce candidat.</p>
+          }
+        </section>
+
+        <!-- FR-29 / FR-26: whichever outcome text exists. -->
+        @if (candidate.decisionComment) {
+          <section class="card" aria-labelledby="decision-title">
+            <h2 id="decision-title" class="card__title">Décision finale</h2>
+            <p class="prose">{{ candidate.decisionComment }}</p>
+            @if (candidate.decidedAt) {
+              <p class="meta">Décidée le {{ candidate.decidedAt | date: 'dd/MM/yyyy' }}</p>
+            }
+          </section>
+        }
+
+        @if (candidate.rejectionReason) {
+          <section class="card" aria-labelledby="rejection-title">
+            <h2 id="rejection-title" class="card__title">Motif du rejet (présélection CV)</h2>
+            <p class="prose">{{ candidate.rejectionReason }}</p>
+          </section>
+        }
+      </div>
+
+      <div class="columns__side">
+        <!-- ------------------------------------------------------ contact -->
+        <section class="card" aria-labelledby="contact-title">
+          <h2 id="contact-title" class="card__title">Coordonnées</h2>
+          <dl class="facts">
+            <div class="facts__row">
+              <dt>Email</dt>
+              <!--
+                Null for a Responsable hiérarchique: FR-35 grants them the name,
+                the poste and the CV, not the contact details. Stated rather
+                than left blank, so it reads as a rule and not as missing data.
+              -->
+              <dd>
+                @if (candidate.email) {
+                  <a href="mailto:{{ candidate.email }}">{{ candidate.email }}</a>
+                } @else {
+                  <span class="facts__restricted">Non communiqué pour votre rôle</span>
+                }
+              </dd>
+            </div>
+            <div class="facts__row">
+              <dt>Téléphone</dt>
+              <dd>
+                @if (candidate.phone) {
+                  {{ candidate.phone }}
+                } @else {
+                  <span class="facts__restricted">Non communiqué pour votre rôle</span>
+                }
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <!-- --------------------------------------------------------- CV -->
+        <section class="card" aria-labelledby="resume-title">
+          <h2 id="resume-title" class="card__title">CV</h2>
+          @if (candidate.resume.hasResume && candidate.resume.url) {
+            <a matButton="filled" [href]="candidate.resume.url" target="_blank" rel="noopener">
+              <mat-icon>download</mat-icon>
+              Télécharger le CV
+            </a>
+          } @else {
+            <p class="empty">Aucun CV téléversé.</p>
+          }
+        </section>
+
+        <!-- ------------------------------------------------------ dossier -->
+        <section class="card" aria-labelledby="file-title">
+          <h2 id="file-title" class="card__title">Dossier</h2>
+          <dl class="facts">
+            <div class="facts__row">
+              <dt>Enregistré le</dt>
+              <dd>{{ candidate.registeredAt | date: 'dd/MM/yyyy' }}</dd>
+            </div>
+            <div class="facts__row">
+              <dt>Enregistré par</dt>
+              <dd>{{ candidate.registeredBy?.name ?? 'Inconnu' }}</dd>
+            </div>
+            <div class="facts__row">
+              <dt>Poste</dt>
+              <dd>{{ candidate.jobPosition?.title ?? 'Poste inconnu' }}</dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+    </div>
+  }
+</app-shell>

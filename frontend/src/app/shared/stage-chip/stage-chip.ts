@@ -10,10 +10,12 @@ import { Component, computed, input } from '@angular/core';
  * The seven stages are ARCHITECTURE.md Section 8's fixed pipeline and are
  * never renamed here — the value arrives from the API and is displayed as-is.
  *
- * COLOUR NOTE: DESIGN.md's palette contains NO success green. Rather than
- * invent one (rule 8 forbids inventing a visual style), « Accepté » uses the
- * strong brand primary as the positive terminal state and rejections use the
- * error role. Flagged for the human.
+ * COLOUR NOTE (D-066): « Accepté » uses DESIGN.md's `success` role, added on
+ * 2026-08-13 at the human's instruction. It previously borrowed the brand
+ * primary, because the palette had no positive-terminal colour and rule 8
+ * forbids inventing one — so the colour was added to DESIGN.md FIRST and is
+ * consumed from there here, rather than being invented at the point of use.
+ * `success` and `error` are counterparts and are applied identically.
  */
 type StageTone = 'neutral' | 'info' | 'progress' | 'attention' | 'positive' | 'negative';
 
@@ -57,9 +59,12 @@ const TONES: Record<string, StageTone> = {
       background-color: var(--mat-sys-tertiary-fixed);
       color: var(--mat-sys-on-tertiary-fixed-variant);
     }
+    // The positive/negative pair are deliberately symmetrical: container tint
+    // as background, on-container tone as text. Both are terminal outcomes and
+    // should read as the same KIND of thing, differing only in hue.
     .chip--positive {
-      background-color: var(--mat-sys-primary-fixed-dim);
-      color: var(--mat-sys-on-primary-fixed);
+      background-color: var(--recrutpro-success-container);
+      color: var(--recrutpro-on-success-container);
     }
     .chip--negative {
       background-color: var(--mat-sys-error-container);

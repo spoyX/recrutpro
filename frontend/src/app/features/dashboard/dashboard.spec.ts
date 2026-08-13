@@ -3,7 +3,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Dashboard } from './dashboard';
-import { AuthService } from '../../core/auth.service';
 import { environment } from '../../../environments/environment';
 
 describe('Dashboard (FR-45, FR-46, FR-47)', () => {
@@ -262,21 +261,7 @@ describe('Dashboard (FR-45, FR-46, FR-47)', () => {
     });
   });
 
-  describe('FR-4: logout', () => {
-    it('calls logout and returns to the login page', () => {
-      const navigate = spyOn(router, 'navigate').and.resolveTo(true);
-      create();
-      http.expectOne(URL).flush({ role: 'Administrateur', activeUsers: 1, recentAuditEntries: [] });
-      fixture.detectChanges();
-
-      fixture.componentInstance.logout();
-
-      const req = http.expectOne(`${environment.apiUrl}/auth/logout`);
-      expect(req.request.withCredentials).toBeTrue();
-      req.flush(null);
-
-      expect(navigate).toHaveBeenCalledWith(['/login']);
-      expect(TestBed.inject(AuthService).currentUser()).toBeNull();
-    });
-  });
+  // FR-4's logout test moved to shared/app-shell/app-shell.spec.ts along with
+  // the behaviour itself (D-067) — the topbar is now the shell's, not this
+  // page's. It is relocated, not dropped.
 });

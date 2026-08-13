@@ -5,8 +5,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { AuthService, ApiError } from '../../core/auth.service';
+import { RouterLink } from '@angular/router';
+import { ApiError } from '../../core/auth.service';
 import { DashboardService, Dashboard as DashboardData } from './dashboard.service';
+import { AppShell } from '../../shared/app-shell/app-shell';
 import { StatTile } from '../../shared/stat-tile/stat-tile';
 import { StageChip } from '../../shared/stage-chip/stage-chip';
 import { PipelineBreakdown } from '../../shared/pipeline-breakdown/pipeline-breakdown';
@@ -25,9 +27,11 @@ import { PipelineBreakdown } from '../../shared/pipeline-breakdown/pipeline-brea
   selector: 'app-dashboard',
   imports: [
     DatePipe,
+    RouterLink,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
+    AppShell,
     StatTile,
     StageChip,
     PipelineBreakdown,
@@ -38,7 +42,6 @@ import { PipelineBreakdown } from '../../shared/pipeline-breakdown/pipeline-brea
 export class Dashboard {
   private readonly dashboards = inject(DashboardService);
   private readonly router = inject(Router);
-  protected readonly auth = inject(AuthService);
 
   readonly data = signal<DashboardData | null>(null);
   readonly loading = signal(true);
@@ -80,13 +83,8 @@ export class Dashboard {
     });
   }
 
-  logout(): void {
-    // FR-4. Idempotent server-side (D-026), so navigate regardless of outcome.
-    this.auth.logout().subscribe({
-      next: () => void this.router.navigate(['/login']),
-      error: () => void this.router.navigate(['/login']),
-    });
-  }
+  // Logout and the topbar identity now live in `shared/app-shell`, which every
+  // protected page wraps itself in — one place to change when D-065 is settled.
 
   /** FR-47 audit entries read as `UtilisateurCree`; space them for humans. */
   humanise(action: string): string {

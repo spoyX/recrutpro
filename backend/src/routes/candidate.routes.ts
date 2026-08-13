@@ -5,6 +5,7 @@ import {
   changeStage,
   putResume,
   getResume,
+  detail,
 } from '../controllers/candidate.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
 import { uploadResume } from '../middleware/upload.middleware';
@@ -45,6 +46,37 @@ router.use(requireAuth);
  *       404: { description: Candidat inexistant ou aucun CV téléversé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.get('/:id/resume', requireRole(Role.Recruteur, Role.ResponsableHierarchique), getResume);
+
+/**
+ * @openapi
+ * /candidates/{id}:
+ *   get:
+ *     summary: Dossier complet d'un candidat (D-067) — page Détail candidat
+ *     description: >
+ *       Renvoie le dossier entier en UNE requête : le candidat, son poste, la
+ *       personne qui l'a enregistré, la présence d'un CV, l'historique de ses
+ *       entretiens (du plus récent au plus ancien) et, pour chaque entretien,
+ *       son évaluation. Aucune de ces trois dernières informations n'est
+ *       accessible par un autre endpoint : il n'existe pas de route de
+ *       métadonnées de CV, `GET /interviews` ne filtre pas par candidat, et
+ *       aucune route ne renvoie une évaluation.
+ *       Accès : Recruteur sans restriction ; Responsable hiérarchique
+ *       UNIQUEMENT pour un candidat dont il mène l'entretien et dans son
+ *       département (D-047, même prédicat que la liste FR-35). Pour ce rôle,
+ *       `email` et `phone` sont renvoyés à `null` : FR-35 lui accorde le nom,
+ *       le poste et le CV, pas les coordonnées.
+ *     tags: [Candidates]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Le dossier du candidat. }
+ *       403: { description: Responsable non assigné à ce candidat, ou rôle non autorisé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Candidat inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/:id', requireRole(Role.Recruteur, Role.ResponsableHierarchique), detail);
 
 // D-051: the stage transition serves BOTH roles — CV review for a Recruteur
 // (FR-25/FR-26), the final decision for a Responsable (FR-29/FR-39) — so it

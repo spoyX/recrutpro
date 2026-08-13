@@ -11,10 +11,11 @@ import {
   CvReviewTargetStage,
   FINAL_DECISION_STAGES,
   FinalDecisionStage,
+  getCandidateDetail,
 } from '../services/candidate.service';
 import { decideCandidateOutcome } from '../services/evaluation.service';
 import { CandidateStage, Role } from '../common/constants';
-import { toCandidateListItem } from '../views/candidate.view';
+import { toCandidateListItem, toCandidateDetail } from '../views/candidate.view';
 import { uploadResumeForCandidate, downloadResume } from '../services/resume.service';
 import { toPublicCandidate } from '../views/candidate.view';
 import { toPublicResume } from '../views/resume.view';
@@ -49,6 +50,21 @@ export const register: RequestHandler = async (req, res, next) => {
     );
 
     res.status(201).json(toPublicCandidate(candidate));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/candidates/:id — the Candidate Details page (D-067).
+ *
+ * HTTP only: the viewer comes from the session (never the request), and every
+ * authorisation and composition rule lives in the service (Section 2).
+ */
+export const detail: RequestHandler = async (req, res, next) => {
+  try {
+    const source = await getCandidateDetail(String(req.params.id), req.currentUser!);
+    res.json(toCandidateDetail(source));
   } catch (error) {
     next(error);
   }

@@ -14,5 +14,16 @@ export const routes: Routes = [
     loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
     title: 'Tableau de bord — RecrutPro',
   },
+  {
+    // D-067. `:id` binds to the component's `id` input via
+    // `withComponentInputBinding`. There is no /candidates list page yet, so
+    // this route is reached from the dashboard's recent-candidate rows.
+    path: 'candidates/:id',
+    loadComponent: () =>
+      import('./features/candidates/candidate-details/candidate-details').then(
+        (m) => m.CandidateDetails,
+      ),
+    title: 'Dossier candidat — RecrutPro',
+  },
   { path: '**', redirectTo: 'login' },
 ];

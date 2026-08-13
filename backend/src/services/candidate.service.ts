@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 import { Candidate, ICandidate } from '../models/Candidate.model';
 import { Resume } from '../models/Resume.model';
+import { Interview } from '../models/Interview.model';
+import { InterviewEvaluation } from '../models/InterviewEvaluation.model';
+import { IUser } from '../models/User.model';
 import {
   CandidateStage,
   AuditAction,
@@ -9,8 +12,19 @@ import {
 } from '../common/constants';
 import { AppError } from '../common/errors';
 import { recordAudit } from '../common/audit';
+import { isDepartmentScoped } from '../middleware/rbac.middleware';
 import { assertAcceptsCandidates } from './jobPosition.service';
 import { notify, resolveResponsibleRecruiter } from './notification.service';
+// MODULE CYCLE, deliberate and safe: interview.service imports
+// `markInterviewScheduled` / `revertToPreselection` from this file, so this
+// import closes a loop. It works because neither side touches the other at
+// module-INITIALISATION time — every reference is inside a function body, and
+// CommonJS resolves those at call time against the finished exports object.
+// The alternative was a second copy of the assignment predicate, which D-047
+// exists to prevent: one predicate, one set of reachable candidates. Verified
+// by the live run, not assumed.
+import { hasAssignedInterviewWith } from './interview.service';
+import { CandidateDetailSource } from '../views/candidate.view';
 
 /**
  * FR-40 — « À chaque changement d'étape d'un candidat (hors inscription
@@ -445,6 +459,94 @@ export const markEvaluationCompleted = async (
   );
 
   return candidate;
+};
+
+/**
+ * `GET /candidates/:id` — the Candidate Details page's whole payload (D-067).
+ *
+ * WHY THIS IS COMPOSED SERVER-SIDE: the page shows the CV, the interview
+ * history and each interview's evaluation, and NONE of the three is reachable
+ * from an existing endpoint. There is no resume-metadata route (only the FR-23
+ * download proxy), `GET /interviews` has no candidate filter, and no route
+ * returns an evaluation at all. Composing client-side would therefore mean
+ * inventing three MORE routes outside the Section 9 contract instead of
+ * building the one it already lists — and it would cost a round trip per
+ * interview against NFR-01. Same reasoning D-057 applied to the dashboard.
+ *
+ * WHO: Recruteur unrestricted (the module is theirs). A Responsable
+ * hiérarchique only for a candidate they actually interview, in their own
+ * department — `hasAssignedInterviewWith`, the SAME predicate as the FR-35
+ * list, the FR-23 CV download, the FR-36 evaluation and the FR-29 decision.
+ * Its fifth use, so the set of candidates that role can see, read, evaluate
+ * and decide on stays one set by construction (D-047, D-048, D-051).
+ * Administrateur is refused by the router: no FR grants it a candidate's file.
+ */
+export const getCandidateDetail = async (
+  candidateId: string,
+  viewer: IUser,
+): Promise<CandidateDetailSource> => {
+  // A malformed id is "no such candidate", not a cast error (D-055's rule).
+  if (!Types.ObjectId.isValid(candidateId)) {
+    throw new AppError(404, 'NOT_FOUND', "Ce candidat n'existe pas.");
+  }
+
+  // Loaded UNPOPULATED on purpose. `hasAssignedInterviewWith` reads
+  // `candidate.jobPositionId` as an id; handing it a populated `{_id, title}`
+  // object would make the authorisation check depend on Mongoose's casting of
+  // a sub-document, which is not a thing a security gate should rest on. The
+  // refs are populated below, AFTER the decision to allow has been made.
+  const candidate = await Candidate.findById(candidateId);
+  if (!candidate) {
+    throw new AppError(404, 'NOT_FOUND', "Ce candidat n'existe pas.");
+  }
+
+  // Checked against the LOADED candidate, never a client-supplied value
+  // (rule 2, NFR-04). 403 rather than 404 follows D-027's resolved rule: every
+  // caller here is an authenticated employee, so a clear refusal beats a
+  // misleading "not found".
+  if (isDepartmentScoped(viewer) && !(await hasAssignedInterviewWith(viewer, candidate))) {
+    throw new AppError(
+      403,
+      'FORBIDDEN',
+      "Vous ne pouvez consulter que les candidats dont vous menez l'entretien.",
+    );
+  }
+
+  await candidate.populate([
+    { path: 'jobPositionId', select: 'title' },
+    { path: 'registeredBy', select: 'name' },
+  ]);
+
+  const interviews = await Interview.find({ candidateId: candidate._id })
+    .populate('interviewerId', 'name')
+    // Newest first. FR-33's schedule sorts FORWARD because it is a queue of
+    // work still to come; this is a HISTORY, where the most recent event is
+    // the one being read — the same newest-first rule as D-041 and D-060.
+    .sort({ scheduledAt: -1 });
+
+  // Both remaining reads are ONE query for the whole page, not one per
+  // interview — the D-041 rule about `hasResume`, applied again.
+  const evaluations = await InterviewEvaluation.find({
+    interviewId: { $in: interviews.map((i) => i._id) },
+  }).populate('submittedBy', 'name');
+  const byInterview = new Map(evaluations.map((e) => [String(e.interviewId), e]));
+
+  // Only an ACTIVE resume counts, so an FR-22 replacement's superseded row does
+  // not read as a downloadable CV.
+  const hasResume = Boolean(
+    await Resume.exists({ candidateId: candidate._id, isActive: true }),
+  );
+
+  return {
+    candidate: candidate as never,
+    hasResume,
+    interviews: interviews.map((interview) => ({
+      interview: interview as never,
+      evaluation: (byInterview.get(String(interview._id)) ?? null) as never,
+    })),
+    // FR-35 enumerates what this role gets, and contact details are not in it.
+    redactContactDetails: isDepartmentScoped(viewer),
+  };
 };
 
 /** FR-24 — the only sortable columns. Anything else is refused, not ignored. */

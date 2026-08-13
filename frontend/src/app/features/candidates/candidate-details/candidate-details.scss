@@ -1,0 +1,270 @@
+// DESIGN.md: Level 1 cards on the Level 0 canvas, 24px gutters, 8px radius,
+// 1px #E5E7EB borders. Layout chrome (sidebar, topbar, page width, margins)
+// lives in shared/app-shell — this file styles only the page's own content.
+
+.page__title {
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--recrutpro-tracking-headline-xl);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.page__error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-small);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-md);
+}
+
+.head__position {
+  font: var(--mat-sys-body-large);
+  color: var(--text-slate);
+  margin: var(--sp-xs) 0 0;
+}
+
+// DESIGN.md's 12-column feel: a wide main column beside a narrower rail.
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: var(--sp-gutter);
+  align-items: start;
+}
+
+.columns__main,
+.columns__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-gutter);
+  min-width: 0;
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+}
+
+.card__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0 0 var(--sp-md);
+}
+
+// ------------------------------------------------------------- interviews
+
+.interviews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+.interview {
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  padding: var(--sp-md);
+}
+
+.interview__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  min-height: var(--layout-row-height);
+  flex-wrap: wrap;
+}
+
+.interview__when {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.interview__status {
+  padding: 2px var(--sp-sm);
+  border-radius: var(--radius-sm); // DESIGN.md: tags use rounded.sm (4px)
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+  margin: 0;
+}
+
+.interview__who {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+  margin-left: auto;
+}
+
+.interview__note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: var(--sp-sm) 0 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-error-container);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// --------------------------------------------------------------- scores
+
+.evaluation {
+  margin-top: var(--sp-md);
+  padding-top: var(--sp-md);
+  border-top: var(--border-level-1);
+}
+
+.evaluation__title {
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+  margin: 0 0 var(--sp-sm);
+}
+
+.evaluation__comments {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  margin: var(--sp-md) 0 0;
+  white-space: pre-wrap;
+}
+
+.scores {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.scores__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+
+  dt {
+    font: var(--mat-sys-body-small);
+    color: var(--text-slate);
+    flex: 1 1 auto;
+  }
+
+  dd {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    margin: 0;
+  }
+}
+
+// A 1–5 scale as five dots. DESIGN.md: "Status Indicators — small circular
+// dots (8px) alongside text labels". No charting dependency for five dots.
+.scores__dots {
+  display: inline-flex;
+  gap: var(--sp-xs);
+}
+
+.scores__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--mat-sys-surface-container-highest);
+}
+
+.scores__dot--on {
+  background-color: var(--mat-sys-primary);
+}
+
+.scores__value {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+// ----------------------------------------------------------------- facts
+
+.facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.facts__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+
+  dt {
+    font: var(--mat-sys-body-small);
+    color: var(--text-slate);
+  }
+
+  dd {
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface);
+    margin: 0;
+    text-align: right;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  a {
+    color: var(--mat-sys-secondary);
+  }
+}
+
+.facts__restricted {
+  color: var(--mat-sys-outline);
+  font-style: italic;
+}
+
+.prose {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: var(--sp-sm) 0 0;
+}
+
+.empty {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+// DESIGN.md: single column below the mobile breakpoint.
+@media (max-width: 900px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .head {
+    flex-direction: column;
+  }
+}

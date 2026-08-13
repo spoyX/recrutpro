@@ -1,25 +1,4 @@
-<header class="topbar">
-  <div class="topbar__inner">
-    <span class="topbar__brand">
-      <span class="topbar__logo" aria-hidden="true"><mat-icon>groups</mat-icon></span>
-      RecrutPro
-    </span>
-
-    @if (auth.currentUser(); as user) {
-      <span class="topbar__identity">
-        <span class="topbar__name">{{ user.name }}</span>
-        <span class="topbar__role label-sm">{{ user.role }}</span>
-      </span>
-    }
-
-    <button matButton type="button" (click)="logout()">
-      <mat-icon>logout</mat-icon>
-      Se déconnecter
-    </button>
-  </div>
-</header>
-
-<main class="page">
+<app-shell>
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" aria-label="Chargement du tableau de bord" />
   }
@@ -61,7 +40,10 @@
             <ul class="rows">
               @for (candidate of dashboard.recentCandidates; track candidate.id) {
                 <li class="rows__row">
-                  <span class="rows__primary">{{ candidate.fullName }}</span>
+                  <!-- The natural next click: straight into the candidate's file (D-067). -->
+                  <a class="rows__primary rows__link" [routerLink]="['/candidates', candidate.id]">
+                    {{ candidate.fullName }}
+                  </a>
                   <span class="rows__secondary">
                     {{ candidate.jobPosition?.title ?? 'Poste inconnu' }}
                   </span>
@@ -152,4 +134,4 @@
       }
     }
   }
-</main>
+</app-shell>
