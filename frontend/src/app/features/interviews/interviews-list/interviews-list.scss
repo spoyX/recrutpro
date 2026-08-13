@@ -1,0 +1,314 @@
+// DESIGN.md: Level 1 cards on the Level 0 canvas, 24px gutters, 8px radius,
+// 56px rows, Level 2 shadow for temporary interaction layers.
+// Layout chrome lives in shared/app-shell.
+
+.page__title {
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--recrutpro-tracking-headline-xl);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.page__error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-small);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.head__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+}
+
+// ---------------------------------------------------------------- filters
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-md);
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  min-width: 0;
+}
+
+.filters__label {
+  color: var(--text-slate);
+  margin: 0;
+}
+
+// DESIGN.md Components: white fill, 1px #D1D5DB border, 8px padding, and the
+// focus blue with a soft outer glow.
+.filters__control {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  min-width: 180px;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+.filters__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  margin-left: auto;
+}
+
+.filters__toggle--on {
+  color: var(--mat-sys-primary);
+}
+
+// ------------------------------------------------------------------ days
+
+.day__heading {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0 0 var(--sp-md);
+  // Dates arrive lowercased in French; a schedule heading reads better capped.
+  text-transform: capitalize;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rows__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  min-height: var(--layout-row-height);
+  padding: var(--sp-sm) 0;
+  border-bottom: var(--border-level-1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// A cancelled or already-held slot is context, not the working set.
+.rows__row--inactive {
+  opacity: 0.65;
+}
+
+.rows__time {
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+}
+
+.rows__who {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+.rows__link {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.rows__poste {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+}
+
+.rows__sublink {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.rows__interviewer {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+  flex: 0 1 20%;
+  min-width: 0;
+}
+
+.rows__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin-left: auto;
+}
+
+.rows__note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 0 0 var(--sp-sm);
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-error-container);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ----------------------------------------------------------------- pager
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+}
+
+.pager__status {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+// ----------------------------------------------------------------- modal
+
+// DESIGN.md Elevation Level 2: temporary interaction layer.
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-md);
+  background-color: rgb(18 28 42 / 0.45);
+  z-index: 10;
+}
+
+.modal__panel {
+  width: min(480px, 100%);
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  // DESIGN.md: modals and feature sections use rounded.lg (16px).
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  padding: var(--sp-lg);
+}
+
+.modal__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0 0 var(--sp-sm);
+}
+
+.modal__body {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-md);
+}
+
+.modal__label {
+  display: block;
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-xs);
+}
+
+.modal__input {
+  width: 100%;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  resize: vertical;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+.modal__error {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-error-container);
+  background-color: var(--mat-sys-error-container);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  margin: var(--sp-sm) 0 0;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-md);
+}
+
+@media (max-width: 900px) {
+  .filters__control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters__field {
+    flex: 1 1 100%;
+  }
+
+  .filters__actions {
+    margin-left: 0;
+  }
+
+  .rows__row {
+    flex-wrap: wrap;
+  }
+
+  .rows__actions {
+    margin-left: 0;
+  }
+}

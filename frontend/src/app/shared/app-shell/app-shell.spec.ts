@@ -77,8 +77,9 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         expect(el.getAttribute('aria-disabled')).toBe('true');
         expect(el.tagName.toLowerCase()).not.toBe('a');
       });
-      // Five destinations have no page at all yet.
-      expect(hints('à venir').length).toBe(5);
+      // Four destinations have no page at all yet: Postes, Rapports,
+      // Utilisateurs, Journal d'audit.
+      expect(hints('à venir').length).toBe(4);
     });
   });
 
@@ -113,7 +114,21 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       // The two disabled reasons must not be conflated: the page EXISTS, it is
       // simply not this role's.
       expect(hints('réservé').length).toBe(1);
-      expect(hints('à venir').length).toBe(5);
+      expect(hints('à venir').length).toBe(4);
+    });
+
+    it('ResponsableHierarchique: « Entretiens » IS a link — FR-35 is theirs', () => {
+      signIn('ResponsableHierarchique');
+      create();
+
+      expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeTruthy();
+    });
+
+    it('Recruteur: « Entretiens » IS a link — FR-33 is theirs', () => {
+      signIn('Recruteur');
+      create();
+
+      expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeTruthy();
     });
 
     it('Administrateur: « Candidats » is disabled — D-068 did not widen the FR-24 list', () => {
@@ -121,7 +136,9 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       create();
 
       expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
-      expect(hints('réservé').length).toBe(1);
+      // Entretiens too: neither FR-33 nor FR-35 names that role.
+      expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
+      expect(hints('réservé').length).toBe(2);
     });
 
     it('every role keeps the dashboard link — FR-45/46/47 give all three one', () => {
@@ -138,7 +155,8 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       create();
 
       expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
-      expect(hints('réservé').length).toBe(1);
+      expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
+      expect(hints('réservé').length).toBe(2);
     });
   });
 

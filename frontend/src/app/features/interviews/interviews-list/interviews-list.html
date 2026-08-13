@@ -1,0 +1,247 @@
+<app-shell>
+  <header class="head">
+    <h1 class="page__title">Entretiens</h1>
+    @if (!loading() && !errorMessage()) {
+      <p class="head__count">
+        @if (total() === 0) {
+          Aucun entretien
+        } @else {
+          {{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}
+        }
+      </p>
+    }
+  </header>
+
+  <!-- FR-33: filtrable par date, responsable hiérarchique et poste. -->
+  <section class="filters card" aria-label="Filtres">
+    <div class="filters__field">
+      <label class="filters__label label-sm" for="filter-from">Du</label>
+      <input
+        id="filter-from"
+        class="filters__control"
+        type="date"
+        [value]="filters().fromDate ?? ''"
+        (change)="setFilter('fromDate', $any($event.target).value)"
+      />
+    </div>
+
+    <div class="filters__field">
+      <label class="filters__label label-sm" for="filter-to">au</label>
+      <input
+        id="filter-to"
+        class="filters__control"
+        type="date"
+        [value]="filters().toDate ?? ''"
+        (change)="setFilter('toDate', $any($event.target).value)"
+      />
+    </div>
+
+    <div class="filters__field">
+      <label class="filters__label label-sm" for="filter-interviewer">Responsable</label>
+      <select
+        id="filter-interviewer"
+        class="filters__control"
+        [value]="filters().interviewerId ?? ''"
+        (change)="setFilter('interviewerId', $any($event.target).value)"
+      >
+        <option value="">Tous les responsables</option>
+        @for (option of interviewerOptions(); track option.id) {
+          <option [value]="option.id">{{ option.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filters__field">
+      <label class="filters__label label-sm" for="filter-position">Poste</label>
+      <select
+        id="filter-position"
+        class="filters__control"
+        [value]="filters().jobPositionId ?? ''"
+        (change)="setFilter('jobPositionId', $any($event.target).value)"
+      >
+        <option value="">Tous les postes</option>
+        @for (option of positionOptions(); track option.id) {
+          <option [value]="option.id">{{ option.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filters__actions">
+      <!-- D-049: the parameter is includeFinished; it reveals BOTH cancelled
+           and already-evaluated interviews, which is why it is not called
+           includeCancelled any more. -->
+      <button
+        matButton
+        type="button"
+        [class.filters__toggle--on]="includeFinished()"
+        (click)="toggleFinished()"
+      >
+        <mat-icon>{{ includeFinished() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+        Afficher les entretiens terminés et annulés
+      </button>
+
+      <button matButton type="button" (click)="toggleSort()">
+        <mat-icon>{{ sortDir() === 'asc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+        {{ sortDir() === 'asc' ? 'Du plus proche' : 'Du plus lointain' }}
+      </button>
+
+      @if (isFiltered() || includeFinished()) {
+        <button matButton type="button" (click)="resetFilters()">
+          <mat-icon>filter_alt_off</mat-icon>
+          Réinitialiser
+        </button>
+      }
+    </div>
+  </section>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement des entretiens" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      <button matButton type="button" (click)="load()">Réessayer</button>
+    </p>
+  }
+
+  @if (!errorMessage()) {
+    @if (days().length) {
+      <!-- Grouped by day, so the list reads as a schedule (FR-33). -->
+      @for (day of days(); track day.date) {
+        <section class="card day" [attr.aria-label]="day.date">
+          <h2 class="day__heading">{{ day.heading | date: 'EEEE d MMMM y' }}</h2>
+
+          <ul class="rows">
+            @for (interview of day.rows; track interview.id) {
+              <li class="rows__row" [class.rows__row--inactive]="interview.status !== 'Planifié'">
+                <span class="rows__time">{{ interview.scheduledAt | date: 'HH:mm' }}</span>
+
+                <span class="rows__who">
+                  @if (interview.candidate; as candidate) {
+                    <a class="rows__link" [routerLink]="['/candidates', candidate.id]">
+                      {{ candidate.fullName }}
+                    </a>
+                  } @else {
+                    Candidat inconnu
+                  }
+                  <span class="rows__poste">
+                    @if (interview.jobPosition; as position) {
+                      <a class="rows__sublink" [routerLink]="['/job-positions', position.id]">
+                        {{ position.title }}
+                      </a>
+                    } @else {
+                      Poste inconnu
+                    }
+                  </span>
+                </span>
+
+                <span class="rows__interviewer">
+                  {{ interview.interviewer?.name ?? 'Responsable inconnu' }}
+                </span>
+
+                <app-stage-chip [stage]="interview.status" />
+
+                <span class="rows__actions">
+                  <!-- FR-35: « un accès au CV ». The URL is this API's proxy
+                       route, never a storage URL (D-040). -->
+                  @if (interview.candidate?.hasResume) {
+                    <a
+                      matButton
+                      [href]="interview.candidate!.resumeUrl"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      <mat-icon>description</mat-icon>
+                      CV
+                    </a>
+                  }
+
+                  @if (canCancel(interview)) {
+                    <button matButton type="button" (click)="startCancel(interview)">
+                      <mat-icon>event_busy</mat-icon>
+                      Annuler
+                    </button>
+                  }
+                </span>
+              </li>
+
+              <!-- FR-34: a cancelled interview keeps its row and its motive. -->
+              @if (interview.cancellationReason) {
+                <li class="rows__note">
+                  <mat-icon aria-hidden="true">event_busy</mat-icon>
+                  <span>Annulé — {{ interview.cancellationReason }}</span>
+                </li>
+              }
+            }
+          </ul>
+        </section>
+      }
+
+      <nav class="pager" aria-label="Pagination">
+        <button matButton type="button" [disabled]="!hasPrevious()" (click)="previousPage()">
+          <mat-icon>chevron_left</mat-icon>
+          Précédent
+        </button>
+        <span class="pager__status">{{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}</span>
+        <button matButton type="button" [disabled]="!hasNext()" (click)="nextPage()">
+          Suivant
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </nav>
+    } @else if (!loading()) {
+      <section class="card">
+        <p class="empty">
+          @if (isFiltered() || includeFinished()) {
+            Aucun entretien ne correspond à ces filtres.
+          } @else {
+            Aucun entretien planifié. Les entretiens terminés et annulés sont masqués par
+            défaut.
+          }
+        </p>
+      </section>
+    }
+  }
+
+  <!-- FR-34 — the motive is mandatory, and the server enforces it too. -->
+  @if (cancelling(); as target) {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+      <div class="modal__panel">
+        <h2 id="cancel-title" class="modal__title">Annuler cet entretien</h2>
+        <p class="modal__body">
+          {{ target.candidate?.fullName ?? 'Ce candidat' }} —
+          {{ target.scheduledAt | date: 'dd/MM/yyyy à HH:mm' }}.
+          Le candidat reviendra à l'étape « Présélection CV validée ».
+        </p>
+
+        <label class="modal__label label-sm" for="cancel-reason">Motif d'annulation</label>
+        <textarea
+          id="cancel-reason"
+          class="modal__input"
+          rows="3"
+          [value]="cancelReason()"
+          (input)="cancelReason.set($any($event.target).value)"
+        ></textarea>
+
+        @if (cancelError(); as message) {
+          <p class="modal__error" role="alert">{{ message }}</p>
+        }
+
+        <div class="modal__actions">
+          <button matButton type="button" [disabled]="cancelBusy()" (click)="dismissCancel()">
+            Retour
+          </button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="cancelBusy()"
+            (click)="confirmCancel()"
+          >
+            Confirmer l'annulation
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</app-shell>

@@ -48,8 +48,17 @@ const NAV: readonly NavItem[] = [
   { label: 'Tableau de bord', icon: 'dashboard', route: '/dashboard' },
   // FR-24 is Recruteur-only (D-041), and D-068 deliberately did not widen it.
   { label: 'Candidats', icon: 'group', route: '/candidates', roles: ['Recruteur'] },
+  // No positions LIST page yet — the details page is reached from a poste
+  // title on the candidate pages (D-071).
   { label: 'Postes', icon: 'work', route: null },
-  { label: 'Entretiens', icon: 'event', route: null },
+  // FR-33 for the Recruteur, FR-35 for the Responsable: the SAME route, with
+  // the scope decided server-side (D-047). The Administrateur has neither FR.
+  {
+    label: 'Entretiens',
+    icon: 'event',
+    route: '/interviews',
+    roles: ['Recruteur', 'ResponsableHierarchique'],
+  },
   { label: 'Rapports', icon: 'insights', route: null },
   { label: 'Utilisateurs', icon: 'manage_accounts', route: null },
   { label: "Journal d'audit", icon: 'receipt_long', route: null },

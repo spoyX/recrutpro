@@ -34,6 +34,16 @@ export const routes: Routes = [
     title: 'Dossier candidat — RecrutPro',
   },
   {
+    // FR-33 (Recruteur, unscoped) and FR-35 (Responsable, scoped) — ONE route,
+    // the scope decided server-side (D-047).
+    path: 'interviews',
+    loadComponent: () =>
+      import('./features/interviews/interviews-list/interviews-list').then(
+        (m) => m.InterviewsList,
+      ),
+    title: 'Entretiens — RecrutPro',
+  },
+  {
     // FR-14 to FR-17. `GET /job-positions/:id` already existed (D-038); there
     // is no positions LIST page yet, so this is reached from a poste title on
     // the candidate pages.
