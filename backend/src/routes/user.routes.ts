@@ -13,9 +13,46 @@ import { Role } from '../common/constants';
 
 const router = Router();
 
-// FR-6 to FR-9 are Administrateur-only. Applied to the whole router rather
-// than per route, so rule 1 ("no unprotected routes, no exceptions") cannot be
-// broken by forgetting a guard on a route added later.
+/**
+ * @openapi
+ * /users:
+ *   get:
+ *     summary: Liste les utilisateurs (FR-12) — et les responsables hiérarchiques pour FR-30
+ *     description: >
+ *       Administrateur : l'annuaire complet, filtrable (FR-12).
+ *       Recruteur (D-073) : UNIQUEMENT avec « role=ResponsableHierarchique », qui
+ *       est obligatoire, éventuellement restreint par « departmentId ». Toute
+ *       autre requête est refusée par 403. La réponse est alors réduite à
+ *       { id, name, departmentId }.
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [Administrateur, Recruteur, ResponsableHierarchique]
+ *       - in: query
+ *         name: isActive
+ *         schema: { type: string, enum: ['true', 'false'] }
+ *       - in: query
+ *         name: departmentId
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Liste des comptes (sans passwordHash). }
+ *       400: { description: Filtre invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: Rôle non autorisé pour ce filtre (D-073)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+// D-073 — the ONE carve-out, mounted BEFORE the router-wide guard because that
+// guard would otherwise refuse it first. Its own roles are stated inline, so
+// the exception is visible at the route rather than hidden in the controller.
+// The mandatory `role=ResponsableHierarchique` narrowing is enforced in
+// user.service.ts, not here: it is an authorisation rule, and rule 1 wants
+// those where the data is read.
+router.get('/', requireAuth, requireRole(Role.Administrateur, Role.Recruteur), list);
+
+// Everything else is Administrateur-only (FR-6 to FR-12). Applied to the whole
+// router rather than per route, so rule 1 ("no unprotected routes, no
+// exceptions") cannot be broken by forgetting a guard on a route added later.
 router.use(requireAuth, requireRole(Role.Administrateur));
 
 /**
@@ -49,27 +86,6 @@ router.use(requireAuth, requireRole(Role.Administrateur));
  *       409: { description: Email déjà utilisé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/', create);
-
-/**
- * @openapi
- * /users:
- *   get:
- *     summary: Liste les utilisateurs, filtrable par rôle et statut (FR-12)
- *     tags: [Users]
- *     parameters:
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [Administrateur, Recruteur, ResponsableHierarchique]
- *       - in: query
- *         name: isActive
- *         schema: { type: string, enum: ['true', 'false'] }
- *     responses:
- *       200: { description: Liste des comptes (sans passwordHash). }
- *       400: { description: Filtre invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.get('/', list);
 
 /**
  * @openapi

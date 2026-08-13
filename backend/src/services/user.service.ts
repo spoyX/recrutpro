@@ -65,26 +65,71 @@ const assertAssignableDepartment = async (
 export interface UserFilters {
   role?: Role;
   isActive?: boolean;
+  /** D-073 — narrows the FR-30 picker to the department of the poste. */
+  departmentId?: string;
 }
 
 /**
- * FR-12 — list all users, filterable by role and by active status.
+ * FR-12 — list all users, filterable by role, active status and department.
  *
  * No pagination: NFR-01 caps the system at ~50 concurrent users, so the whole
  * table is a handful of documents. Add it when a real deployment says otherwise.
+ *
+ * D-073 — the Recruteur carve-out. This is the ONLY /users route a
+ * non-administrator can reach, and only as FR-30's interviewer picker. The
+ * narrowing lives HERE rather than in the controller for the same reason
+ * D-047's interview scoping does: it is an authorisation rule, and a rule
+ * enforced in the request layer is a rule the next caller can forget.
  */
-export const listUsers = async (filters: UserFilters): Promise<IUser[]> => {
+export const listUsers = async (filters: UserFilters, viewer: IUser): Promise<IUser[]> => {
   const query: Record<string, unknown> = {};
+  const effective: UserFilters = { ...filters };
 
-  if (filters.role !== undefined) {
-    query.role = filters.role;
-  }
-  if (filters.isActive !== undefined) {
-    query.isActive = filters.isActive;
+  if (viewer.role !== Role.Administrateur) {
+    // 403, not 400. The query is well formed; the caller is simply not
+    // entitled to this answer. A 400 would say "fix the query and you may
+    // pass", which is false for every value but this one.
+    if (effective.role !== Role.ResponsableHierarchique) {
+      throw new AppError(
+        403,
+        'FORBIDDEN',
+        "L'annuaire des comptes est réservé à l'administration. Vous pouvez uniquement " +
+          'lister les responsables hiérarchiques, avec le filtre « role=ResponsableHierarchique ».',
+      );
+    }
+
+    // Refused rather than silently overridden — the D-047 rule. A deactivated
+    // account is invisible outside the administration screen, and D-043 would
+    // refuse one as an interviewer anyway, so an option that can only produce
+    // a 400 has no place in a picker.
+    if (effective.isActive === false) {
+      throw new AppError(
+        403,
+        'FORBIDDEN',
+        'Les comptes désactivés sont réservés à l\'administration. Retirez le filtre « isActive ».',
+      );
+    }
+    effective.isActive = true;
   }
 
-  // Sorted by name so the admin screen has a stable order between reloads.
-  return User.find(query).sort({ name: 1 });
+  if (effective.role !== undefined) {
+    query.role = effective.role;
+  }
+  if (effective.isActive !== undefined) {
+    query.isActive = effective.isActive;
+  }
+  if (effective.departmentId !== undefined) {
+    // A malformed id is a bad filter, not a 500 from the ObjectId cast.
+    if (!Types.ObjectId.isValid(effective.departmentId)) {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Identifiant de département invalide.');
+    }
+    query.departmentId = effective.departmentId;
+  }
+
+  // Sorted by name, with the D-069 `_id` tiebreaker: two namesakes would
+  // otherwise swap places between reloads. Unpaginated, so this is determinism
+  // only, not the row-loss defect D-069 fixed.
+  return User.find(query).sort({ name: 1, _id: 1 });
 };
 
 /** FR-12 — read a single user. */

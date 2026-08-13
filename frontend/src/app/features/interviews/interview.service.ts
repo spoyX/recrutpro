@@ -43,6 +43,27 @@ export interface InterviewPage {
 
 export const INTERVIEW_PAGE_SIZE = 25;
 
+/**
+ * D-073 — one row of FR-30's interviewer picker, mirroring the backend's
+ * `InterviewerOption`. Deliberately NOT the full account shape: `GET /users`
+ * returns only `{id, name, departmentId}` to a Recruteur.
+ */
+export interface InterviewerOption {
+  id: string;
+  name: string;
+  departmentId: string | null;
+}
+
+/** FR-30 to FR-32 — the scheduling request body. */
+export interface ScheduleInterviewInput {
+  candidateId: string;
+  interviewerId: string;
+  /** ISO 8601 instant. The form collects a LOCAL time and converts. */
+  scheduledAt: string;
+  /** FR-32 — the recruiter's explicit "book it anyway" after a conflict warning. */
+  confirmDespiteConflict?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class InterviewService {
   private readonly http = inject(HttpClient);
@@ -92,5 +113,42 @@ export class InterviewService {
       { cancellationReason },
       { withCredentials: true },
     );
+  }
+
+  /**
+   * FR-30's picker — D-073's carve-out on `GET /users`.
+   *
+   * `role=ResponsableHierarchique` is MANDATORY server-side, not a convenience:
+   * this is the only shape of the request a Recruteur may make, and anything
+   * else is a 403. `departmentId` is what keeps the list to the eligible
+   * responsables, since FR-30 requires the interviewer to belong to the
+   * department of the poste — but it is the SERVER that enforces that at
+   * scheduling time (D-030: a constrained picker is not an enforced rule).
+   */
+  listInterviewers(departmentId?: string): Observable<InterviewerOption[]> {
+    let params = new HttpParams().set('role', 'ResponsableHierarchique');
+    if (departmentId) {
+      params = params.set('departmentId', departmentId);
+    }
+
+    return this.http
+      .get<InterviewerOption[]>(`${environment.apiUrl}/users`, {
+        params,
+        withCredentials: true,
+      })
+      .pipe(map((users) => users ?? []));
+  }
+
+  /**
+   * FR-30 to FR-32 — schedule an interview.
+   *
+   * A conflict (FR-31) comes back as a 409 `SCHEDULING_CONFLICT`, which is a
+   * WARNING with an override rather than a refusal: the caller re-sends with
+   * `confirmDespiteConflict` to book it anyway (FR-32).
+   */
+  scheduleInterview(input: ScheduleInterviewInput): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`${environment.apiUrl}/interviews`, input, {
+      withCredentials: true,
+    });
   }
 }

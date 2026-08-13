@@ -7,6 +7,8 @@
 
 @use 'styles/theme';
 @use 'styles/tokens';
+// Shared by the FR-34 cancellation prompt and the FR-30 scheduling dialog.
+@use 'styles/modal';
 
 // Border-box everywhere. Without it a declared width means CONTENT width, so
 // `flex: 0 0 280px` plus 16px padding renders a 313px sidebar and DESIGN.md's
@@ -66,6 +68,30 @@ h2 {
   font: var(--mat-sys-label-small);
   letter-spacing: var(--recrutpro-tracking-label-sm);
   text-transform: uppercase;
+}
+
+// Page-level chrome, shared by every feature page.
+//
+// These two were byte-identical in five component stylesheets — the `page__`
+// prefix says they were always page chrome rather than a feature's own styling,
+// and five copies is five places to forget when DESIGN.md moves.
+.page__title {
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--recrutpro-tracking-headline-xl);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.page__error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-small);
 }
 
 // Available to screen readers, invisible on screen. Used where an icon carries

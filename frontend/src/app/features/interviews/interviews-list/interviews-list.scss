@@ -2,24 +2,7 @@
 // 56px rows, Level 2 shadow for temporary interaction layers.
 // Layout chrome lives in shared/app-shell.
 
-.page__title {
-  font: var(--mat-sys-headline-large);
-  letter-spacing: var(--recrutpro-tracking-headline-xl);
-  color: var(--mat-sys-on-surface);
-  margin: 0;
-}
 
-.page__error {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  margin: 0;
-  padding: var(--sp-sm) var(--sp-md);
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
-  font: var(--mat-sys-body-small);
-}
 
 .head {
   display: flex;
@@ -216,79 +199,8 @@
   margin: 0;
 }
 
-// ----------------------------------------------------------------- modal
-
-// DESIGN.md Elevation Level 2: temporary interaction layer.
-.modal {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: var(--sp-md);
-  background-color: rgb(18 28 42 / 0.45);
-  z-index: 10;
-}
-
-.modal__panel {
-  width: min(480px, 100%);
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  // DESIGN.md: modals and feature sections use rounded.lg (16px).
-  border-radius: var(--radius-lg);
-  box-shadow: var(--elevation-2);
-  padding: var(--sp-lg);
-}
-
-.modal__title {
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0 0 var(--sp-sm);
-}
-
-.modal__body {
-  font: var(--mat-sys-body-small);
-  color: var(--text-slate);
-  margin: 0 0 var(--sp-md);
-}
-
-.modal__label {
-  display: block;
-  color: var(--text-slate);
-  margin: 0 0 var(--sp-xs);
-}
-
-.modal__input {
-  width: 100%;
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-default);
-  padding: var(--sp-sm);
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface);
-  resize: vertical;
-
-  &:focus {
-    border-color: var(--recrutpro-focus);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
-    outline: none;
-  }
-}
-
-.modal__error {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-error-container);
-  background-color: var(--mat-sys-error-container);
-  border-radius: var(--radius-default);
-  padding: var(--sp-sm);
-  margin: var(--sp-sm) 0 0;
-}
-
-.modal__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--sp-sm);
-  margin-top: var(--sp-md);
-}
+// The .modal* chrome now lives in src/styles/_modal.scss, shared with the
+// FR-30 scheduling dialog.
 
 @media (max-width: 900px) {
   .filters__control {

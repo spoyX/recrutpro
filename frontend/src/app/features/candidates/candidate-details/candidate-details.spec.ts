@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { CandidateDetails } from './candidate-details';
 import { CandidateDetail } from '../candidate.service';
+import { AuthService } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
 
 describe('CandidateDetails (D-067)', () => {
@@ -220,6 +221,95 @@ describe('CandidateDetails (D-067)', () => {
       load({ email: null, phone: null });
 
       expect(fixture.nativeElement.querySelector('a[href*="/resume"]')).toBeTruthy();
+    });
+  });
+
+  /**
+   * FR-30 — the entry point to scheduling. This is an AFFORDANCE, not a
+   * permission: `POST /interviews` is Recruteur-only and re-checks the stage,
+   * so these tests pin what is SHOWN, and the server tests pin what is allowed.
+   */
+  describe('FR-30 — offering to schedule an interview', () => {
+    const signIn = (role: string): void => {
+      TestBed.inject(AuthService).currentUser.set({
+        id: 'u1',
+        name: 'Marie',
+        email: 'marie@example.com',
+        role: role as 'Recruteur',
+        departmentId: 'd1',
+        mustChangePassword: false,
+      });
+    };
+
+    const scheduleButton = (): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+        (b as HTMLElement).textContent?.includes('Planifier un entretien'),
+      ) as HTMLButtonElement | undefined;
+
+    it('a Recruteur is offered it on a CV-validated candidate', () => {
+      signIn('Recruteur');
+      load({ currentStage: 'Présélection CV validée', decisionComment: null, decidedAt: null });
+
+      expect(scheduleButton()).toBeTruthy();
+    });
+
+    it('the offer is absent at every other stage — the server would 409', () => {
+      for (const stage of ['Candidature reçue', 'Entretien planifié', 'Accepté', 'Rejeté']) {
+        signIn('Recruteur');
+        load({ currentStage: stage, interviews: [] });
+        expect(scheduleButton())
+          .withContext(`stage ${stage}`)
+          .toBeUndefined();
+      }
+    });
+
+    it('a Responsable hiérarchique is not offered it — FR-30 is the recruiter\'s', () => {
+      signIn('ResponsableHierarchique');
+      load({ currentStage: 'Présélection CV validée', email: null, phone: null });
+
+      expect(scheduleButton()).toBeUndefined();
+    });
+
+    it('opens the dialog, which fetches the picker only THEN — not on every file view', () => {
+      signIn('Recruteur');
+      load({ currentStage: 'Présélection CV validée' });
+
+      // Nothing extra was requested just by viewing the file.
+      http.verify();
+
+      scheduleButton()!.click();
+      fixture.detectChanges();
+
+      http.expectOne(`${environment.apiUrl}/job-positions/p1`).flush({
+        id: 'p1',
+        title: 'Développeur backend',
+        departmentId: 'd9',
+        status: 'Ouvert',
+      });
+      const users = http.expectOne((r) => r.url === `${environment.apiUrl}/users`);
+      expect(users.request.params.get('role')).toBe('ResponsableHierarchique');
+      expect(users.request.params.get('departmentId')).toBe('d9');
+      users.flush([{ id: 'r1', name: 'Claire Morel', departmentId: 'd9' }]);
+      fixture.detectChanges();
+
+      expect(text()).toContain('Planifier un entretien');
+      expect(text()).toContain('Claire Morel');
+    });
+
+    it('FR-27: re-reads the file after scheduling, since the stage moved', () => {
+      signIn('Recruteur');
+      load({ currentStage: 'Présélection CV validée' });
+
+      fixture.componentInstance.onScheduled();
+      fixture.detectChanges();
+
+      // The reload is a real request against the same endpoint — the page does
+      // not guess the new stage, it asks.
+      http.expectOne(URL).flush({ ...base, currentStage: 'Entretien planifié' });
+      fixture.detectChanges();
+
+      expect(text()).toContain('Entretien planifié');
+      expect(scheduleButton()).toBeUndefined();
     });
   });
 

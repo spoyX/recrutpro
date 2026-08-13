@@ -6,24 +6,7 @@
 // 280px sidebar finally had somewhere to navigate to. This file now styles
 // only the dashboard's own content.
 
-.page__title {
-  font: var(--mat-sys-headline-large);
-  letter-spacing: var(--recrutpro-tracking-headline-xl);
-  color: var(--mat-sys-on-surface);
-  margin: 0;
-}
 
-.page__error {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  margin: 0;
-  padding: var(--sp-sm) var(--sp-md);
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
-  font: var(--mat-sys-body-small);
-}
 
 // A fluid tile row rather than a hard 12-column grid: the three roles have
 // one, one and two tiles, and auto-fit keeps every case sensible.

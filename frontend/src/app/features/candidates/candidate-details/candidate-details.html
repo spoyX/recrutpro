@@ -25,7 +25,17 @@
           }
         </p>
       </div>
-      <app-stage-chip [stage]="candidate.currentStage" />
+      <div class="head__actions">
+        <!-- FR-30: offered only where the server would accept it (see
+             canSchedule) — the rule itself lives on the server. -->
+        @if (canSchedule(candidate)) {
+          <button matButton="filled" type="button" (click)="scheduling.set(true)">
+            <mat-icon>event_available</mat-icon>
+            Planifier un entretien
+          </button>
+        }
+        <app-stage-chip [stage]="candidate.currentStage" />
+      </div>
     </header>
 
     <div class="columns">
@@ -212,5 +222,17 @@
         </section>
       </div>
     </div>
+
+    <!-- FR-30 to FR-32. Rendered only while open, so it fetches the picker
+         when the recruiter asks for it rather than on every file view. -->
+    @if (scheduling()) {
+      <app-schedule-interview
+        [candidateId]="candidate.id"
+        [candidateName]="candidate.fullName"
+        [jobPositionId]="candidate.jobPosition?.id ?? null"
+        (scheduled)="onScheduled()"
+        (dismissed)="scheduling.set(false)"
+      />
+    }
   }
 </app-shell>

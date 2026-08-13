@@ -17,6 +17,28 @@ export interface PublicUser {
   mustChangePassword: boolean;
 }
 
+/**
+ * D-073 — what a Recruteur sees of a user account: exactly what FR-30's picker
+ * has to render and submit, and nothing else.
+ *
+ * A separate shape rather than `PublicUser`, for the same reason `passwordHash`
+ * is absent by construction above: `mustChangePassword` says an account is
+ * sitting on an administrator-issued temporary credential, which is
+ * administration business, and a field added to `PublicUser` next month would
+ * otherwise reach this caller without anyone deciding that it should.
+ */
+export interface InterviewerOption {
+  id: string;
+  name: string;
+  departmentId: string | null;
+}
+
+export const toInterviewerOption = (user: IUser): InterviewerOption => ({
+  id: String(user._id),
+  name: user.name,
+  departmentId: user.departmentId ? String(user.departmentId) : null,
+});
+
 export const toPublicUser = (user: IUser): PublicUser => ({
   id: String(user._id),
   name: user.name,

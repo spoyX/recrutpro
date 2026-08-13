@@ -5,8 +5,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ApiError } from '../../../core/auth.service';
+import { ApiError, AuthService } from '../../../core/auth.service';
 import { CandidateService, CandidateDetail } from '../candidate.service';
+import { ScheduleInterview } from '../../interviews/schedule-interview/schedule-interview';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 
@@ -33,6 +34,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     MatProgressBarModule,
     AppShell,
     StageChip,
+    ScheduleInterview,
   ],
   templateUrl: './candidate-details.html',
   styleUrl: './candidate-details.scss',
@@ -40,6 +42,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
 export class CandidateDetails {
   private readonly candidates = inject(CandidateService);
   private readonly router = inject(Router);
+  protected readonly auth = inject(AuthService);
 
   /** Bound from the `:id` route parameter (`withComponentInputBinding`). */
   readonly id = input.required<string>();
@@ -95,4 +98,31 @@ export class CandidateDetails {
 
   /** FR-36's scale is 1–5, so a score renders as a filled/empty run of 5. */
   readonly scaleMax = [1, 2, 3, 4, 5];
+
+  // ---------------------------------------------------- FR-30, FR-31, FR-32
+
+  readonly scheduling = signal(false);
+
+  /**
+   * Whether to OFFER scheduling — an affordance, not a permission check.
+   *
+   * The stage half is the same gate the server applies (only a « Présélection
+   * CV validée » candidate can be scheduled), mirrored so the button is not
+   * present to be clicked into a 409. The role half matches `canCancel` on the
+   * interview list. Neither grants anything: `POST /interviews` is
+   * Recruteur-only and re-checks the stage, so hiding this changes what is
+   * shown, never what is allowed (NFR-04, D-064).
+   */
+  canSchedule(candidate: CandidateDetail): boolean {
+    return (
+      candidate.currentStage === 'Présélection CV validée' &&
+      this.auth.currentUser()?.role === 'Recruteur'
+    );
+  }
+
+  /** FR-27: scheduling moves the candidate's stage, so the file is re-read. */
+  onScheduled(): void {
+    this.scheduling.set(false);
+    this.load();
+  }
 }

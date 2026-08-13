@@ -34,6 +34,7 @@ const adminHash = hashSync(ADMIN_PASSWORD, 4);
 const ADMIN_ID = new Types.ObjectId().toString();
 const TARGET_ID = new Types.ObjectId().toString();
 const DEPT_ID = new Types.ObjectId().toString();
+const RECRUTEUR_ID = new Types.ObjectId().toString();
 
 const admin = {
   _id: ADMIN_ID,
@@ -62,6 +63,17 @@ const makeTarget = (overrides: Record<string, unknown> = {}) => ({
 // during a password reset (FR-10), which is what the NFR-03 test reads back.
 let target: ReturnType<typeof makeTarget> & { passwordHash?: string };
 
+const recruteur = {
+  _id: RECRUTEUR_ID,
+  name: 'Recruteur',
+  email: 'recruteur@example.com',
+  passwordHash: adminHash,
+  role: Role.Recruteur,
+  departmentId: DEPT_ID,
+  isActive: true,
+  mustChangePassword: false,
+};
+
 /** Logs in as the admin through the REAL login endpoint and returns the cookie. */
 const signInAsAdmin = async (): Promise<string[]> => {
   mockedUser.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(admin) });
@@ -85,6 +97,7 @@ beforeEach(async () => {
     const key = String(id);
     if (key === ADMIN_ID) return Promise.resolve(admin);
     if (key === TARGET_ID) return Promise.resolve(target);
+    if (key === RECRUTEUR_ID) return Promise.resolve(recruteur);
     return Promise.resolve(null);
   });
   mockedDepartment.findById.mockResolvedValue({ _id: DEPT_ID, name: 'Ingénierie', isActive: true });
@@ -539,6 +552,167 @@ describe('User management — FR-6 to FR-9', () => {
 
       expect(res.status).toBe(409);
       expect(mockedAuditLog.create).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * D-073 — the ONE read a Recruteur may perform on this module, so that FR-30
+   * has an interviewer picker at all. Every test here is a boundary test: the
+   * point is not that the allowed call works, it is that nothing NEXT to it
+   * does.
+   */
+  describe('D-073: the Recruteur carve-out on GET /users', () => {
+    const find = () => (mockedUser as unknown as { find: jest.Mock }).find;
+
+    const listResolves = (users: unknown[]) => {
+      (mockedUser as unknown as { find: jest.Mock }).find = jest
+        .fn()
+        .mockReturnValue({ sort: jest.fn().mockResolvedValue(users) });
+    };
+
+    const responsable = (overrides: Record<string, unknown> = {}) => ({
+      _id: new Types.ObjectId().toString(),
+      name: 'Claire Morel',
+      email: 'claire@example.com',
+      role: Role.ResponsableHierarchique,
+      departmentId: DEPT_ID,
+      isActive: true,
+      mustChangePassword: false,
+      ...overrides,
+    });
+
+    let recruteurCookie: string[];
+
+    beforeEach(async () => {
+      mockedUser.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(recruteur) });
+      const login = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: 'recruteur@example.com', password: ADMIN_PASSWORD });
+      expect(login.status).toBe(200);
+      recruteurCookie = login.headers['set-cookie'] as unknown as string[];
+      listResolves([responsable()]);
+    });
+
+    const asRecruteur = (method: 'get' | 'post' | 'patch', url: string) =>
+      request(app)[method](url).set('Cookie', recruteurCookie);
+
+    it('FR-30: role=ResponsableHierarchique is allowed, and is silently narrowed to ACTIVE accounts', async () => {
+      const res = await asRecruteur('get', `/api/v1/users?role=${Role.ResponsableHierarchique}`);
+
+      expect(res.status).toBe(200);
+      // `isActive: true` is added by the service, not asked for by the caller:
+      // D-043 refuses a deactivated interviewer, so offering one would be an
+      // option that can only produce a 400.
+      expect(find()).toHaveBeenCalledWith({
+        role: Role.ResponsableHierarchique,
+        isActive: true,
+      });
+    });
+
+    it('FR-30: departmentId narrows the picker to the department of the poste', async () => {
+      await asRecruteur(
+        'get',
+        `/api/v1/users?role=${Role.ResponsableHierarchique}&departmentId=${DEPT_ID}`,
+      );
+
+      expect(find()).toHaveBeenCalledWith({
+        role: Role.ResponsableHierarchique,
+        isActive: true,
+        departmentId: DEPT_ID,
+      });
+    });
+
+    it('a malformed departmentId is a 400, not a 500 from the ObjectId cast', async () => {
+      const res = await asRecruteur(
+        'get',
+        `/api/v1/users?role=${Role.ResponsableHierarchique}&departmentId=not-an-id`,
+      );
+
+      expect(res.status).toBe(400);
+      expect(find()).not.toHaveBeenCalled();
+    });
+
+    it('NO role filter is a 403 — never a silent full directory', async () => {
+      const res = await asRecruteur('get', '/api/v1/users');
+
+      expect(res.status).toBe(403);
+      // The assertion that matters: the query never ran. A 403 returned after
+      // reading every account would still be a read of every account.
+      expect(find()).not.toHaveBeenCalled();
+    });
+
+    it('role=Recruteur is a 403 — the carve-out is one role wide, not "any filter"', async () => {
+      const res = await asRecruteur('get', `/api/v1/users?role=${Role.Recruteur}`);
+
+      expect(res.status).toBe(403);
+      expect(find()).not.toHaveBeenCalled();
+    });
+
+    it('role=Administrateur is a 403', async () => {
+      const res = await asRecruteur('get', `/api/v1/users?role=${Role.Administrateur}`);
+
+      expect(res.status).toBe(403);
+      expect(find()).not.toHaveBeenCalled();
+    });
+
+    it('isActive=false is REFUSED, not overridden — the D-047 rule', async () => {
+      const res = await asRecruteur(
+        'get',
+        `/api/v1/users?role=${Role.ResponsableHierarchique}&isActive=false`,
+      );
+
+      expect(res.status).toBe(403);
+      expect(find()).not.toHaveBeenCalled();
+    });
+
+    it('the Recruteur gets the PICKER shape: id, name, departmentId — and nothing else', async () => {
+      listResolves([{ ...responsable(), passwordHash: '$2b$10$leaked' }]);
+
+      const res = await asRecruteur('get', `/api/v1/users?role=${Role.ResponsableHierarchique}`);
+
+      expect(res.status).toBe(200);
+      expect(Object.keys(res.body[0]).sort()).toEqual(['departmentId', 'id', 'name']);
+      // Not merely absent from the interface — absent from the wire.
+      const wire = JSON.stringify(res.body);
+      expect(wire).not.toContain('passwordHash');
+      expect(wire).not.toContain('claire@example.com');
+      expect(wire).not.toContain('mustChangePassword');
+    });
+
+    it('the Administrateur keeps the FULL FR-12 shape — D-073 narrowed nobody else', async () => {
+      listResolves([responsable()]);
+
+      const res = await asAdmin('get', `/api/v1/users?role=${Role.ResponsableHierarchique}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body[0].email).toBe('claire@example.com');
+      expect(res.body[0].mustChangePassword).toBe(false);
+      // And no `isActive: true` is forced on them: FR-12 lists every account.
+      expect(find()).toHaveBeenCalledWith({ role: Role.ResponsableHierarchique });
+    });
+
+    it('GET /users/:id stays Administrateur-only — only the LIST was opened', async () => {
+      const res = await asRecruteur('get', `/api/v1/users/${TARGET_ID}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('management operations are untouched: a Recruteur still cannot deactivate', async () => {
+      const res = await asRecruteur('patch', `/api/v1/users/${TARGET_ID}/deactivate`);
+
+      expect(res.status).toBe(403);
+      expect(target.save).not.toHaveBeenCalled();
+    });
+
+    it('management operations are untouched: a Recruteur still cannot reset a password', async () => {
+      const res = await asRecruteur('post', `/api/v1/users/${TARGET_ID}/reset-password`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.temporaryPassword).toBeUndefined();
+    });
+
+    it('rule 1: the carve-out did not un-authenticate the route', async () => {
+      const res = await request(app).get(`/api/v1/users?role=${Role.ResponsableHierarchique}`);
+      expect(res.status).toBe(401);
     });
   });
 

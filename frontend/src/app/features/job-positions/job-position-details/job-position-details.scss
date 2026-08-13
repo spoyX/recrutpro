@@ -1,24 +1,7 @@
 // DESIGN.md: Level 1 cards on the Level 0 canvas, 24px gutters, 8px radius,
 // 56px rows. Layout chrome lives in shared/app-shell.
 
-.page__title {
-  font: var(--mat-sys-headline-large);
-  letter-spacing: var(--recrutpro-tracking-headline-xl);
-  color: var(--mat-sys-on-surface);
-  margin: 0;
-}
 
-.page__error {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  margin: 0;
-  padding: var(--sp-sm) var(--sp-md);
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
-  font: var(--mat-sys-body-small);
-}
 
 .head {
   display: flex;

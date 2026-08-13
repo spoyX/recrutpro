@@ -1,0 +1,113 @@
+// The modal chrome, shared rather than copied.
+//
+// Lifted out of interviews-list.scss when the FR-30 scheduling dialog became
+// the second user of the exact same panel. GLOBAL, not a component partial: a
+// component stylesheet is attribute-scoped, so a partial `@use`d twice would
+// produce two scoped copies of the same rules, which is the duplication this
+// removes rather than the one it avoids.
+//
+// DESIGN.md Elevation Level 2: temporary interaction layer.
+.modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-md);
+  background-color: rgb(18 28 42 / 0.45);
+  z-index: 10;
+}
+
+.modal__panel {
+  width: min(480px, 100%);
+  // The scheduling form is taller than the cancellation prompt, and a short
+  // viewport must be able to reach the buttons.
+  max-height: calc(100vh - (2 * var(--sp-md)));
+  overflow-y: auto;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  // DESIGN.md: modals and feature sections use rounded.lg (16px).
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  padding: var(--sp-lg);
+}
+
+.modal__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0 0 var(--sp-sm);
+}
+
+.modal__body {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-md);
+}
+
+.modal__label {
+  display: block;
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-xs);
+}
+
+.modal__input {
+  width: 100%;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  resize: vertical;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+// One field plus its label. The scheduling dialog stacks three.
+.modal__field {
+  margin-bottom: var(--sp-md);
+}
+
+.modal__error {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-error-container);
+  background-color: var(--mat-sys-error-container);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  margin: var(--sp-sm) 0 0;
+}
+
+// FR-31/FR-32: a scheduling conflict is a WARNING with an override, not a
+// refusal — so it must not wear the error red that means "this cannot proceed".
+// The tertiary role is DESIGN.md's existing attention colour.
+//
+// The token choice took three tries, and both rejects are worth recording.
+//
+// `tertiary-container` (#a73400) is a DARK fill carrying light text, while the
+// error banner beside it is a LIGHT fill with dark text — that pairing renders
+// the overridable warning HEAVIER than the hard failure, exactly backwards.
+//
+// `tertiary-fixed` (#ffdbcf) fixes the weight but is measurably indistinct from
+// error-container (#ffdad6): rgb(255,219,207) against rgb(255,218,214), which
+// no reader would tell apart. `fixed-dim` keeps the light weight and is the
+// nearest DESIGN.md tone that is actually a different colour. A live check
+// asserts the channel distance rather than mere inequality, since `!==` passes
+// happily on a one-in-255 difference.
+.modal__warning {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-tertiary-fixed);
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  margin: var(--sp-sm) 0 0;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-md);
+}

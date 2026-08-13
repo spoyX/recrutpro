@@ -9,7 +9,7 @@ import {
   getUserById,
   MIN_PASSWORD_LENGTH,
 } from '../services/user.service';
-import { toPublicUser } from '../views/user.view';
+import { toPublicUser, toInterviewerOption } from '../views/user.view';
 import { Role } from '../common/constants';
 import { AppError } from '../common/errors';
 
@@ -62,17 +62,31 @@ const asOptionalBoolean = (value: unknown, label: string): boolean | undefined =
   throw invalid(`Le filtre « ${label} » doit valoir "true" ou "false".`);
 };
 
-/** GET /api/v1/users — FR-12 */
+/** GET /api/v1/users — FR-12, and FR-30's interviewer picker (D-073) */
 export const list: RequestHandler = async (req, res, next) => {
   try {
-    const { role, isActive } = req.query as Record<string, unknown>;
+    const { role, isActive, departmentId } = req.query as Record<string, unknown>;
+    const viewer = req.currentUser!;
 
-    const users = await listUsers({
-      role: role === undefined ? undefined : asRole(role, 'rôle'),
-      isActive: asOptionalBoolean(isActive, 'statut'),
-    });
+    const users = await listUsers(
+      {
+        role: role === undefined ? undefined : asRole(role, 'rôle'),
+        isActive: asOptionalBoolean(isActive, 'statut'),
+        departmentId: asOptionalString(departmentId, 'département'),
+      },
+      viewer,
+    );
 
-    res.status(200).json(users.map(toPublicUser));
+    // D-073: a Recruteur reaches this route only as FR-30's picker, so they get
+    // the picker's shape. `listUsers` has already refused any other query from
+    // them, so this branch cannot leak a wider set under a narrower view.
+    res
+      .status(200)
+      .json(
+        viewer.role === Role.Administrateur
+          ? users.map(toPublicUser)
+          : users.map(toInterviewerOption),
+      );
   } catch (error) {
     next(error);
   }

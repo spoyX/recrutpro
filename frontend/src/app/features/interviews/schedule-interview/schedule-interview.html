@@ -1,0 +1,90 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="schedule-title">
+  <div class="modal__panel">
+    <h2 id="schedule-title" class="modal__title">Planifier un entretien</h2>
+    <p class="modal__body">
+      {{ candidateName() }} passera à l'étape « Entretien planifié » et le responsable
+      choisi sera notifié.
+    </p>
+
+    @if (loadingInterviewers()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Chargement des responsables" />
+    }
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="schedule-interviewer">
+        Responsable hiérarchique
+      </label>
+      <!--
+        FR-30: the list holds only ACTIVE responsables of the poste's
+        department (D-073). It is a convenience, not the rule — the server
+        re-checks all three conditions (D-030).
+      -->
+      <select
+        id="schedule-interviewer"
+        class="modal__input"
+        [disabled]="loadingInterviewers() || busy()"
+        [value]="interviewerId()"
+        (change)="setInterviewer($any($event.target).value)"
+      >
+        <option value="">Choisir un responsable…</option>
+        @for (option of interviewers(); track option.id) {
+          <option [value]="option.id">{{ option.name }}</option>
+        }
+      </select>
+
+      @if (!loadingInterviewers() && !interviewers().length) {
+        <p class="modal__error" role="alert">
+          Aucun responsable hiérarchique actif n'est rattaché au département de ce poste.
+          Un administrateur doit en affecter un avant de pouvoir planifier un entretien.
+        </p>
+      }
+    </div>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="schedule-at">Date et heure</label>
+      <!-- Native picker (no dependency); `min` mirrors D-043's future-only rule. -->
+      <input
+        id="schedule-at"
+        class="modal__input"
+        type="datetime-local"
+        [min]="minLocal"
+        [disabled]="busy()"
+        [value]="scheduledAtLocal()"
+        (change)="setSlot($any($event.target).value)"
+      />
+    </div>
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <!-- FR-31 / FR-32 — a warning with an explicit override, never a block. -->
+    @if (conflictMessage(); as message) {
+      <p class="modal__warning" role="alert">
+        <mat-icon aria-hidden="true">warning</mat-icon>
+        {{ message }}
+      </p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="busy()" (click)="dismissed.emit()">
+        Retour
+      </button>
+
+      @if (conflictMessage()) {
+        <button
+          matButton="filled"
+          type="button"
+          [disabled]="!canSubmit()"
+          (click)="submit(true)"
+        >
+          Planifier malgré le conflit
+        </button>
+      } @else {
+        <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+          Planifier
+        </button>
+      }
+    </div>
+  </div>
+</div>
