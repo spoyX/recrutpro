@@ -8,14 +8,22 @@ const router = Router();
 // SRS workflow step 9: « [Recruteur / Responsable hiérarchique] Consulte les
 // tableaux de bord et génère des rapports de pipeline ou de délai de
 // recrutement. » Both roles, confirmed against SRS.md rather than assumed from
-// the neighbouring modules. The Administrateur is NOT granted access: no SRS
-// text puts reporting in that role, and PRD Section 3 scopes it to accounts,
-// departments and audit.
+// the neighbouring modules.
+//
+// The Administrateur is ALSO granted access (D-068), extending D-038's
+// oversight rationale — an administrator auditing the system may read what it
+// reports. Both routes here are GETs, so "read-only" needs no extra guard:
+// this module exposes no write at all.
 //
 // The Responsable's results are scoped to their own department inside the
 // service (rule 2, D-047) — the ROLE decides access, the DEPARTMENT decides
-// how much of it they see.
-router.use(requireAuth, requireRole(Role.Recruteur, Role.ResponsableHierarchique));
+// how much of it they see. The Administrateur is NOT department-scoped
+// (D-027), so they see the whole organisation, as D-038 already gives them on
+// job positions.
+router.use(
+  requireAuth,
+  requireRole(Role.Recruteur, Role.ResponsableHierarchique, Role.Administrateur),
+);
 
 /**
  * @openapi

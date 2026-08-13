@@ -45,7 +45,15 @@ router.use(requireAuth);
  *       403: { description: Responsable non assigné à ce candidat (D-047)., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       404: { description: Candidat inexistant ou aucun CV téléversé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
-router.get('/:id/resume', requireRole(Role.Recruteur, Role.ResponsableHierarchique), getResume);
+// D-068 adds the Administrateur, READ-ONLY. The CV is part of the candidate
+// file they were granted, and the D-067 payload advertises a `resume.url` —
+// leaving this route closed would ship a download link that 403s. Uploading
+// and replacing a CV stay Recruteur-only, below the write guard.
+router.get(
+  '/:id/resume',
+  requireRole(Role.Recruteur, Role.ResponsableHierarchique, Role.Administrateur),
+  getResume,
+);
 
 /**
  * @openapi
@@ -76,7 +84,16 @@ router.get('/:id/resume', requireRole(Role.Recruteur, Role.ResponsableHierarchiq
  *       403: { description: Responsable non assigné à ce candidat, ou rôle non autorisé., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       404: { description: Candidat inexistant., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
-router.get('/:id', requireRole(Role.Recruteur, Role.ResponsableHierarchique), detail);
+// D-068 adds the Administrateur, READ-ONLY, on D-038's oversight rationale.
+// Note what is NOT granted with it: `GET /candidates` (the FR-24 list) sits
+// below the Recruteur-only guard and stays there. Reading one candidate's file
+// while auditing is a different act from pulling every candidate's contact
+// details in bulk, and only the first was asked for.
+router.get(
+  '/:id',
+  requireRole(Role.Recruteur, Role.ResponsableHierarchique, Role.Administrateur),
+  detail,
+);
 
 // D-051: the stage transition serves BOTH roles — CV review for a Recruteur
 // (FR-25/FR-26), the final decision for a Responsable (FR-29/FR-39) — so it

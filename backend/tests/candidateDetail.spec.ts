@@ -164,11 +164,50 @@ describe('GET /candidates/:id — Candidate Details (D-067)', () => {
       expect(mockedCandidate.findById).not.toHaveBeenCalled();
     });
 
-    it('FR-5: refuses an Administrateur with 403 — no FR grants them a candidate file', async () => {
+    it('D-068: an Administrateur MAY read a candidate file, on D-038 oversight grounds', async () => {
       const cookie = await signInAs(admin);
       const res = await get(cookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body.fullName).toBe('Jean Martin');
+    });
+
+    it('D-068: the Administrateur is not department-scoped, so no assignment is required', async () => {
+      // They have no department at all (D-016), which is exactly why the
+      // Responsable's assignment predicate must not run for them.
+      mockedInterview.exists.mockResolvedValue(null);
+      const cookie = await signInAs(admin);
+      const res = await get(cookie);
+
+      expect(res.status).toBe(200);
+      expect(mockedJobPosition.findById).not.toHaveBeenCalled();
+    });
+
+    it('D-068: READ-ONLY — the Administrateur is still 403 on the stage transition', async () => {
+      const cookie = await signInAs(admin);
+      const res = await request(app)
+        .patch(`/api/v1/candidates/${CANDIDATE_ID}/stage`)
+        .set('Cookie', cookie)
+        .send({ targetStage: 'Présélection CV validée' });
+
       expect(res.status).toBe(403);
-      expect(mockedCandidate.findById).not.toHaveBeenCalled();
+    });
+
+    it('D-068: READ-ONLY — the Administrateur is still 403 on registering a candidate', async () => {
+      const cookie = await signInAs(admin);
+      const res = await request(app)
+        .post('/api/v1/candidates')
+        .set('Cookie', cookie)
+        .send({ fullName: 'X', email: 'x@example.com', phone: '06', jobPositionId: POSITION_ID });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('D-068: the FR-24 LIST is NOT granted — bulk contact data is a separate act', async () => {
+      const cookie = await signInAs(admin);
+      const res = await request(app).get('/api/v1/candidates').set('Cookie', cookie);
+
+      expect(res.status).toBe(403);
     });
   });
 

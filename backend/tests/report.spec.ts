@@ -372,12 +372,22 @@ describe('FR-5: report access', () => {
     expect(forPierre.status).toBe(200);
   });
 
-  it('the Administrateur is 403 — no SRS text puts reporting in that role', async () => {
+  it('D-068: the Administrateur may READ both reports, on D-038 oversight grounds', async () => {
     const pipelineRes = await get(admin, '/api/v1/reports/pipeline');
     const ttoRes = await get(admin, '/api/v1/reports/time-to-hire');
 
-    expect(pipelineRes.status).toBe(403);
-    expect(ttoRes.status).toBe(403);
+    expect(pipelineRes.status).toBe(200);
+    expect(ttoRes.status).toBe(200);
+  });
+
+  it('D-068 / D-027: the Administrateur is NOT department-scoped — they see the whole organisation', async () => {
+    const res = await get(admin, '/api/v1/reports/pipeline');
+
+    expect(res.status).toBe(200);
+    // A scoped caller would have had a department filter applied; the
+    // Administrateur must not, or the oversight view would be partial and
+    // silently so.
+    expect(res.body.length).toBeGreaterThan(0);
   });
 
   it('rule 2: a Responsable with no department is refused, not given everything', async () => {
