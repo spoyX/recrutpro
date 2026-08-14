@@ -1,0 +1,95 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="cv-review-title">
+  <div class="modal__panel">
+    <h2 id="cv-review-title" class="modal__title">Présélection CV</h2>
+    <p class="modal__body">
+      {{ candidateName() }} — cette décision est <strong>définitive</strong> :
+      la présélection CV ne peut être prise qu'une fois.
+    </p>
+
+    <!-- FR-25's decision rests on the CV, so it is one click away. D-040: this
+         is the API's own proxy route, never a storage URL. -->
+    @if (resumeUrl(); as url) {
+      <p class="review__resume">
+        <a matButton [href]="url" target="_blank" rel="noopener">
+          <mat-icon>description</mat-icon>
+          Relire le CV
+        </a>
+      </p>
+    } @else {
+      <p class="review__noresume">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>Aucun CV n'est joint à ce dossier.</span>
+      </p>
+    }
+
+    <fieldset class="outcome">
+      <legend class="outcome__legend label-sm">Décision</legend>
+
+      <div class="outcome__choices">
+        @for (option of outcomes; track option) {
+          <label class="outcome__choice" [class.outcome__choice--on]="outcome() === option">
+            <input
+              class="visually-hidden"
+              type="radio"
+              name="cv-review-outcome"
+              [value]="option"
+              [checked]="outcome() === option"
+              [disabled]="busy()"
+              (change)="setOutcome(option)"
+            />
+            <app-stage-chip [stage]="option" />
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <!--
+      FR-26 — the motive appears ONLY on the rejection branch.
+      The server FORBIDS a motive on a validation (D-042), so a field left on
+      screen for both outcomes would invite a 400 that the reader caused by
+      filling in what looked like an ordinary optional box. This is the exact
+      inverse of the FR-29 final decision, whose comment is required on BOTH.
+    -->
+    @if (isRejection()) {
+      <div class="modal__field">
+        <label class="modal__label label-sm" for="cv-review-reason">
+          Motif du rejet (obligatoire)
+        </label>
+        <textarea
+          id="cv-review-reason"
+          class="modal__input"
+          rows="4"
+          [disabled]="busy()"
+          [value]="reason()"
+          (input)="reason.set($any($event.target).value)"
+        ></textarea>
+      </div>
+    }
+
+    @if (!canSubmit() && !busy()) {
+      <p class="review__missing">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          @if (outcome() === null) {
+            Choisissez une décision.
+          } @else {
+            Un motif est obligatoire pour rejeter un candidat à la présélection CV.
+          }
+        </span>
+      </p>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="busy()" (click)="dismissed.emit()">
+        Retour
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        Confirmer la décision
+      </button>
+    </div>
+  </div>
+</div>

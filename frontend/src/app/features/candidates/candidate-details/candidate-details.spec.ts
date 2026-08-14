@@ -313,6 +313,135 @@ describe('CandidateDetails (D-067)', () => {
     });
   });
 
+  /** FR-25 / FR-26 — the entry point to the CV preselection. */
+  describe('FR-25 — offering the CV preselection', () => {
+    const signIn = (role: string): void => {
+      TestBed.inject(AuthService).currentUser.set({
+        id: 'u1',
+        name: 'Marie',
+        email: 'marie@example.com',
+        role: role as 'Recruteur',
+        departmentId: 'd1',
+        mustChangePassword: false,
+      });
+    };
+
+    const reviewButton = (): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+        (b as HTMLElement).textContent?.includes('Présélection CV'),
+      ) as HTMLButtonElement | undefined;
+
+    it('a Recruteur is offered it at « Candidature reçue »', () => {
+      signIn('Recruteur');
+      load({
+        currentStage: 'Candidature reçue',
+        decisionComment: null,
+        decidedAt: null,
+        interviews: [],
+      });
+
+      expect(reviewButton()).toBeTruthy();
+    });
+
+    it('D-042: not offered at any other stage — the transition is ONE-WAY', () => {
+      for (const stage of [
+        'Présélection CV validée',
+        'Rejeté (CV)',
+        'Entretien planifié',
+        'Évaluation complétée',
+        'Accepté',
+      ]) {
+        signIn('Recruteur');
+        load({ currentStage: stage, decisionComment: null, decidedAt: null, interviews: [] });
+        expect(reviewButton())
+          .withContext(`stage ${stage}`)
+          .toBeUndefined();
+      }
+    });
+
+    it("a Responsable is NOT offered it — FR-25 is the recruiter's", () => {
+      signIn('ResponsableHierarchique');
+      load({
+        currentStage: 'Candidature reçue',
+        decisionComment: null,
+        decidedAt: null,
+        interviews: [],
+        email: null,
+        phone: null,
+      });
+
+      expect(reviewButton()).toBeUndefined();
+    });
+
+    it('opens the dialog with the CV link the file already holds — no follow-up request', () => {
+      signIn('Recruteur');
+      load({
+        currentStage: 'Candidature reçue',
+        decisionComment: null,
+        decidedAt: null,
+        interviews: [],
+      });
+
+      reviewButton()!.click();
+      fixture.detectChanges();
+
+      http.verify();
+      expect(fixture.nativeElement.querySelector('app-cv-review')).toBeTruthy();
+      // Passed straight down from the file's payload.
+      const link = fixture.nativeElement.querySelector(
+        'app-cv-review a[href*="/resume"]',
+      ) as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toBe(`/api/v1/candidates/${ID}/resume`);
+    });
+
+    it('re-reads the file after the decision, and the offer is gone', () => {
+      signIn('Recruteur');
+      load({
+        currentStage: 'Candidature reçue',
+        decisionComment: null,
+        decidedAt: null,
+        interviews: [],
+      });
+
+      fixture.componentInstance.onReviewed();
+      fixture.detectChanges();
+
+      http.expectOne(URL).flush({
+        ...base,
+        currentStage: 'Rejeté (CV)',
+        rejectionReason: 'Profil trop junior pour le poste.',
+        decisionComment: null,
+        decidedAt: null,
+        interviews: [],
+      });
+      fixture.detectChanges();
+
+      expect(text()).toContain('Profil trop junior pour le poste.');
+      expect(reviewButton()).toBeUndefined();
+      const chip = fixture.nativeElement.querySelector('app-stage-chip .chip') as HTMLElement;
+      expect(chip.className).toContain('chip--negative');
+    });
+
+    it('the pipeline is now continuous: a validated candidate is offered SCHEDULING next', () => {
+      signIn('Recruteur');
+      load({
+        currentStage: 'Présélection CV validée',
+        decisionComment: null,
+        decidedAt: null,
+        interviews: [],
+      });
+
+      // The gap D-077 flagged: registration → preselection → scheduling now
+      // has no missing link for a Recruteur.
+      expect(reviewButton()).toBeUndefined();
+      expect(
+        Array.from(fixture.nativeElement.querySelectorAll('button')).some((b) =>
+          (b as HTMLElement).textContent?.includes('Planifier un entretien'),
+        ),
+      ).toBeTrue();
+    });
+  });
+
   /** FR-29 / FR-39 — the entry point to the final decision. */
   describe('FR-39 — offering the final decision', () => {
     const signIn = (role: string): void => {

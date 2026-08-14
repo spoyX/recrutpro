@@ -9,6 +9,7 @@ import { ApiError, AuthService } from '../../../core/auth.service';
 import { CandidateService, CandidateDetail } from '../candidate.service';
 import { ScheduleInterview } from '../../interviews/schedule-interview/schedule-interview';
 import { FinalDecision } from '../final-decision/final-decision';
+import { CvReview } from '../cv-review/cv-review';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 
@@ -37,6 +38,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     StageChip,
     ScheduleInterview,
     FinalDecision,
+    CvReview,
   ],
   templateUrl: './candidate-details.html',
   styleUrl: './candidate-details.scss',
@@ -100,6 +102,30 @@ export class CandidateDetails {
 
   /** FR-36's scale is 1–5, so a score renders as a filled/empty run of 5. */
   readonly scaleMax = [1, 2, 3, 4, 5];
+
+  // ------------------------------------------------------- FR-25, FR-26
+
+  readonly reviewing = signal(false);
+
+  /**
+   * Whether to OFFER the CV preselection — an affordance, not a permission.
+   *
+   * Both halves mirror server rules (D-042): only from « Candidature reçue »,
+   * and only for a Recruteur. The transition is one-way, so a candidate past
+   * this point never sees the button — the server would 409 anyway.
+   */
+  canReviewCv(candidate: CandidateDetail): boolean {
+    return (
+      candidate.currentStage === 'Candidature reçue' &&
+      this.auth.currentUser()?.role === 'Recruteur'
+    );
+  }
+
+  /** FR-25 moves the stage (and may set a motive), so the file is re-read. */
+  onReviewed(): void {
+    this.reviewing.set(false);
+    this.load();
+  }
 
   // ---------------------------------------------------- FR-30, FR-31, FR-32
 

@@ -26,6 +26,15 @@
         </p>
       </div>
       <div class="head__actions">
+        <!-- FR-25/FR-26: the pipeline's first decision. Offered only from
+             « Candidature reçue », and one-way (D-042). -->
+        @if (canReviewCv(candidate)) {
+          <button matButton="filled" type="button" (click)="reviewing.set(true)">
+            <mat-icon>fact_check</mat-icon>
+            Présélection CV
+          </button>
+        }
+
         <!-- FR-30: offered only where the server would accept it (see
              canSchedule) — the rule itself lives on the server. -->
         @if (canSchedule(candidate)) {
@@ -242,6 +251,19 @@
         [jobPositionId]="candidate.jobPosition?.id ?? null"
         (scheduled)="onScheduled()"
         (dismissed)="scheduling.set(false)"
+      />
+    }
+
+    <!-- FR-25 / FR-26. The SAME shared stage route, Recruteur half (D-042).
+         The motive is mandatory on rejection and FORBIDDEN on validation —
+         the inverse of the final decision below. -->
+    @if (reviewing()) {
+      <app-cv-review
+        [candidateId]="candidate.id"
+        [candidateName]="candidate.fullName"
+        [resumeUrl]="candidate.resume.url"
+        (reviewed)="onReviewed()"
+        (dismissed)="reviewing.set(false)"
       />
     }
 

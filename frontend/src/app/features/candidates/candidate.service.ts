@@ -106,6 +106,17 @@ export const CANDIDATE_PAGE_SIZE = 25;
 export const FINAL_DECISION_STAGES = ['Accepté', 'Rejeté'] as const;
 export type FinalDecisionStage = (typeof FINAL_DECISION_STAGES)[number];
 
+/**
+ * FR-25 / FR-26 — the two outcomes of the Recruteur's CV preselection.
+ *
+ * The SAME `PATCH /candidates/:id/stage` route as the final decision, which
+ * executes the one transition the caller's role owns (D-042, D-051). These two
+ * values are refused for a Responsable, and `FINAL_DECISION_STAGES` are refused
+ * for a Recruteur — the role picks which pair is legal, never the client.
+ */
+export const CV_REVIEW_STAGES = ['Présélection CV validée', 'Rejeté (CV)'] as const;
+export type CvReviewStage = (typeof CV_REVIEW_STAGES)[number];
+
 /** FR-19 — what the registration form sends. `currentStage` is NOT among them. */
 export interface RegisterCandidateInput {
   fullName: string;
@@ -216,6 +227,30 @@ export class CandidateService {
     return this.http.patch(
       `${environment.apiUrl}/candidates/${encodeURIComponent(id)}/stage`,
       { targetStage, decisionComment },
+      { withCredentials: true },
+    );
+  }
+
+  /**
+   * FR-25 / FR-26 — the CV preselection decision.
+   *
+   * **THE ASYMMETRY IS THE POINT, and it is the inverse of `decideOutcome`.**
+   * `rejectionReason` is MANDATORY on « Rejeté (CV) » and **FORBIDDEN** on
+   * « Présélection CV validée » — supplying one on a pass is a 400, not a
+   * silently dropped field, because storing a rejection motive against a
+   * candidate who was not rejected would put a false statement in the record
+   * (D-042). Contrast `decideOutcome`, where the comment is required on BOTH
+   * outcomes (D-051). The parameter is therefore only ever sent on a rejection.
+   *
+   * The transition is ONE-WAY and gated on « Candidature reçue » server-side.
+   */
+  reviewCv(id: string, targetStage: CvReviewStage, rejectionReason?: string): Observable<unknown> {
+    return this.http.patch(
+      `${environment.apiUrl}/candidates/${encodeURIComponent(id)}/stage`,
+      {
+        targetStage,
+        ...(targetStage === 'Rejeté (CV)' ? { rejectionReason } : {}),
+      },
       { withCredentials: true },
     );
   }
