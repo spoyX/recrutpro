@@ -1,0 +1,77 @@
+// The modal chrome is global — src/styles/_modal.scss.
+
+.outcome {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--sp-md);
+  min-width: 0; // a fieldset defaults to min-content, which breaks flex children
+}
+
+.outcome__legend {
+  color: var(--text-slate);
+  padding: 0;
+  margin-bottom: var(--sp-xs);
+}
+
+.outcome__choices {
+  display: flex;
+  gap: var(--sp-sm);
+}
+
+// The radio inside is `.visually-hidden`, so this label IS the control: it
+// carries the hit area, the selected state and — via :focus-within — the focus
+// ring the hidden input would otherwise take away from a keyboard user.
+//
+// The chip inside supplies the OUTCOME colour (success / error). This wrapper
+// therefore stays deliberately neutral: a second tinted surface around it
+// would compete with the very token the chip exists to show.
+.outcome__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-lowest);
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &:focus-within {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+  }
+}
+
+// Selection is shown by the BORDER, not by a fill: the fill belongs to the
+// chip. Two pixels of the brand primary read clearly as "this one" without
+// arguing with the success/error hue it surrounds.
+.outcome__choice--on {
+  border-color: var(--mat-sys-primary);
+  box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
+  background-color: var(--mat-sys-surface-container-high);
+}
+
+// The same quiet third severity as FR-37's form: nothing has failed and
+// nothing is being overridden — the form is simply not finished.
+.decision__missing {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: var(--sp-sm) 0 0;
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}

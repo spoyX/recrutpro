@@ -1,0 +1,81 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="decision-dialog-title">
+  <div class="modal__panel">
+    <h2 id="decision-dialog-title" class="modal__title">Décision finale</h2>
+    <p class="modal__body">
+      {{ candidateName() }} — cette décision est <strong>définitive</strong> :
+      « Accepté » et « Rejeté » sont des étapes terminales et ne peuvent pas être annulées.
+    </p>
+
+    <!--
+      FR-39: « Accepté / Rejeté ». Native radios again — the platform's own
+      "one of two", announced as a group. The chosen outcome is previewed with
+      the SAME StageChip the file renders afterwards, so the terminal state is
+      seen in its real colour before it is written (D-066's success token for
+      « Accepté », the error token for « Rejeté »).
+    -->
+    <fieldset class="outcome">
+      <legend class="outcome__legend label-sm">Issue</legend>
+
+      <div class="outcome__choices">
+        @for (option of outcomes; track option) {
+          <label class="outcome__choice" [class.outcome__choice--on]="outcome() === option">
+            <input
+              class="visually-hidden"
+              type="radio"
+              name="final-outcome"
+              [value]="option"
+              [checked]="outcome() === option"
+              [disabled]="busy()"
+              (change)="setOutcome(option)"
+            />
+            <app-stage-chip [stage]="option" />
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="decision-comment">
+        Commentaire (obligatoire)
+      </label>
+      <!-- FR-29: mandatory for BOTH outcomes, not only for a rejection. -->
+      <textarea
+        id="decision-comment"
+        class="modal__input"
+        rows="4"
+        [disabled]="busy()"
+        [value]="comment()"
+        (input)="comment.set($any($event.target).value)"
+      ></textarea>
+    </div>
+
+    <!-- Stated, not merely disabled: a dim button with no reason is its own
+         defect — the same rule as FR-37's form. -->
+    @if (!canSubmit() && !busy()) {
+      <p class="decision__missing">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          @if (outcome() === null) {
+            Choisissez une issue, puis saisissez un commentaire — il est obligatoire dans
+            les deux cas.
+          } @else {
+            Un commentaire est obligatoire, y compris pour une décision favorable.
+          }
+        </span>
+      </p>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="busy()" (click)="dismissed.emit()">
+        Retour
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        Confirmer la décision
+      </button>
+    </div>
+  </div>
+</div>

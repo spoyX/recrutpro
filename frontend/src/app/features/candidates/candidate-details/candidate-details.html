@@ -34,6 +34,16 @@
             Planifier un entretien
           </button>
         }
+
+        <!-- FR-39: only from « Évaluation complétée », and only for the
+             responsable. The assignment is the server's to check (D-051). -->
+        @if (canDecide(candidate)) {
+          <button matButton="filled" type="button" (click)="deciding.set(true)">
+            <mat-icon>gavel</mat-icon>
+            Décision finale
+          </button>
+        }
+
         <app-stage-chip [stage]="candidate.currentStage" />
       </div>
     </header>
@@ -232,6 +242,17 @@
         [jobPositionId]="candidate.jobPosition?.id ?? null"
         (scheduled)="onScheduled()"
         (dismissed)="scheduling.set(false)"
+      />
+    }
+
+    <!-- FR-29 / FR-39. No new endpoint: this is the shared stage route, which
+         executes the one transition this role owns (D-051). -->
+    @if (deciding()) {
+      <app-final-decision
+        [candidateId]="candidate.id"
+        [candidateName]="candidate.fullName"
+        (decided)="onDecided()"
+        (dismissed)="deciding.set(false)"
       />
     }
   }

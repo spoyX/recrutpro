@@ -313,6 +313,107 @@ describe('CandidateDetails (D-067)', () => {
     });
   });
 
+  /** FR-29 / FR-39 — the entry point to the final decision. */
+  describe('FR-39 — offering the final decision', () => {
+    const signIn = (role: string): void => {
+      TestBed.inject(AuthService).currentUser.set({
+        id: 'u1',
+        name: 'Pierre',
+        email: 'pierre@example.com',
+        role: role as 'ResponsableHierarchique',
+        departmentId: 'd1',
+        mustChangePassword: false,
+      });
+    };
+
+    const decideButton = (): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+        (b as HTMLElement).textContent?.includes('Décision finale'),
+      ) as HTMLButtonElement | undefined;
+
+    it('a Responsable is offered it at « Évaluation complétée »', () => {
+      signIn('ResponsableHierarchique');
+      load({
+        currentStage: 'Évaluation complétée',
+        decisionComment: null,
+        decidedAt: null,
+        email: null,
+        phone: null,
+      });
+
+      expect(decideButton()).toBeTruthy();
+    });
+
+    it('D-051: not offered at any other stage — the server would 409', () => {
+      for (const stage of [
+        'Candidature reçue',
+        'Présélection CV validée',
+        'Entretien planifié',
+        'Accepté',
+        'Rejeté',
+      ]) {
+        signIn('ResponsableHierarchique');
+        load({ currentStage: stage, decisionComment: null, decidedAt: null, interviews: [] });
+        expect(decideButton())
+          .withContext(`stage ${stage}`)
+          .toBeUndefined();
+      }
+    });
+
+    it('a Recruteur is NOT offered it — FR-39 is the responsable\'s', () => {
+      signIn('Recruteur');
+      load({ currentStage: 'Évaluation complétée', decisionComment: null, decidedAt: null });
+
+      expect(decideButton()).toBeUndefined();
+    });
+
+    it('opens the dialog without a follow-up request', () => {
+      signIn('ResponsableHierarchique');
+      load({ currentStage: 'Évaluation complétée', decisionComment: null, decidedAt: null });
+
+      decideButton()!.click();
+      fixture.detectChanges();
+
+      http.verify();
+      expect(fixture.nativeElement.querySelector('app-final-decision')).toBeTruthy();
+    });
+
+    it('re-reads the file after a decision — the stage and decidedAt are the server\'s', () => {
+      signIn('ResponsableHierarchique');
+      load({ currentStage: 'Évaluation complétée', decisionComment: null, decidedAt: null });
+
+      fixture.componentInstance.onDecided();
+      fixture.detectChanges();
+
+      http.expectOne(URL).flush({
+        ...base,
+        currentStage: 'Accepté',
+        decisionComment: 'Excellent profil, offre envoyée.',
+        decidedAt: '2026-08-14T10:00:00.000Z',
+      });
+      fixture.detectChanges();
+
+      expect(text()).toContain('Excellent profil, offre envoyée.');
+      // Terminal: the offer is gone, because the stage moved past it.
+      expect(decideButton()).toBeUndefined();
+      const chip = fixture.nativeElement.querySelector('app-stage-chip .chip') as HTMLElement;
+      expect(chip.className).toContain('chip--positive');
+    });
+
+    it('a rejection renders with the NEGATIVE tone, same as every other terminal reject', () => {
+      signIn('ResponsableHierarchique');
+      load({
+        currentStage: 'Rejeté',
+        decisionComment: 'Séniorité insuffisante.',
+        decidedAt: '2026-08-14T10:00:00.000Z',
+      });
+
+      const chip = fixture.nativeElement.querySelector('app-stage-chip .chip') as HTMLElement;
+      expect(chip.className).toContain('chip--negative');
+      expect(text()).toContain('Séniorité insuffisante.');
+    });
+  });
+
   describe('Null-tolerance', () => {
     it('renders a candidate whose position or registrant is missing', () => {
       load({ jobPosition: null, registeredBy: null });

@@ -8,6 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ApiError, AuthService } from '../../../core/auth.service';
 import { CandidateService, CandidateDetail } from '../candidate.service';
 import { ScheduleInterview } from '../../interviews/schedule-interview/schedule-interview';
+import { FinalDecision } from '../final-decision/final-decision';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 
@@ -35,6 +36,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     AppShell,
     StageChip,
     ScheduleInterview,
+    FinalDecision,
   ],
   templateUrl: './candidate-details.html',
   styleUrl: './candidate-details.scss',
@@ -123,6 +125,33 @@ export class CandidateDetails {
   /** FR-27: scheduling moves the candidate's stage, so the file is re-read. */
   onScheduled(): void {
     this.scheduling.set(false);
+    this.load();
+  }
+
+  // ------------------------------------------------------- FR-29, FR-39
+
+  readonly deciding = signal(false);
+
+  /**
+   * Whether to OFFER the final decision — an affordance, not a permission.
+   *
+   * Both halves mirror rules the server applies (D-051): only from
+   * « Évaluation complétée », and only for a Responsable hiérarchique. The
+   * assignment half is deliberately NOT mirrored — `hasAssignedInterviewWith`
+   * is a database question the client cannot answer, and pretending to would
+   * be the false reassurance D-064 rules out. A non-assigned responsable who
+   * reaches this button gets a 403, which the dialog shows.
+   */
+  canDecide(candidate: CandidateDetail): boolean {
+    return (
+      candidate.currentStage === 'Évaluation complétée' &&
+      this.auth.currentUser()?.role === 'ResponsableHierarchique'
+    );
+  }
+
+  /** FR-39 sets a TERMINAL stage and stamps `decidedAt`, so the file is re-read. */
+  onDecided(): void {
+    this.deciding.set(false);
     this.load();
   }
 }

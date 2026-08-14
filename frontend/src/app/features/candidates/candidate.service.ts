@@ -93,6 +93,19 @@ export const CANDIDATE_STAGES = [
 
 export const CANDIDATE_PAGE_SIZE = 25;
 
+/**
+ * FR-29 / FR-39 — the two terminal outcomes a Responsable hiérarchique may set.
+ *
+ * These are `targetStage` values on the SHARED stage route, not a decision
+ * endpoint of their own: `PATCH /candidates/:id/stage` executes the ONE
+ * transition the caller owns, chosen by their role (D-051). The Recruteur's
+ * « Présélection CV validée » / « Rejeté (CV) » travel the same route and are
+ * refused for this role, and vice versa — which is why there is no
+ * `/decision` endpoint to add.
+ */
+export const FINAL_DECISION_STAGES = ['Accepté', 'Rejeté'] as const;
+export type FinalDecisionStage = (typeof FINAL_DECISION_STAGES)[number];
+
 @Injectable({ providedIn: 'root' })
 export class CandidateService {
   private readonly http = inject(HttpClient);
@@ -137,5 +150,29 @@ export class CandidateService {
           total: Number(response.headers.get('X-Total-Count') ?? response.body?.length ?? 0),
         })),
       );
+  }
+
+  /**
+   * FR-29 / FR-39 — the final decision.
+   *
+   * `decisionComment` is mandatory for BOTH outcomes, not only for a rejection
+   * (D-051): a hire is a decision that needs a reason on the record just as
+   * much as a refusal. The server enforces it and refuses a whitespace-only
+   * comment, so this is a request the client cannot make valid on its own.
+   *
+   * The candidate must be at « Évaluation complétée » and the caller must be
+   * the ASSIGNED responsable — both checked server-side through the same
+   * predicate as the FR-35 list and the FR-36 evaluation (D-047, D-051).
+   */
+  decideOutcome(
+    id: string,
+    targetStage: FinalDecisionStage,
+    decisionComment: string,
+  ): Observable<unknown> {
+    return this.http.patch(
+      `${environment.apiUrl}/candidates/${encodeURIComponent(id)}/stage`,
+      { targetStage, decisionComment },
+      { withCredentials: true },
+    );
   }
 }
