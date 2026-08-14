@@ -17,6 +17,13 @@ import { Component, computed, input } from '@angular/core';
  * forbids inventing one — so the colour was added to DESIGN.md FIRST and is
  * consumed from there here, rather than being invented at the point of use.
  * `success` and `error` are counterparts and are applied identically.
+ *
+ * COLOUR NOTE (D-080): the `attention` tone moved to `tertiary-fixed-dim` on
+ * 2026-08-14 for the same reason and by the same route — DESIGN.md first. This
+ * component owns BOTH vocabularies, which is exactly why a collision between
+ * two of its tones is a collision on a real screen rather than a theoretical
+ * one: `chip--attention` and `chip--negative` were 7 channel-units apart and
+ * rendered side by side.
  */
 type StageTone = 'neutral' | 'info' | 'progress' | 'attention' | 'positive' | 'negative';
 
@@ -66,8 +73,14 @@ const TONES: Record<string, StageTone> = {
       background-color: var(--mat-sys-primary-fixed);
       color: var(--mat-sys-on-primary-fixed-variant);
     }
+    // DESIGN.md's ATTENTION role: tertiary-fixed-dim, NOT tertiary-fixed. That
+    // tone sat 7 channel-units from error-container and the two rendered as one
+    // colour on screens showing both — « Clôturé » above « Rejeté (CV) » on a
+    // position's file, « Évaluation complétée » beside « Rejeté » in the
+    // candidate list. Decided in DESIGN.md first (D-080), consumed here.
+    // NOTE: no backticks in this styles literal — they close it.
     .chip--attention {
-      background-color: var(--mat-sys-tertiary-fixed);
+      background-color: var(--mat-sys-tertiary-fixed-dim);
       color: var(--mat-sys-on-tertiary-fixed-variant);
     }
     // The positive/negative pair are deliberately symmetrical: container tint
