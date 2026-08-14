@@ -1,0 +1,94 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="evaluation-title">
+  <div class="modal__panel">
+    <h2 id="evaluation-title" class="modal__title">Évaluer l'entretien</h2>
+    <p class="modal__body">
+      {{ interview().candidate?.fullName ?? 'Ce candidat' }} —
+      {{ interview().jobPosition?.title ?? 'poste inconnu' }},
+      le {{ interview().scheduledAt | date: 'dd/MM/yyyy à HH:mm' }}.
+      Le candidat passera à l'étape « Évaluation complétée ».
+    </p>
+
+    <!-- FR-35 « un accès au CV » — the file is worth re-reading while grading,
+         and this is the API's own proxy route, never a storage URL (D-040). -->
+    @if (interview().candidate?.hasResume) {
+      <p class="evaluation__resume">
+        <a matButton [href]="interview().candidate!.resumeUrl" target="_blank" rel="noopener">
+          <mat-icon>description</mat-icon>
+          Relire le CV
+        </a>
+      </p>
+    }
+
+    <!--
+      FR-36: « des notes sur une échelle de 1 à 5 pour au moins trois critères ».
+      Native radios in a fieldset — the control the platform already has for
+      "one of five", keyboard-navigable and announced as a group, with no
+      dependency and no ARIA to get wrong.
+    -->
+    @for (criterion of criteria; track criterion.key) {
+      <fieldset class="criterion">
+        <legend class="criterion__legend label-sm">{{ criterion.label }}</legend>
+
+        <div class="criterion__scale">
+          @for (step of scale; track step) {
+            <label
+              class="criterion__step"
+              [class.criterion__step--on]="scoreOf(criterion.key) === step"
+            >
+              <input
+                class="visually-hidden"
+                type="radio"
+                [name]="criterion.key"
+                [value]="step"
+                [checked]="scoreOf(criterion.key) === step"
+                [disabled]="busy()"
+                (change)="setScore(criterion.key, step)"
+              />
+              {{ step }}
+            </label>
+          }
+        </div>
+      </fieldset>
+    }
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="evaluation-comments">
+        Commentaires (facultatif)
+      </label>
+      <textarea
+        id="evaluation-comments"
+        class="modal__input"
+        rows="4"
+        [disabled]="busy()"
+        [value]="comments()"
+        (input)="comments.set($any($event.target).value)"
+      ></textarea>
+    </div>
+
+    <!-- FR-37, stated rather than merely disabling the button: a control that
+         is dim for an unexplained reason is its own usability defect. -->
+    @if (missing().length) {
+      <p class="evaluation__missing">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          Toutes les notes sont obligatoires. Il en manque
+          {{ missing().length }} :
+          {{ missingLabels() }}.
+        </span>
+      </p>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="busy()" (click)="dismissed.emit()">
+        Retour
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        Soumettre l'évaluation
+      </button>
+    </div>
+  </div>
+</div>

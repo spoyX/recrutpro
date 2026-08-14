@@ -54,6 +54,26 @@ export interface InterviewerOption {
   departmentId: string | null;
 }
 
+/**
+ * FR-36 — the three criteria SRS.md itself names, mirroring the backend's
+ * `EVALUATION_CRITERIA`. The ORDER here is the render order of the form.
+ */
+export const EVALUATION_CRITERIA = [
+  { key: 'technicalSkills', label: 'Compétences techniques' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'overallFit', label: 'Adéquation globale' },
+] as const;
+
+export type EvaluationCriterion = (typeof EVALUATION_CRITERIA)[number]['key'];
+
+/** FR-36 — « une échelle de 1 à 5 », a five-point scale (D-048). */
+export const SCORE_SCALE = [1, 2, 3, 4, 5] as const;
+
+export interface SubmitEvaluationInput {
+  scores: Record<EvaluationCriterion, number>;
+  comments?: string;
+}
+
 /** FR-30 to FR-32 — the scheduling request body. */
 export interface ScheduleInterviewInput {
   candidateId: string;
@@ -150,5 +170,26 @@ export class InterviewService {
     return this.http.post<{ id: string }>(`${environment.apiUrl}/interviews`, input, {
       withCredentials: true,
     });
+  }
+
+  /**
+   * FR-36 / FR-37 — submit the evaluation for one interview.
+   *
+   * Scores go as NUMBERS: the service integer-checks them (D-048), so a string
+   * from a form control would be refused as "not an integer" and the message
+   * would blame the value rather than the type.
+   *
+   * `comments` is omitted when empty rather than sent as `''` — FR-36 makes the
+   * comment field optional, and an empty string is a value, not an absence.
+   */
+  submitEvaluation(id: string, input: SubmitEvaluationInput): Observable<unknown> {
+    return this.http.post(
+      `${environment.apiUrl}/interviews/${encodeURIComponent(id)}/evaluation`,
+      {
+        scores: input.scores,
+        ...(input.comments ? { comments: input.comments } : {}),
+      },
+      { withCredentials: true },
+    );
   }
 }

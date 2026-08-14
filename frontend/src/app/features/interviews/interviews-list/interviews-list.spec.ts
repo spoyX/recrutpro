@@ -366,6 +366,136 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
     });
   });
 
+  /**
+   * FR-36 / FR-37 — the entry point to the evaluation form. An AFFORDANCE, not
+   * a permission: `POST /interviews/:id/evaluation` re-checks the role, the
+   * assignment, the status and the slot (D-048).
+   */
+  describe('FR-36 — offering the evaluation form', () => {
+    /** In the past, which is FR-36's « après un entretien ». */
+    const past = new Date(Date.now() - 3 * 3600 * 1000).toISOString();
+    /** Comfortably ahead, so a slow suite cannot drift it into the past. */
+    const future = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+
+    const evaluateButton = (): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+        (b as HTMLElement).textContent?.includes('Évaluer'),
+      ) as HTMLButtonElement | undefined;
+
+    it('the assigned Responsable is offered it once the slot has passed', () => {
+      signIn('ResponsableHierarchique');
+      load([row('a', { scheduledAt: past })]);
+
+      expect(evaluateButton()).toBeTruthy();
+    });
+
+    it("FR-36 « APRÈS un entretien »: not offered before the slot", () => {
+      signIn('ResponsableHierarchique');
+      load([row('a', { scheduledAt: future })]);
+
+      expect(evaluateButton()).toBeUndefined();
+    });
+
+    it('D-048: not offered for a cancelled or already-evaluated interview', () => {
+      for (const status of ['Annulé', 'Réalisé']) {
+        signIn('ResponsableHierarchique');
+        load([row('a', { scheduledAt: past, status })]);
+        expect(evaluateButton())
+          .withContext(`status ${status}`)
+          .toBeUndefined();
+      }
+    });
+
+    it('a Recruteur is NOT offered it — they schedule and cancel, they do not evaluate', () => {
+      signIn('Recruteur');
+      load([row('a', { scheduledAt: past })]);
+
+      expect(evaluateButton()).toBeUndefined();
+      // …and still gets their own action on the same row.
+      expect(
+        Array.from(fixture.nativeElement.querySelectorAll('button')).some((b) =>
+          (b as HTMLElement).textContent?.includes('Annuler'),
+        ),
+      ).toBeTrue();
+    });
+
+    it('opens the form with the row it already has — no follow-up request', () => {
+      signIn('ResponsableHierarchique');
+      load([row('a', { scheduledAt: past })]);
+
+      evaluateButton()!.click();
+      fixture.detectChanges();
+
+      // The assertion that decided the design: `GET /interviews/:id` is never
+      // called, because the row is the payload.
+      http.verify();
+      expect(fixture.nativeElement.querySelector('app-evaluation-form')).toBeTruthy();
+      expect(text()).toContain('Candidat a');
+    });
+
+    it('FR-38: reloads after submission, since the row leaves the default view', () => {
+      signIn('ResponsableHierarchique');
+      load([row('a', { scheduledAt: past }), row('b', { scheduledAt: past })], 2);
+
+      fixture.componentInstance.startEvaluate(row('a', { scheduledAt: past }));
+      fixture.detectChanges();
+      fixture.componentInstance.onEvaluated();
+      fixture.detectChanges();
+
+      // A real request against the same endpoint — the new shape is the
+      // server's to state, not ours to guess.
+      listRequest().flush([row('b', { scheduledAt: past })], {
+        headers: { 'X-Total-Count': '1' },
+      });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-evaluation-form')).toBeNull();
+      expect(text()).toContain('1–1 sur 1');
+    });
+  });
+
+  describe('Paging after a row leaves the list', () => {
+    it('steps back a page instead of showing a false « aucun entretien »', () => {
+      signIn('Recruteur');
+      // A full page 1, then the user pages forward to a single row on page 2.
+      load(
+        Array.from({ length: 25 }, (_, i) => row(`p1-${i}`)),
+        26,
+      );
+      fixture.componentInstance.nextPage();
+      fixture.detectChanges();
+      listRequest().flush([row('last')], { headers: { 'X-Total-Count': '26' } });
+      fixture.detectChanges();
+      expect(text()).toContain('26–26 sur 26');
+
+      // That last row is now cancelled or evaluated, so the total drops to 25
+      // and offset 25 no longer exists.
+      fixture.componentInstance.load();
+      listRequest().flush([], { headers: { 'X-Total-Count': '25' } });
+      fixture.detectChanges();
+
+      // Rather than rendering an empty page over a total of 25, it re-asks at
+      // the last offset that exists.
+      const retry = listRequest();
+      expect(retry.request.params.get('offset')).toBe('0');
+      retry.flush(Array.from({ length: 25 }, (_, i) => row(`p1-${i}`)), {
+        headers: { 'X-Total-Count': '25' },
+      });
+      fixture.detectChanges();
+
+      expect(text()).toContain('1–25 sur 25');
+      expect(text()).not.toContain('Aucun entretien ne correspond');
+    });
+
+    it('a genuinely empty result still reports empty, without looping', () => {
+      signIn('Recruteur');
+      load([], 0);
+
+      expect(text()).toContain('Aucun entretien planifié');
+      http.verify();
+    });
+  });
+
   describe('Errors', () => {
     it('FR-2 / FR-8: a 401 navigates to /login', () => {
       const navigate = spyOn(router, 'navigate').and.resolveTo(true);

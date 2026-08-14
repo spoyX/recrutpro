@@ -1,0 +1,89 @@
+// The modal chrome (.modal, .modal__panel, .modal__field, .modal__error …)
+// is global — src/styles/_modal.scss. Only the form's own controls live here.
+
+.evaluation__resume {
+  margin: 0 0 var(--sp-md);
+}
+
+.criterion {
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--sp-md);
+  min-width: 0; // a fieldset defaults to min-content, which breaks flex children
+}
+
+.criterion__legend {
+  color: var(--text-slate);
+  padding: 0;
+  margin-bottom: var(--sp-xs);
+}
+
+.criterion__scale {
+  display: flex;
+  gap: var(--sp-xs);
+}
+
+// A 1-5 step. The radio inside is `.visually-hidden`, so this label IS the
+// control: it carries the hit area, the state and — via :focus-within — the
+// focus ring the hidden input would otherwise take away from a keyboard user.
+.criterion__step {
+  flex: 1 1 0;
+  min-width: 44px; // a comfortable touch target
+  padding: var(--sp-sm) 0;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+
+  font: var(--mat-sys-label-large);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface-variant);
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  // The hidden input still receives focus; without this the ring vanishes and
+  // the scale becomes unusable by keyboard.
+  &:focus-within {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+  }
+}
+
+// The chosen step. `primary` / `on-primary` is a DESIGN.md pair, so the
+// contrast is the palette's guarantee rather than a value picked by eye — and
+// it matches the filled dots the candidate file already uses for a score.
+.criterion__step--on {
+  background-color: var(--mat-sys-primary);
+  border-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  &:hover {
+    background-color: var(--mat-sys-primary);
+  }
+}
+
+// FR-37's explanation. Deliberately NEITHER the error red nor the FR-31
+// warning peach: nothing has failed and nothing is being overridden — the form
+// is simply not finished yet. A third severity needs a third, quieter tone.
+.evaluation__missing {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: var(--sp-sm) 0 0;
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}

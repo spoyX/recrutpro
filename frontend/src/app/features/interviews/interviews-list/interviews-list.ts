@@ -14,6 +14,7 @@ import {
 } from '../interview.service';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
+import { EvaluationForm } from '../evaluation-form/evaluation-form';
 
 /** One day's interviews, so the list reads as a schedule rather than a table. */
 export interface InterviewDay {
@@ -61,6 +62,7 @@ export interface InterviewDay {
     MatProgressBarModule,
     AppShell,
     StageChip,
+    EvaluationForm,
   ],
   templateUrl: './interviews-list.html',
   styleUrl: './interviews-list.scss',
@@ -165,6 +167,19 @@ export class InterviewsList {
       })
       .subscribe({
         next: (page) => {
+          // Cancelling (FR-34) and evaluating (FR-38) both REMOVE the row from
+          // the default view, so a reload can land on an offset that no longer
+          // exists — page 2 of a list that just shrank to 25 rows comes back
+          // empty while the total says 25, and the page renders « aucun
+          // entretien ne correspond à ces filtres », which is false. Step back
+          // to the last page that does exist and ask again. Bounded: the retry
+          // offset is strictly smaller, so it cannot loop.
+          if (page.items.length === 0 && page.total > 0 && this.offset() >= page.total) {
+            this.offset.set(Math.max(0, Math.floor((page.total - 1) / this.pageSize) * this.pageSize));
+            this.load();
+            return;
+          }
+
           this.rows.set(page.items);
           this.total.set(page.total);
           this.loading.set(false);
@@ -245,6 +260,47 @@ export class InterviewsList {
     this.cancelling.set(null);
     this.cancelReason.set('');
     this.cancelError.set(null);
+  }
+
+  // ------------------------------------------------------ FR-36, FR-37
+
+  /** The row awaiting an evaluation, or null. */
+  readonly evaluating = signal<InterviewListItem | null>(null);
+
+  /**
+   * Whether to OFFER the evaluation form — an affordance, not a permission.
+   *
+   * All three conditions mirror rules the SERVER applies (D-048): only the
+   * assigned Responsable hiérarchique, only a `Planifié` interview, and only
+   * once the slot has passed — FR-36 says « APRÈS un entretien ». Mirrored so
+   * the button is never present to be clicked into a 403 or a 409, never to
+   * grant anything: `POST /interviews/:id/evaluation` re-checks every one of
+   * them, the assignment through the same predicate as the FR-35 list itself.
+   *
+   * The `interviewerId` is deliberately NOT compared here. The server already
+   * scopes this list to the caller's own assignments (D-047), so a client-side
+   * comparison would restate a guarantee it cannot make (NFR-04, D-064).
+   */
+  canEvaluate(row: InterviewListItem): boolean {
+    return (
+      row.status === 'Planifié' &&
+      this.auth.currentUser()?.role === 'ResponsableHierarchique' &&
+      new Date(row.scheduledAt).getTime() <= Date.now()
+    );
+  }
+
+  startEvaluate(row: InterviewListItem): void {
+    this.evaluating.set(row);
+  }
+
+  /** FR-38: the interview becomes `Réalisé` and leaves the default view. */
+  onEvaluated(): void {
+    this.evaluating.set(null);
+    // Reload rather than patch, for exactly D-046's reason on cancellation:
+    // submitting also flips the interview to `Réalisé` and advances the
+    // candidate, so the row's new shape is the server's to state, not ours to
+    // guess — and by default it disappears from this list entirely (D-049).
+    this.load();
   }
 
   confirmCancel(): void {

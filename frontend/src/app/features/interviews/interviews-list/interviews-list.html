@@ -164,6 +164,16 @@
                       Annuler
                     </button>
                   }
+
+                  <!-- FR-36: « APRÈS un entretien » — offered only once the
+                       slot has passed, and only to the assigned responsable.
+                       The server re-checks both (D-048). -->
+                  @if (canEvaluate(interview)) {
+                    <button matButton="filled" type="button" (click)="startEvaluate(interview)">
+                      <mat-icon>rate_review</mat-icon>
+                      Évaluer
+                    </button>
+                  }
                 </span>
               </li>
 
@@ -202,6 +212,16 @@
         </p>
       </section>
     }
+  }
+
+  <!-- FR-36 / FR-37. A dialog, not a page: the row already holds everything
+       the form shows, so no `GET /interviews/:id` was needed. -->
+  @if (evaluating(); as target) {
+    <app-evaluation-form
+      [interview]="target"
+      (submitted)="onEvaluated()"
+      (dismissed)="evaluating.set(null)"
+    />
   }
 
   <!-- FR-34 — the motive is mandatory, and the server enforces it too. -->
