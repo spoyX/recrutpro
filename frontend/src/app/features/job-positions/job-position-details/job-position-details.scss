@@ -10,6 +10,15 @@
   gap: var(--sp-md);
 }
 
+// The FR-15/FR-16 actions sit beside the status badge, same shape as the
+// candidate file's action row.
+.head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+}
+
 .head__department {
   font: var(--mat-sys-body-large);
   color: var(--text-slate);

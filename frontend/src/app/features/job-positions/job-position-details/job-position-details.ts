@@ -5,9 +5,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { ApiError } from '../../../core/auth.service';
+import { ApiError, AuthService } from '../../../core/auth.service';
 import { JobPositionService, JobPosition } from '../job-position.service';
 import { CandidateService, CandidateListItem } from '../../candidates/candidate.service';
+import { JobPositionForm } from '../job-position-form/job-position-form';
+import { ClosePosition } from '../close-position/close-position';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 
@@ -35,6 +37,8 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     MatProgressBarModule,
     AppShell,
     StageChip,
+    JobPositionForm,
+    ClosePosition,
   ],
   templateUrl: './job-position-details.html',
   styleUrl: './job-position-details.scss',
@@ -43,6 +47,7 @@ export class JobPositionDetails {
   private readonly positions = inject(JobPositionService);
   private readonly candidates = inject(CandidateService);
   private readonly router = inject(Router);
+  protected readonly auth = inject(AuthService);
 
   /** Bound from the `:id` route parameter (`withComponentInputBinding`). */
   readonly id = input.required<string>();
@@ -128,5 +133,33 @@ export class JobPositionDetails {
         this.candidatesForbidden.set(response.status === 403);
       },
     });
+  }
+
+  // -------------------------------------------------------- FR-15, FR-16
+
+  readonly editing = signal(false);
+  readonly closing = signal(false);
+
+  /**
+   * Whether to OFFER the write actions — an affordance, not a permission.
+   *
+   * Writes are Recruteur-only (D-038) and D-068 keeps the Administrateur
+   * read-only; both are the server's to enforce (NFR-04, D-064). The closed
+   * check mirrors D-037: a clôturé position is neither editable nor
+   * re-closable, and the server answers both with a 409.
+   */
+  isManageable(position: JobPosition): boolean {
+    return this.auth.currentUser()?.role === 'Recruteur' && position.status !== 'Clôturé';
+  }
+
+  /**
+   * Both actions change the record this page renders, and an edit may move the
+   * position to another department — so the file is re-read rather than
+   * patched in place from the response.
+   */
+  onWritten(): void {
+    this.editing.set(false);
+    this.closing.set(false);
+    this.load();
   }
 }

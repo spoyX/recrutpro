@@ -1,0 +1,185 @@
+// Deliberately the same shapes as candidates-list.scss: both are the FR-17/FR-24
+// "filterable list of records" screen and should not look like two features.
+// No pager block here — the endpoint is unpaginated (see the component note).
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.head__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+}
+
+// ---------------------------------------------------------------- filters
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-md);
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  min-width: 0;
+}
+
+.filters__label {
+  color: var(--text-slate);
+  margin: 0;
+}
+
+// DESIGN.md Components: "Input Fields — white background, 1px #D1D5DB border,
+// 8px padding. On focus the border shifts to the focus blue."
+.filters__control {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  min-width: 180px;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+.filters__reset {
+  margin-left: auto;
+}
+
+// ------------------------------------------------------------------ table
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
+  // Both required — see the note in candidates-list.scss: `.page` is a column
+  // flex container sized by its widest item, so without these the table drags
+  // the page into horizontal scroll instead of scrolling inside its wrapper.
+  min-width: 0;
+  max-width: 100%;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--sp-sm) var(--sp-lg);
+    border-bottom: var(--border-level-1);
+    // Single-line cells, so DESIGN.md's 56px row stays 56px.
+    white-space: nowrap;
+  }
+
+  th {
+    font: var(--mat-sys-label-small);
+    letter-spacing: var(--recrutpro-tracking-label-sm);
+    text-transform: uppercase;
+    color: var(--text-slate);
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  tbody tr {
+    height: var(--layout-row-height);
+  }
+
+  tbody tr:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.table__link {
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+  font: var(--mat-sys-body-medium);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.table__meta {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+}
+
+.table__date {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.table__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  // The cell is a flex row, so it no longer inherits the 56px row height.
+  height: var(--layout-row-height);
+}
+
+// D-037's locked state. Outline, not error red: a closed position is a normal
+// terminal state, not a failure.
+.table__locked {
+  color: var(--mat-sys-outline);
+}
+
+.empty {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  padding: var(--sp-lg);
+}
+
+// DESIGN.md: single column with 16px margins below the breakpoint.
+@media (max-width: 900px) {
+  .filters__control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters__field {
+    flex: 1 1 100%;
+  }
+
+  .filters__reset {
+    margin-left: 0;
+  }
+}

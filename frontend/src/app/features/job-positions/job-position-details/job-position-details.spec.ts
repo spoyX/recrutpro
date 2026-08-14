@@ -9,6 +9,7 @@ import { provideRouter, Router } from '@angular/router';
 import { JobPositionDetails } from './job-position-details';
 import { JobPosition } from '../job-position.service';
 import { CandidateListItem } from '../../candidates/candidate.service';
+import { AuthService, AuthenticatedUser } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
 
 describe('JobPositionDetails (FR-14 to FR-17)', () => {
@@ -213,6 +214,78 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
       expect(text()).toContain("n'est pas accessible à votre rôle");
       expect(text()).toContain('Développeur backend');
       expect(fixture.componentInstance.errorMessage()).toBeNull();
+    });
+  });
+
+  // FR-15/FR-16 reached from the file rather than only from the FR-17 list.
+  // Both are affordances: D-038 and D-037 are enforced server-side (NFR-04).
+  describe('FR-15 / FR-16 — the write actions (D-079)', () => {
+    const signIn = (role: AuthenticatedUser['role']): void => {
+      TestBed.inject(AuthService).currentUser.set({
+        id: 'u1',
+        name: 'Test User',
+        email: 'test@example.com',
+        role,
+        departmentId: DEPT,
+        mustChangePassword: false,
+      });
+    };
+
+    const buttonLabelled = (label: string): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+        (b as HTMLElement).textContent?.includes(label),
+      ) as HTMLButtonElement | undefined;
+
+    it('a Recruteur on an OPEN position is offered both', () => {
+      signIn('Recruteur');
+      load();
+
+      expect(buttonLabelled('Modifier')).toBeTruthy();
+      expect(buttonLabelled('Clôturer')).toBeTruthy();
+    });
+
+    it('D-037: a CLOSED position is offered neither', () => {
+      signIn('Recruteur');
+      load({ status: 'Clôturé' });
+
+      // The server 409s an edit and a re-close alike; a button here could only
+      // walk the reader into one.
+      expect(buttonLabelled('Modifier')).toBeUndefined();
+      expect(buttonLabelled('Clôturer')).toBeUndefined();
+      // …and the existing closed-state note still explains why.
+      expect(text()).toContain('aucun nouveau candidat');
+    });
+
+    it('D-068: an Administrateur reads the position and is offered neither', () => {
+      signIn('Administrateur');
+      load();
+
+      expect(text()).toContain('Développeur backend');
+      expect(buttonLabelled('Modifier')).toBeUndefined();
+      expect(buttonLabelled('Clôturer')).toBeUndefined();
+    });
+
+    it('FR-18/D-038: no delete action, for any role', () => {
+      signIn('Recruteur');
+      load();
+
+      expect(buttonLabelled('Supprimer')).toBeUndefined();
+      expect(text()).not.toContain('Supprimer');
+    });
+
+    it('a write re-reads the file — an edit can move it to another department', () => {
+      signIn('Recruteur');
+      load();
+
+      fixture.componentInstance.onWritten();
+
+      only(URL).flush({ ...position, title: 'Renommé' });
+      fixture.detectChanges();
+      only(DEPARTMENTS_URL).flush([{ id: DEPT, name: 'Ingénierie' }]);
+      only(CANDIDATES_URL).flush([], { headers: { 'X-Total-Count': '0' } });
+      fixture.detectChanges();
+
+      expect(text()).toContain('Renommé');
     });
   });
 

@@ -1,0 +1,129 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="position-form-title">
+  <div class="modal__panel">
+    <h2 id="position-form-title" class="modal__title">
+      @if (isEdit()) {
+        Modifier le poste
+      } @else {
+        Nouveau poste
+      }
+    </h2>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="position-title">Intitulé</label>
+      <input
+        id="position-title"
+        class="modal__input"
+        type="text"
+        [disabled]="busy()"
+        [value]="title()"
+        (input)="title.set($any($event.target).value)"
+      />
+    </div>
+
+    <!-- FR-14: « choisi dans une liste ». D-016/D-030 make the server the one
+         that decides which departments are assignable; this only offers them. -->
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="position-department">Département</label>
+      <!--
+        `[selected]` on each OPTION, not `[value]` on the select. A property
+        binding on the select is applied before the `@for` has created the
+        options, so `select.value = 'd1'` lands on an empty list and is
+        discarded — the browser then auto-selects the first option. On a create
+        form that default is '' and the bug is invisible; on FR-15's seeded
+        edit form it showed « Choisir un département » for a position that
+        plainly had one. Only the DISPLAY was wrong (the signal held the right
+        value), which is exactly why it needed a test to catch.
+      -->
+      <select
+        id="position-department"
+        class="modal__input"
+        [disabled]="busy() || loadingDepartments()"
+        (change)="departmentId.set($any($event.target).value)"
+      >
+        <option value="" [selected]="departmentId() === ''">Choisir un département</option>
+        @for (department of departmentChoices(); track department.id) {
+          <option [value]="department.id" [selected]="department.id === departmentId()">
+            {{ department.name }}@if (!department.isActive) {&nbsp;(désactivé)}
+          </option>
+        }
+      </select>
+    </div>
+
+    @if (departmentInactive()) {
+      <p class="modal__warning">
+        Ce département a été désactivé. Il reste affiché parce que ce poste y est déjà
+        rattaché, mais toute modification qui le renvoie sera refusée : choisissez un
+        département actif.
+      </p>
+    }
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="position-description">Description</label>
+      <textarea
+        id="position-description"
+        class="modal__input"
+        rows="4"
+        [disabled]="busy()"
+        [value]="description()"
+        (input)="description.set($any($event.target).value)"
+      ></textarea>
+    </div>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="position-requirements">
+        Exigences (facultatif)
+      </label>
+      <textarea
+        id="position-requirements"
+        class="modal__input"
+        rows="3"
+        [disabled]="busy()"
+        [value]="requirements()"
+        (input)="requirements.set($any($event.target).value)"
+      ></textarea>
+    </div>
+
+    <!--
+      D-037: « Clôturé » is absent by design, not by oversight. It is reachable
+      only through FR-16's close action, and the update route refuses it as a
+      value. A third option here would offer a 400.
+    -->
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="position-status">Statut</label>
+      <select
+        id="position-status"
+        class="modal__input"
+        [disabled]="busy()"
+        (change)="status.set($any($event.target).value)"
+      >
+        <!-- `[selected]` per option, same reason as the department select. -->
+        @for (option of statuses; track option) {
+          <option [value]="option" [selected]="option === status()">{{ option }}</option>
+        }
+      </select>
+    </div>
+
+    @if (!canSubmit() && !busy()) {
+      <p class="modal__body">
+        L'intitulé, le département et la description sont obligatoires.
+      </p>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="busy()" (click)="dismissed.emit()">
+        Annuler
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        @if (isEdit()) {
+          Enregistrer les modifications
+        } @else {
+          Créer le poste
+        }
+      </button>
+    </div>
+  </div>
+</div>

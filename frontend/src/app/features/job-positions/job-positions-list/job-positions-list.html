@@ -1,0 +1,167 @@
+<app-shell>
+  <header class="head">
+    <h1 class="page__title">Postes</h1>
+    <div class="head__actions">
+      @if (!loading() && !errorMessage()) {
+        <p class="head__count">
+          @if (rows().length === 0) {
+            Aucun poste
+          } @else {
+            {{ rows().length }} poste{{ rows().length > 1 ? 's' : '' }}
+          }
+        </p>
+      }
+      <!-- FR-14. Offered to a Recruteur only; D-068 keeps the Administrateur
+           read-only, and the server refuses the POST either way. -->
+      @if (canWrite()) {
+        <button matButton="filled" type="button" (click)="creating.set(true)">
+          <mat-icon>post_add</mat-icon>
+          Nouveau poste
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- FR-17: filtrable par statut et département. -->
+  <section class="filters card" aria-label="Filtres">
+    <div class="filters__field">
+      <label class="filters__label label-sm" for="filter-status">Statut</label>
+      <select
+        id="filter-status"
+        class="filters__control"
+        [value]="filters().status ?? ''"
+        (change)="setFilter('status', $any($event.target).value)"
+      >
+        <option value="">Tous les statuts</option>
+        @for (status of statuses; track status) {
+          <option [value]="status">{{ status }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filters__field">
+      <label class="filters__label label-sm" for="filter-department">Département</label>
+      <select
+        id="filter-department"
+        class="filters__control"
+        [value]="filters().departmentId ?? ''"
+        (change)="setFilter('departmentId', $any($event.target).value)"
+      >
+        <option value="">Tous les départements</option>
+        @for (department of departments(); track department.id) {
+          <option [value]="department.id">{{ department.name }}</option>
+        }
+      </select>
+    </div>
+
+    @if (isFiltered()) {
+      <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+        <mat-icon>filter_alt_off</mat-icon>
+        Réinitialiser
+      </button>
+    }
+  </section>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement des postes" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      <button matButton type="button" (click)="load()">Réessayer</button>
+    </p>
+  }
+
+  @if (!errorMessage()) {
+    <section class="card table-card" aria-labelledby="positions-title">
+      <h2 id="positions-title" class="visually-hidden">Liste des postes</h2>
+
+      @if (rows().length) {
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Intitulé</th>
+                <th scope="col">Département</th>
+                <th scope="col">Statut</th>
+                <th scope="col">Créé le</th>
+                <!-- FR-18/D-038: no delete column exists, and none may be added. -->
+                @if (canWrite()) {
+                  <th scope="col"><span class="visually-hidden">Actions</span></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (position of rows(); track position.id) {
+                <tr>
+                  <td>
+                    <a class="table__link" [routerLink]="['/job-positions', position.id]">
+                      {{ position.title }}
+                    </a>
+                  </td>
+                  <td class="table__meta">{{ departmentName(position.departmentId) }}</td>
+                  <td><app-stage-chip [stage]="position.status" /></td>
+                  <td class="table__date">{{ position.createdAt | date: 'dd/MM/yyyy' }}</td>
+                  @if (canWrite()) {
+                    <td class="table__actions">
+                      @if (isManageable(position)) {
+                        <button matButton type="button" (click)="editing.set(position)">
+                          <mat-icon>edit</mat-icon>
+                          Modifier
+                        </button>
+                        <button matButton type="button" (click)="closingPosition.set(position)">
+                          <mat-icon>lock</mat-icon>
+                          Clôturer
+                        </button>
+                      } @else {
+                        <!-- D-037: a closed position is neither editable nor
+                             re-closable. Stated, rather than leaving an empty
+                             cell that reads as a rendering fault. -->
+                        <span class="table__locked label-sm">Clôturé — non modifiable</span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (!loading()) {
+        <p class="empty">
+          @if (isFiltered()) {
+            Aucun poste ne correspond à ces filtres. Élargissez la recherche ou
+            réinitialisez-les.
+          } @else {
+            Aucun poste n'est enregistré pour le moment.
+          }
+        </p>
+      }
+    </section>
+  }
+
+  <!-- FR-14 — created from nothing, so no position is passed. -->
+  @if (creating()) {
+    <app-job-position-form (saved)="onSaved()" (dismissed)="creating.set(false)" />
+  }
+
+  <!-- FR-15 — the same form, seeded from the row. -->
+  @if (editing(); as position) {
+    <app-job-position-form
+      [position]="position"
+      (saved)="onSaved()"
+      (dismissed)="editing.set(null)"
+    />
+  }
+
+  <!-- FR-16 — its own action, never a status the form may assign (D-037). -->
+  @if (closingPosition(); as position) {
+    <app-close-position
+      [positionId]="position.id"
+      [title]="position.title"
+      (closed)="onClosed()"
+      (dismissed)="closingPosition.set(null)"
+    />
+  }
+</app-shell>

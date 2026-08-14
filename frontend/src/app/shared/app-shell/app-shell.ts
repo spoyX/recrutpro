@@ -48,9 +48,12 @@ const NAV: readonly NavItem[] = [
   { label: 'Tableau de bord', icon: 'dashboard', route: '/dashboard' },
   // FR-24 is Recruteur-only (D-041), and D-068 deliberately did not widen it.
   { label: 'Candidats', icon: 'group', route: '/candidates', roles: ['Recruteur'] },
-  // No positions LIST page yet — the details page is reached from a poste
-  // title on the candidate pages (D-071).
-  { label: 'Postes', icon: 'work', route: null },
+  // FR-14 to FR-17. D-038 opens the module's READS to Recruteur and
+  // Administrateur and closes it to the Responsable hiérarchique entirely, so
+  // the link is live for two roles and « réservé » for the third. Writes are
+  // Recruteur-only (D-038/D-068) and the page hides its own write actions —
+  // the entry itself is a read destination.
+  { label: 'Postes', icon: 'work', route: '/job-positions', roles: ['Recruteur', 'Administrateur'] },
   // FR-33 for the Recruteur, FR-35 for the Responsable: the SAME route, with
   // the scope decided server-side (D-047). The Administrateur has neither FR.
   {

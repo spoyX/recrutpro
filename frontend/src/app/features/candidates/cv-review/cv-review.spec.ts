@@ -67,7 +67,11 @@ describe('CvReview (FR-25, FR-26)', () => {
   describe('No new endpoint — the shared stage route', () => {
     it('issues NO request when it opens', () => {
       open();
-      http.verify();
+      // `http.verify()` alone would throw on a stray request but records no
+      // Jasmine expectation — Karma flags it as a spec that asserts nothing,
+      // and deleting the line would leave a test that could never fail. The
+      // count IS the assertion.
+      expect(http.match(() => true).length).toBe(0);
     });
 
     it('offers exactly the two CV-review outcomes, and neither final-decision stage', () => {
@@ -228,7 +232,9 @@ describe('CvReview (FR-25, FR-26)', () => {
 
       fixture.componentInstance.submit();
 
-      http.verify();
+      // Same point as the open-time check: an explicit count, not a bare
+      // `verify()` that Jasmine cannot see.
+      expect(http.match(() => true).length).toBe(0);
     });
   });
 

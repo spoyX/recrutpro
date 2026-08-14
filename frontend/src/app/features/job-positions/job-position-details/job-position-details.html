@@ -19,8 +19,23 @@
           {{ departmentName() ?? 'Département inconnu' }}
         </p>
       </div>
-      <!-- FR-14/FR-16 status, through the shared badge. -->
-      <app-stage-chip [stage]="position.status" />
+      <div class="head__actions">
+        <!-- FR-15/FR-16. Offered only where the server would accept them; the
+             rules themselves live on the server (D-037, D-038, D-068). -->
+        @if (isManageable(position)) {
+          <button matButton type="button" (click)="editing.set(true)">
+            <mat-icon>edit</mat-icon>
+            Modifier
+          </button>
+          <button matButton type="button" (click)="closing.set(true)">
+            <mat-icon>lock</mat-icon>
+            Clôturer
+          </button>
+        }
+
+        <!-- FR-14/FR-16 status, through the shared badge. -->
+        <app-stage-chip [stage]="position.status" />
+      </div>
     </header>
 
     <div class="columns">
@@ -112,5 +127,24 @@
         </section>
       </div>
     </div>
+
+    <!-- FR-15 — the same dialog the FR-17 list uses, seeded from this record. -->
+    @if (editing()) {
+      <app-job-position-form
+        [position]="position"
+        (saved)="onWritten()"
+        (dismissed)="editing.set(false)"
+      />
+    }
+
+    <!-- FR-16 — its own action, never a status the form may assign (D-037). -->
+    @if (closing()) {
+      <app-close-position
+        [positionId]="position.id"
+        [title]="position.title"
+        (closed)="onWritten()"
+        (dismissed)="closing.set(false)"
+      />
+    }
   }
 </app-shell>

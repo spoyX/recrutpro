@@ -77,9 +77,9 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         expect(el.getAttribute('aria-disabled')).toBe('true');
         expect(el.tagName.toLowerCase()).not.toBe('a');
       });
-      // Four destinations have no page at all yet: Postes, Rapports,
-      // Utilisateurs, Journal d'audit.
-      expect(hints('à venir').length).toBe(4);
+      // Three destinations have no page at all: Rapports, Utilisateurs,
+      // Journal d'audit. « Postes » left this set when FR-14 to FR-17 landed.
+      expect(hints('à venir').length).toBe(3);
     });
   });
 
@@ -112,9 +112,10 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
 
       expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
       // The two disabled reasons must not be conflated: the page EXISTS, it is
-      // simply not this role's.
-      expect(hints('réservé').length).toBe(1);
-      expect(hints('à venir').length).toBe(4);
+      // simply not this role's. « Candidats » (D-041) and « Postes » (D-038
+      // closes that module to this role entirely) are both in that state.
+      expect(hints('réservé').length).toBe(2);
+      expect(hints('à venir').length).toBe(3);
     });
 
     it('ResponsableHierarchique: « Entretiens » IS a link — FR-35 is theirs', () => {
@@ -156,7 +157,32 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
 
       expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
-      expect(hints('réservé').length).toBe(2);
+      expect(fixture.nativeElement.querySelector('a[href="/job-positions"]')).toBeNull();
+      expect(hints('réservé').length).toBe(3);
+    });
+
+    // FR-14 to FR-17. D-038 opened the module's READS to two roles and closed
+    // it to the third; D-068 kept the Administrateur's half read-only.
+    it('Recruteur and Administrateur both get « Postes » as a real link (D-038)', () => {
+      for (const role of ['Recruteur', 'Administrateur'] as const) {
+        signIn(role);
+        create();
+
+        const link = fixture.nativeElement.querySelector(
+          'a[href="/job-positions"]',
+        ) as HTMLAnchorElement;
+        expect(link).withContext(role).toBeTruthy();
+        expect(link.textContent).toContain('Postes');
+      }
+    });
+
+    it('ResponsableHierarchique: « Postes » is disabled — D-038 closes the module to them', () => {
+      signIn('ResponsableHierarchique');
+      create();
+
+      expect(fixture.nativeElement.querySelector('a[href="/job-positions"]')).toBeNull();
+      // Present, so the product's shape stays honest — just not a link.
+      expect(text()).toContain('Postes');
     });
   });
 

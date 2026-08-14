@@ -55,9 +55,19 @@ export const routes: Routes = [
     title: 'Entretiens — RecrutPro',
   },
   {
-    // FR-14 to FR-17. `GET /job-positions/:id` already existed (D-038); there
-    // is no positions LIST page yet, so this is reached from a poste title on
-    // the candidate pages.
+    // FR-17, and the home of FR-14/FR-15/FR-16. Registered BEFORE
+    // `job-positions/:id` for readability only — the two patterns have
+    // different segment counts and cannot shadow each other.
+    path: 'job-positions',
+    loadComponent: () =>
+      import('./features/job-positions/job-positions-list/job-positions-list').then(
+        (m) => m.JobPositionsList,
+      ),
+    title: 'Postes — RecrutPro',
+  },
+  {
+    // FR-14 to FR-17. `GET /job-positions/:id` already existed (D-038). Reached
+    // from the list above and from a poste title on the candidate pages.
     path: 'job-positions/:id',
     loadComponent: () =>
       import('./features/job-positions/job-position-details/job-position-details').then(
