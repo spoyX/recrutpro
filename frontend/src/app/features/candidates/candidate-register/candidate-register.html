@@ -1,0 +1,240 @@
+<app-shell>
+  <header class="head">
+    <h1 class="page__title">Nouveau candidat</h1>
+    <p class="head__phase label-sm">
+      @switch (phase()) {
+        @case ('identity') { Étape 1 sur 2 — informations }
+        @case ('resume') { Étape 2 sur 2 — CV }
+        @case ('done') { Terminé }
+      }
+    </p>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      @if (!positionOptions().length) {
+        <button matButton type="button" (click)="retryPositions()">Réessayer</button>
+      }
+    </p>
+  }
+
+  <!-- ------------------------------------------------ FR-19: the identity -->
+  @if (phase() === 'identity') {
+    <section class="card form" aria-labelledby="identity-title">
+      <h2 id="identity-title" class="card__title">Informations du candidat</h2>
+
+      @if (loadingPositions()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Chargement des postes" />
+      }
+
+      <div class="form__field">
+        <label class="form__label label-sm" for="reg-name">Nom complet</label>
+        <input
+          id="reg-name"
+          class="form__control"
+          type="text"
+          autocomplete="name"
+          [disabled]="busy()"
+          [value]="fullName()"
+          (input)="setFullName($any($event.target).value)"
+        />
+      </div>
+
+      <div class="form__field">
+        <label class="form__label label-sm" for="reg-email">Email</label>
+        <!-- type=email gets the right keyboard and the browser's own hint. The
+             address is validated by the server's schema regardless. -->
+        <input
+          id="reg-email"
+          class="form__control"
+          type="email"
+          autocomplete="email"
+          [disabled]="busy()"
+          [value]="email()"
+          (input)="setEmail($any($event.target).value)"
+        />
+      </div>
+
+      <div class="form__field">
+        <label class="form__label label-sm" for="reg-phone">Téléphone</label>
+        <input
+          id="reg-phone"
+          class="form__control"
+          type="tel"
+          autocomplete="tel"
+          [disabled]="busy()"
+          [value]="phone()"
+          (input)="setPhone($any($event.target).value)"
+        />
+      </div>
+
+      <div class="form__field">
+        <label class="form__label label-sm" for="reg-position">Poste</label>
+        <!-- FR-16: closed postings are filtered out — the server refuses them,
+             so offering one could only produce a 409. -->
+        <select
+          id="reg-position"
+          class="form__control"
+          [disabled]="busy() || loadingPositions()"
+          [value]="jobPositionId()"
+          (change)="setJobPosition($any($event.target).value)"
+        >
+          <option value="">Choisir un poste…</option>
+          @for (option of positionOptions(); track option.id) {
+            <option [value]="option.id">{{ option.title }}</option>
+          }
+        </select>
+
+        @if (!loadingPositions() && !positionOptions().length && !errorMessage()) {
+          <p class="form__hint">
+            Aucun poste ouvert. Un candidat doit être rattaché à un poste qui accepte
+            encore des candidatures.
+          </p>
+        }
+      </div>
+
+      <p class="form__note">
+        La candidature sera enregistrée à l'étape « Candidature reçue ».
+      </p>
+
+      <!--
+        FR-20 / D-004 — the duplicate is CONFIRMED, never silently refused and
+        never silently retried. The server's own message names the existing
+        candidate and the date they were registered, which is the detail the
+        recruiter has to see before choosing.
+      -->
+      @if (duplicateWarning(); as warning) {
+        <div class="duplicate" role="alert">
+          <p class="duplicate__text">
+            <mat-icon aria-hidden="true">person_search</mat-icon>
+            <span>{{ warning }}</span>
+          </p>
+          <div class="duplicate__actions">
+            <button matButton type="button" [disabled]="busy()" (click)="duplicateWarning.set(null)">
+              Annuler
+            </button>
+            <button
+              matButton="filled"
+              type="button"
+              [disabled]="busy()"
+              (click)="submitIdentity(true)"
+            >
+              Enregistrer quand même
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="form__actions">
+        @if (!duplicateWarning()) {
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="!canSubmitIdentity()"
+            (click)="submitIdentity()"
+          >
+            <mat-icon>person_add</mat-icon>
+            Enregistrer le candidat
+          </button>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- ---------------------------------------------------- FR-21: the CV -->
+  @if (phase() === 'resume' && created(); as candidate) {
+    <section class="card form" aria-labelledby="resume-title">
+      <h2 id="resume-title" class="card__title">CV de {{ candidate.fullName }}</h2>
+
+      <!-- Said plainly: the candidate EXISTS now. The CV route needs their id,
+           so this cannot be one atomic step, and pretending otherwise would
+           make a failed upload look like a failed registration. -->
+      <p class="form__note">
+        {{ candidate.fullName }} est enregistré. Le CV est facultatif et peut être
+        ajouté plus tard depuis le dossier.
+      </p>
+
+      <div class="form__field">
+        <label class="form__label label-sm" for="reg-resume">Fichier</label>
+        <input
+          id="reg-resume"
+          class="form__control"
+          type="file"
+          [accept]="accept"
+          [disabled]="uploading()"
+          (change)="chooseFile($any($event.target).files)"
+        />
+        <!-- Guidance, not a gate: the server checks the real bytes (D-007). -->
+        <p class="form__hint">
+          PDF ou DOCX, 5 Mo maximum. Le format est vérifié par le serveur à partir du
+          contenu réel du fichier, pas de son extension.
+        </p>
+      </div>
+
+      @if (uploading()) {
+        <mat-progress-bar
+          [mode]="uploadPercent() === null ? 'indeterminate' : 'determinate'"
+          [value]="uploadPercent() ?? 0"
+          aria-label="Envoi du CV"
+        />
+        <p class="form__hint">
+          Envoi en cours@if (uploadPercent() !== null) { — {{ uploadPercent() }} %}…
+        </p>
+      }
+
+      @if (uploadError(); as message) {
+        <p class="page__error" role="alert">
+          <mat-icon aria-hidden="true">error_outline</mat-icon>
+          <span>{{ message }}</span>
+        </p>
+      }
+
+      <div class="form__actions">
+        <button matButton type="button" [disabled]="uploading()" (click)="skipResume()">
+          Sans CV pour l'instant
+        </button>
+        <button
+          matButton="filled"
+          type="button"
+          [disabled]="!file() || uploading()"
+          (click)="uploadResume()"
+        >
+          <mat-icon>upload_file</mat-icon>
+          Envoyer le CV
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ------------------------------------------------------- the outcome -->
+  @if (phase() === 'done' && created(); as candidate) {
+    <section class="card form" aria-labelledby="done-title">
+      <h2 id="done-title" class="card__title">Candidat enregistré</h2>
+
+      <p class="done">
+        <mat-icon aria-hidden="true">check_circle</mat-icon>
+        <span>
+          {{ candidate.fullName }} est enregistré à l'étape « {{ candidate.currentStage }} »@if (resumeAttached()) {, CV joint}.
+        </span>
+      </p>
+
+      @if (!resumeAttached()) {
+        <p class="form__hint">
+          Aucun CV n'a été joint. Il pourra être ajouté depuis le dossier du candidat.
+        </p>
+      }
+
+      <div class="form__actions">
+        <button matButton type="button" (click)="registerAnother()">
+          <mat-icon>person_add</mat-icon>
+          Enregistrer un autre candidat
+        </button>
+        <button matButton="filled" type="button" (click)="openCandidate()">
+          Ouvrir le dossier
+        </button>
+      </div>
+    </section>
+  }
+</app-shell>

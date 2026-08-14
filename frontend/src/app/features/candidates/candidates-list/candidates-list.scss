@@ -19,6 +19,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+// The count and the FR-19 entry point sit together, so the primary action is
+// at the end of the header rather than lost above the filters.
+.head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
 .card {
   background-color: var(--mat-sys-surface-container-lowest);
   border: var(--border-level-1);

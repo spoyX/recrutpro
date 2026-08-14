@@ -1,15 +1,23 @@
 <app-shell>
   <header class="head">
     <h1 class="page__title">Candidats</h1>
-    @if (!loading() && !errorMessage()) {
-      <p class="head__count">
-        @if (total() === 0) {
-          Aucun candidat
-        } @else {
-          {{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}
-        }
-      </p>
-    }
+    <div class="head__actions">
+      @if (!loading() && !errorMessage()) {
+        <p class="head__count">
+          @if (total() === 0) {
+            Aucun candidat
+          } @else {
+            {{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}
+          }
+        </p>
+      }
+      <!-- FR-19: the pipeline's entry point. This route is Recruteur-only
+           server-side, and this whole page already is (D-069). -->
+      <a matButton="filled" routerLink="/candidates/new">
+        <mat-icon>person_add</mat-icon>
+        Nouveau candidat
+      </a>
+    </div>
   </header>
 
   <!-- FR-24: filtrable par poste, étape et plage de dates d'enregistrement. -->

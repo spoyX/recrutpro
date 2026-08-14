@@ -1,0 +1,146 @@
+// `.page__title` and `.page__error` are global (src/styles.scss). Layout
+// chrome lives in shared/app-shell.
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.head__phase {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+}
+
+.card__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0 0 var(--sp-md);
+}
+
+// A single readable column. DESIGN.md's 12-column grid is for dashboards; a
+// form is easier to complete when the eye does not travel.
+.form {
+  max-width: 640px;
+}
+
+.form__field {
+  margin-bottom: var(--sp-md);
+}
+
+.form__label {
+  display: block;
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-xs);
+}
+
+.form__control {
+  width: 100%;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  min-height: var(--layout-row-height);
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+
+  &:disabled {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.form__hint {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: var(--sp-xs) 0 0;
+}
+
+.form__note {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-md);
+}
+
+.form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+// FR-20 / D-004 — a duplicate is a WARNING with an override, not a failure.
+// Same tone as FR-31's scheduling conflict, and for the same reason: the two
+// are the same kind of event, so they must not look like different ones.
+// Deliberately NOT the error red, which means "this cannot proceed".
+.duplicate {
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+  color: var(--mat-sys-on-tertiary-fixed);
+  border-radius: var(--radius-default);
+  padding: var(--sp-md);
+  margin-top: var(--sp-md);
+}
+
+.duplicate__text {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0;
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex: none;
+  }
+}
+
+.duplicate__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-sm);
+  flex-wrap: wrap;
+}
+
+.done {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-md);
+  border-radius: var(--radius-default);
+  // D-066's success role — a settled positive outcome, which is exactly what
+  // this is. Same token « Accepté » wears.
+  background-color: var(--recrutpro-success-container);
+  color: var(--recrutpro-on-success-container);
+  font: var(--mat-sys-body-medium);
+
+  mat-icon {
+    flex: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .form {
+    max-width: none;
+  }
+}

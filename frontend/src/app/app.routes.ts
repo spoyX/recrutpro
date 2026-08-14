@@ -23,6 +23,17 @@ export const routes: Routes = [
     title: 'Candidats — RecrutPro',
   },
   {
+    // FR-19 to FR-22. Registered BEFORE `candidates/:id` because « new » would
+    // otherwise match that pattern and be read as a candidate id — the one
+    // ordering here that genuinely matters.
+    path: 'candidates/new',
+    loadComponent: () =>
+      import('./features/candidates/candidate-register/candidate-register').then(
+        (m) => m.CandidateRegister,
+      ),
+    title: 'Nouveau candidat — RecrutPro',
+  },
+  {
     // D-067. `:id` binds to the component's `id` input via
     // `withComponentInputBinding`. There is no /candidates list page yet, so
     // this route is reached from the dashboard's recent-candidate rows.

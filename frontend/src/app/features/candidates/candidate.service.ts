@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpEvent, HttpEventType } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -106,6 +106,50 @@ export const CANDIDATE_PAGE_SIZE = 25;
 export const FINAL_DECISION_STAGES = ['Accepté', 'Rejeté'] as const;
 export type FinalDecisionStage = (typeof FINAL_DECISION_STAGES)[number];
 
+/** FR-19 — what the registration form sends. `currentStage` is NOT among them. */
+export interface RegisterCandidateInput {
+  fullName: string;
+  email: string;
+  phone: string;
+  jobPositionId: string;
+  /** FR-20 / D-004 — the recruiter's explicit "yes, register it anyway". */
+  confirmDuplicate?: boolean;
+}
+
+/** The subset of `PublicCandidate` the registration flow needs back. */
+export interface RegisteredCandidate {
+  id: string;
+  fullName: string;
+  currentStage: string;
+}
+
+/**
+ * D-040 — what comes back from an upload. `downloadUrl` is this API's own
+ * proxy route; there is no `fileUrl` and no `publicId`, by construction in the
+ * server's view. Nothing here is ever assembled client-side.
+ */
+export interface UploadedResume {
+  id: string;
+  candidateId: string;
+  uploadedAt: string;
+  isActive: boolean;
+  downloadUrl: string;
+}
+
+/** Progress for the FR-21 upload, or the finished resume. */
+export type ResumeUploadEvent =
+  | { kind: 'progress'; percent: number | null }
+  | { kind: 'done'; resume: UploadedResume };
+
+/**
+ * D-007 — the limits the SERVER enforces, restated here only to render them as
+ * guidance. They are NOT a client-side gate: the real check is the magic-byte
+ * signature test, which no browser API performs and which a renamed executable
+ * would sail past.
+ */
+export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
+export const RESUME_ACCEPT = '.pdf,.docx';
+
 @Injectable({ providedIn: 'root' })
 export class CandidateService {
   private readonly http = inject(HttpClient);
@@ -174,5 +218,73 @@ export class CandidateService {
       { targetStage, decisionComment },
       { withCredentials: true },
     );
+  }
+
+  /**
+   * FR-19 / FR-20 — register a candidate.
+   *
+   * `currentStage` is deliberately NOT sent. FR-19 fixes the initial stage at
+   * « Candidature reçue » and the server sets it; a client-supplied stage would
+   * be a way to enter the pipeline part-way through (D-006).
+   *
+   * `confirmDuplicate` is omitted rather than sent as `false` on a first
+   * attempt: the server treats only a literal `true` as confirmation, and
+   * sending the flag at all on the first try misrepresents what the recruiter
+   * has been shown.
+   */
+  registerCandidate(input: RegisterCandidateInput): Observable<RegisteredCandidate> {
+    return this.http.post<RegisteredCandidate>(
+      `${environment.apiUrl}/candidates`,
+      {
+        fullName: input.fullName,
+        email: input.email,
+        phone: input.phone,
+        jobPositionId: input.jobPositionId,
+        ...(input.confirmDuplicate ? { confirmDuplicate: true } : {}),
+      },
+      { withCredentials: true },
+    );
+  }
+
+  /**
+   * FR-21 / FR-22 — attach a CV.
+   *
+   * `multipart/form-data` with the field name `file`, which is what the
+   * server's multer instance reads. The Content-Type header is deliberately
+   * NOT set: the browser must add it itself, because only it knows the
+   * multipart boundary — setting it by hand produces a body the server cannot
+   * parse.
+   *
+   * Progress is reported so a 5 MB upload is not a frozen button. It is
+   * presentation only: the file is accepted or refused by the server's
+   * magic-byte check (D-007) long after the bar reaches 100%.
+   */
+  uploadResume(candidateId: string, file: File): Observable<ResumeUploadEvent> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+
+    return this.http
+      .post<UploadedResume>(
+        `${environment.apiUrl}/candidates/${encodeURIComponent(candidateId)}/resume`,
+        body,
+        { withCredentials: true, reportProgress: true, observe: 'events' },
+      )
+      .pipe(
+        map((event: HttpEvent<UploadedResume>): ResumeUploadEvent => {
+          if (event.type === HttpEventType.UploadProgress) {
+            return {
+              kind: 'progress',
+              // `total` is absent when the size is unknown; a percentage
+              // invented from a missing total would be a lie, so it stays null
+              // and the bar renders indeterminate.
+              percent: event.total ? Math.round((100 * event.loaded) / event.total) : null,
+            };
+          }
+          if (event.type === HttpEventType.Response) {
+            return { kind: 'done', resume: event.body as UploadedResume };
+          }
+          return { kind: 'progress', percent: null };
+        }),
+      );
   }
 }
