@@ -271,3 +271,8 @@
     flex-direction: column;
   }
 }
+
+// FR-22's upload action, under whichever CV state the card is showing.
+.resume__action {
+  margin-top: var(--sp-sm);
+}

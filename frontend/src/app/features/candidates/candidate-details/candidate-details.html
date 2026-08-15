@@ -219,6 +219,19 @@
           } @else {
             <p class="empty">Aucun CV téléversé.</p>
           }
+
+          <!-- FR-22. The same action either way — the endpoint replaces or
+               creates — so the wording differs and nothing else does. -->
+          @if (canManageResume()) {
+            <button matButton type="button" class="resume__action" (click)="replacing.set(true)">
+              <mat-icon>upload_file</mat-icon>
+              @if (candidate.resume.hasResume) {
+                Remplacer le CV
+              } @else {
+                Téléverser un CV
+              }
+            </button>
+          }
         </section>
 
         <!-- ------------------------------------------------------ dossier -->
@@ -264,6 +277,18 @@
         [resumeUrl]="candidate.resume.url"
         (reviewed)="onReviewed()"
         (dismissed)="reviewing.set(false)"
+      />
+    }
+
+    <!-- FR-22. The SAME route FR-21 uses at registration; a second call
+         replaces, storing the new file before destroying the old (D-040). -->
+    @if (replacing()) {
+      <app-replace-resume
+        [candidateId]="candidate.id"
+        [candidateName]="candidate.fullName"
+        [hasExisting]="candidate.resume.hasResume"
+        (replaced)="onResumeReplaced()"
+        (dismissed)="replacing.set(false)"
       />
     }
 

@@ -10,6 +10,7 @@ import { CandidateService, CandidateDetail } from '../candidate.service';
 import { ScheduleInterview } from '../../interviews/schedule-interview/schedule-interview';
 import { FinalDecision } from '../final-decision/final-decision';
 import { CvReview } from '../cv-review/cv-review';
+import { ReplaceResume } from '../replace-resume/replace-resume';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 
@@ -39,6 +40,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     ScheduleInterview,
     FinalDecision,
     CvReview,
+    ReplaceResume,
   ],
   templateUrl: './candidate-details.html',
   styleUrl: './candidate-details.scss',
@@ -102,6 +104,33 @@ export class CandidateDetails {
 
   /** FR-36's scale is 1–5, so a score renders as a filled/empty run of 5. */
   readonly scaleMax = [1, 2, 3, 4, 5];
+
+  // ------------------------------------------------------------- FR-22
+
+  readonly replacing = signal(false);
+
+  /**
+   * Whether to OFFER the CV upload — an affordance, not a permission.
+   *
+   * `POST /candidates/:id/resume` sits below the Recruteur-only guard in
+   * `candidate.routes.ts`, unlike the GET beside it, which D-047 opens to an
+   * assigned Responsable for FR-35. So a Responsable may READ this candidate's
+   * CV and may not replace it — the server enforces both, and this only
+   * declines to show a button that would 403.
+   *
+   * Deliberately NOT gated on the pipeline stage. FR-22 names no stage, and a
+   * wrong file attached to an accepted candidate is exactly when someone needs
+   * to fix it.
+   */
+  canManageResume(): boolean {
+    return this.auth.currentUser()?.role === 'Recruteur';
+  }
+
+  /** The file's `resume.hasResume` and `resume.url` both change, so re-read. */
+  onResumeReplaced(): void {
+    this.replacing.set(false);
+    this.load();
+  }
 
   // ------------------------------------------------------- FR-25, FR-26
 

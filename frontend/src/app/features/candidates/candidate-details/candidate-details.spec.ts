@@ -609,4 +609,90 @@ describe('CandidateDetails (D-067)', () => {
       expect(text()).toContain('Jean Martin');
     });
   });
+
+  // FR-22 — replacing (or first attaching) a CV from the file, which is where
+  // a missing or wrong one is noticed.
+  describe('FR-22 — the CV upload action (D-082)', () => {
+    const signIn = (role: string): void => {
+      TestBed.inject(AuthService).currentUser.set({
+        id: 'u1',
+        name: 'Marie',
+        email: 'marie@example.com',
+        role: role as 'Recruteur',
+        departmentId: 'd1',
+        mustChangePassword: false,
+      });
+    };
+
+    const uploadButton = (): HTMLButtonElement | undefined =>
+      Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+        /Remplacer le CV|Téléverser un CV/.test((b as HTMLElement).textContent ?? ''),
+      ) as HTMLButtonElement | undefined;
+
+    it('offers REPLACE when a CV is attached', () => {
+      signIn('Recruteur');
+      load({ resume: { hasResume: true, url: `/api/v1/candidates/${ID}/resume` } });
+
+      expect(uploadButton()!.textContent).toContain('Remplacer le CV');
+    });
+
+    it('offers a FIRST upload when none is — registration allows skipping it', () => {
+      signIn('Recruteur');
+      load({ resume: { hasResume: false, url: null } });
+
+      expect(uploadButton()!.textContent).toContain('Téléverser un CV');
+      expect(text()).toContain('Aucun CV téléversé');
+    });
+
+    it('is NOT offered to a Responsable — they may READ the CV, not replace it', () => {
+      signIn('ResponsableHierarchique');
+      load({ resume: { hasResume: true, url: `/api/v1/candidates/${ID}/resume` } });
+
+      // D-047 opens the GET to an assigned responsable; the POST sits below the
+      // Recruteur-only guard. The server enforces both — this only declines to
+      // show a button that would 403.
+      expect(uploadButton()).toBeUndefined();
+      expect(fixture.nativeElement.querySelector('a[href*="/resume"]')).toBeTruthy();
+    });
+
+    it('is offered on a TERMINAL candidate too — FR-22 names no stage', () => {
+      signIn('Recruteur');
+      load({
+        currentStage: 'Accepté',
+        resume: { hasResume: true, url: `/api/v1/candidates/${ID}/resume` },
+      });
+
+      // A wrong file on an accepted candidate is exactly when someone needs it.
+      expect(uploadButton()).toBeTruthy();
+    });
+
+    it('opens the dialog with the file it already holds — no follow-up request', () => {
+      signIn('Recruteur');
+      load({ resume: { hasResume: true, url: `/api/v1/candidates/${ID}/resume` } });
+
+      uploadButton()!.click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-replace-resume')).toBeTruthy();
+      expectNoPageRequests(http);
+    });
+
+    it('re-reads the file after a replacement — hasResume and url both change', () => {
+      signIn('Recruteur');
+      load({ resume: { hasResume: false, url: null } });
+
+      fixture.componentInstance.onResumeReplaced();
+
+      http.expectOne(URL).flush({
+        ...base,
+        resume: { hasResume: true, url: `/api/v1/candidates/${ID}/resume` },
+      });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-replace-resume')).toBeNull();
+      expect(text()).toContain('Télécharger le CV');
+    });
+  });
+
+
 });

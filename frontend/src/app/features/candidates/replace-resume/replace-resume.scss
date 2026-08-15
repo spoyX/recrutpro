@@ -1,0 +1,33 @@
+// The modal chrome is global — src/styles/_modal.scss.
+
+// Same shape as the CV-review dialog's info strip: a stated fact, not a
+// warning. Neutral on purpose — the tertiary tone means "attention" and this
+// is reassurance about what will NOT happen.
+.resume__safety {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0 0 var(--sp-md);
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+.resume__progress {
+  margin: var(--sp-sm) 0 0;
+}
+
+.resume__percent {
+  color: var(--mat-sys-on-surface-variant);
+  margin: var(--sp-xs) 0 0;
+  font-variant-numeric: tabular-nums;
+}

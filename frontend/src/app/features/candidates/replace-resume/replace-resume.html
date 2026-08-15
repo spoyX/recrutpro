@@ -1,0 +1,84 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="replace-resume-title">
+  <div class="modal__panel">
+    <h2 id="replace-resume-title" class="modal__title">
+      @if (hasExisting()) {
+        Remplacer le CV
+      } @else {
+        Téléverser un CV
+      }
+    </h2>
+
+    <p class="modal__body">
+      {{ candidateName() }} —
+      @if (hasExisting()) {
+        le CV actuel sera remplacé. L'ancien fichier est supprimé du stockage et
+        n'est plus téléchargeable : cette action est <strong>définitive</strong>.
+      } @else {
+        aucun CV n'est joint à ce dossier pour le moment.
+      }
+    </p>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="replace-resume-file">
+        Fichier — PDF ou DOCX, 5 Mo maximum
+      </label>
+      <input
+        id="replace-resume-file"
+        class="modal__input"
+        type="file"
+        [accept]="accept"
+        [disabled]="uploading()"
+        (change)="chooseFile($any($event.target).files)"
+      />
+      <!--
+        D-007/D-040: `accept` is a picker convenience, NOT a check. The real
+        gate is the server's magic-byte signature test, which no browser API
+        performs — so nothing here inspects the file and the server's refusal
+        is what the reader sees.
+      -->
+    </div>
+
+    @if (hasExisting()) {
+      <!--
+        The promise that makes this click safe, and it is a real property of the
+        service rather than reassurance: the new bytes are stored BEFORE the old
+        asset is touched, so a rejected file changes nothing.
+      -->
+      <p class="resume__safety">
+        <mat-icon aria-hidden="true">shield</mat-icon>
+        <span>
+          Si le nouveau fichier est refusé, le CV actuel reste en place — il
+          n'est supprimé qu'une fois le remplacement enregistré.
+        </span>
+      </p>
+    }
+
+    @if (uploading() || percent() !== null) {
+      <div class="resume__progress">
+        @if (percent() === null) {
+          <mat-progress-bar mode="indeterminate" aria-label="Téléversement en cours" />
+        } @else {
+          <mat-progress-bar mode="determinate" [value]="percent()!" />
+          <p class="resume__percent label-sm">{{ percent() }} %</p>
+        }
+      </div>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="uploading()" (click)="dismissed.emit()">
+        Annuler
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        @if (hasExisting()) {
+          Remplacer le CV
+        } @else {
+          Téléverser
+        }
+      </button>
+    </div>
+  </div>
+</div>
