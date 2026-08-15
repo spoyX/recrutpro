@@ -17,9 +17,15 @@ import { isDepartmentScoped } from '../middleware/rbac.middleware';
  * « **[Recruteur / Responsable hiérarchique]** Consulte les tableaux de bord et
  * génère des rapports », so BOTH roles reach these routes. User stories 22 and
  * 23 sit under Recruteur, which is why the Recruteur's view is unscoped and the
- * Responsable's is limited to their own department (rule 2, D-047). The
- * Administrateur is NOT granted access: no SRS text puts reporting in that
- * role, and PRD Section 3 scopes it to accounts, departments and audit.
+ * Responsable's is limited to their own department (rule 2, D-047).
+ *
+ * **The Administrateur IS granted access, since D-068.** This paragraph used to
+ * say the opposite — the original reasoning was that no SRS text puts reporting
+ * in that role — and D-068 overturned it, extending D-038's oversight rationale
+ * so the role reads everything and writes nothing. `report.routes.ts` has named
+ * all three roles since; only this comment was left behind. Corrected on
+ * 2026-08-15 rather than left to send a future reader "fixing" the route the
+ * wrong way. They are NOT department-scoped (D-027), so they see everything.
  */
 
 /** The department floor for a scoped caller; `null` means "no restriction". */

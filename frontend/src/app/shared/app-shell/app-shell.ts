@@ -63,7 +63,10 @@ const NAV: readonly NavItem[] = [
     route: '/interviews',
     roles: ['Recruteur', 'ResponsableHierarchique'],
   },
-  { label: 'Rapports', icon: 'insights', route: null },
+  // SRS Section 1.5, user stories 22/23. All THREE roles: workflow step 9
+  // names the Recruteur and the Responsable, and D-068 added the
+  // Administrateur. No `roles` key, therefore — the same as the dashboard.
+  { label: 'Rapports', icon: 'insights', route: '/reports' },
   { label: 'Utilisateurs', icon: 'manage_accounts', route: null },
   { label: "Journal d'audit", icon: 'receipt_long', route: null },
 ];

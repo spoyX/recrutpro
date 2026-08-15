@@ -1,0 +1,245 @@
+<app-shell>
+  <header class="head">
+    <h1 class="page__title">Rapports</h1>
+    <!--
+      D-047: the server narrows this role to its own department. Stated, so a
+      responsable reading three postings does not conclude the company has
+      three — the same reasoning as the candidate file's redacted contact
+      details, where a rule is shown as a rule rather than as missing data.
+    -->
+    @if (isScoped()) {
+      <p class="head__scope">
+        <mat-icon aria-hidden="true">filter_alt</mat-icon>
+        <span>Ces rapports ne couvrent que votre département.</span>
+      </p>
+    }
+  </header>
+
+  <!-- ================================================= user story 22 -->
+  <section class="card" aria-labelledby="pipeline-title">
+    <div class="section__head">
+      <h2 id="pipeline-title" class="card__title">Pipeline par poste</h2>
+      @if (!pipelineLoading() && !pipelineError() && rows().length) {
+        <p class="section__count">
+          {{ rows().length }} poste{{ rows().length > 1 ? 's' : '' }} —
+          {{ grandTotal() }} candidat{{ grandTotal() > 1 ? 's' : '' }}
+        </p>
+      }
+    </div>
+
+    <div class="filters">
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="report-position">Poste</label>
+        <!--
+          Options derived from the ROWS, not from GET /job-positions: D-038
+          closes that endpoint to the Responsable hiérarchique, who is allowed
+          on this page. Deriving also means no option can match nothing.
+        -->
+        <select
+          id="report-position"
+          class="filters__control"
+          [value]="selectedPosition()"
+          (change)="selectPosition($any($event.target).value)"
+        >
+          <option value="">Tous les postes</option>
+          @for (option of positionOptions(); track option.id) {
+            <option [value]="option.id">{{ option.title }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (pipelineLoading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Chargement du pipeline" />
+    }
+
+    @if (pipelineError(); as message) {
+      <p class="page__error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ message }}</span>
+        <button matButton type="button" (click)="loadPipeline()">Réessayer</button>
+      </p>
+    }
+
+    @if (!pipelineError() && rows().length) {
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Poste</th>
+              <th scope="col">Statut</th>
+              @for (stage of stageNames(); track stage) {
+                <th scope="col" class="table__num">{{ stage }}</th>
+              }
+              <th scope="col" class="table__num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.jobPosition.id) {
+              <tr>
+                <td>
+                  <a class="table__link" [routerLink]="['/job-positions', row.jobPosition.id]">
+                    {{ row.jobPosition.title }}
+                  </a>
+                </td>
+                <!--
+                  D-059 carries the status for a reason: a pipeline of zero on a
+                  CLÔTURÉ posting reads very differently from the same zero on
+                  an open one, and the number alone cannot say which.
+                -->
+                <td><app-stage-chip [stage]="row.jobPosition.status" /></td>
+                @for (stage of stageNames(); track stage) {
+                  <td class="table__num" [class.table__num--zero]="row.stages[stage] === 0">
+                    {{ row.stages[stage] }}
+                  </td>
+                }
+                <td class="table__num table__num--total">{{ row.total }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- One position selected: the mode the endpoint's jobPositionId exists
+           for, and the shape PipelineBreakdown already renders (D-057). -->
+      @if (focused(); as row) {
+        <div class="focus">
+          <h3 class="focus__title label-sm">
+            Répartition — {{ row.jobPosition.title }}
+          </h3>
+          @if (row.total) {
+            <app-pipeline-breakdown [breakdown]="row.stages" />
+          } @else {
+            <p class="empty">
+              Aucun candidat n'a postulé à ce poste. C'est un résultat, pas une
+              absence de donnée.
+            </p>
+          }
+        </div>
+      }
+    } @else if (!pipelineLoading() && !pipelineError()) {
+      <p class="empty">
+        @if (selectedPosition()) {
+          Ce poste n'apparaît pas dans les rapports que vous pouvez consulter.
+        } @else {
+          Aucun poste à rapporter pour le moment.
+        }
+      </p>
+    }
+  </section>
+
+  <!-- ================================================= user story 23 -->
+  <section class="card" aria-labelledby="hire-title">
+    <div class="section__head">
+      <h2 id="hire-title" class="card__title">Délai de recrutement</h2>
+      <p class="section__count">
+        <!-- The definition, on screen: the number is only interpretable with it. -->
+        Entre l'enregistrement du candidat et la décision d'acceptation
+      </p>
+    </div>
+
+    <div class="filters">
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="hire-from">Décisions du</label>
+        <input
+          id="hire-from"
+          class="filters__control"
+          type="date"
+          [value]="fromDate()"
+          (change)="setFrom($any($event.target).value)"
+        />
+      </div>
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="hire-to">au</label>
+        <input
+          id="hire-to"
+          class="filters__control"
+          type="date"
+          [value]="toDate()"
+          (change)="setTo($any($event.target).value)"
+        />
+      </div>
+      @if (isPeriodFiltered()) {
+        <button matButton type="button" class="filters__reset" (click)="resetPeriod()">
+          <mat-icon>filter_alt_off</mat-icon>
+          Toute la période
+        </button>
+      }
+    </div>
+
+    <!--
+      The period filters on the DECISION date, not the application date. Stated
+      because it changes what the number means: filtering on applications would
+      drop slow hires still in flight and bias the average downward.
+    -->
+    @if (isPeriodFiltered()) {
+      <p class="note">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          La période porte sur la date de <strong>décision</strong>, pas sur la date
+          de candidature : ce sont les recrutements conclus dans cet intervalle.
+        </span>
+      </p>
+    }
+
+    @if (hireLoading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Chargement du délai de recrutement" />
+    }
+
+    @if (hireError(); as message) {
+      <p class="page__error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ message }}</span>
+        <button matButton type="button" (click)="loadTimeToHire()">Réessayer</button>
+      </p>
+    }
+
+    @if (hire(); as report) {
+      @if (!hireError()) {
+        @if (report.hires === 0) {
+          <!--
+            NOT four tiles of « 0 ». The server returns null averages rather
+            than zero precisely because zero days would be a false claim of
+            instant hiring, and rendering null as 0 here would reintroduce it.
+          -->
+          <p class="empty">
+            Aucun recrutement conclu
+            @if (isPeriodFiltered()) {
+              sur cette période.
+            } @else {
+              pour le moment.
+            }
+            Le délai moyen ne peut pas être calculé.
+          </p>
+        } @else {
+          <div class="grid grid--tiles">
+            <app-stat-tile
+              label="Recrutements"
+              [value]="report.hires"
+              hint="Taille de l'échantillon"
+            />
+            <app-stat-tile
+              label="Délai moyen"
+              [value]="report.averageDays + ' j'"
+              hint="Entre candidature et acceptation"
+            />
+            <app-stat-tile label="Le plus rapide" [value]="report.fastestDays + ' j'" />
+            <app-stat-tile label="Le plus lent" [value]="report.slowestDays + ' j'" />
+          </div>
+
+          <!-- The server returns `hires` so this can be said out loud. -->
+          @if (smallSample()) {
+            <p class="note">
+              <mat-icon aria-hidden="true">info</mat-icon>
+              <span>
+                Moyenne calculée sur {{ report.hires }} recrutement{{
+                  report.hires > 1 ? 's' : ''
+                }} seulement : à lire comme un ordre de grandeur, pas comme une statistique.
+              </span>
+            </p>
+          }
+        }
+      }
+    }
+  </section>
+</app-shell>

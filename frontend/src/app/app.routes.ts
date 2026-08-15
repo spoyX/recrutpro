@@ -55,6 +55,14 @@ export const routes: Routes = [
     title: 'Entretiens — RecrutPro',
   },
   {
+    // SRS Section 1.5, user stories 22 and 23. Both `GET /reports/*` routes
+    // have existed since D-059; all three roles reach them, with the
+    // Responsable's results scoped server-side (D-047, D-068).
+    path: 'reports',
+    loadComponent: () => import('./features/reports/reports/reports').then((m) => m.Reports),
+    title: 'Rapports — RecrutPro',
+  },
+  {
     // FR-17, and the home of FR-14/FR-15/FR-16. Registered BEFORE
     // `job-positions/:id` for readability only — the two patterns have
     // different segment counts and cannot shadow each other.

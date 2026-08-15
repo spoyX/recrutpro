@@ -1,0 +1,227 @@
+// Deliberately the same shapes as dashboard.scss and candidates-list.scss:
+// the tile grid, the card and the filter row already exist in this app and a
+// report that invented its own would read as a different product.
+//
+// NO chart styles here. DESIGN.md says nothing about charts and rule 8 forbids
+// inventing a visual language at the point of use, so the bars come from the
+// shared PipelineBreakdown (D-057) and the figures from the shared StatTile.
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+// A stated RULE, not a warning: the responsable's narrower view is correct
+// behaviour, so it wears the neutral surface rather than the attention tone.
+.head__scope,
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+.note {
+  margin-top: var(--sp-md);
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+  // The pipeline table scrolls inside its own wrapper; without these the card
+  // stretches to the table's width and drags the page into horizontal scroll.
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-md);
+}
+
+.section__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+// ---------------------------------------------------------------- filters
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  min-width: 0;
+}
+
+.filters__label {
+  color: var(--text-slate);
+  margin: 0;
+}
+
+.filters__control {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  min-width: 200px;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+.filters__reset {
+  margin-left: auto;
+}
+
+// ------------------------------------------------------------------ table
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  // Nine columns of stage names need room; the wrapper scrolls, not the page.
+  min-width: 940px;
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: var(--border-level-1);
+    white-space: nowrap;
+  }
+
+  th {
+    font: var(--mat-sys-label-small);
+    letter-spacing: var(--recrutpro-tracking-label-sm);
+    text-transform: uppercase;
+    color: var(--text-slate);
+    background-color: var(--mat-sys-surface-container-low);
+    vertical-align: bottom;
+  }
+
+  tbody tr {
+    height: var(--layout-row-height);
+  }
+
+  tbody tr:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.table__link {
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+  font: var(--mat-sys-body-medium);
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+// A zero is data, so it is SHOWN — but muted, so the counts that carry
+// information are the ones the eye lands on.
+.table__num--zero {
+  color: var(--mat-sys-outline);
+}
+
+.table__num--total {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface);
+}
+
+// --------------------------------------------------------------- focus
+
+.focus {
+  margin-top: var(--sp-lg);
+  padding-top: var(--sp-lg);
+  border-top: var(--border-level-1);
+}
+
+.focus__title {
+  color: var(--text-slate);
+  margin: 0 0 var(--sp-md);
+}
+
+// ---------------------------------------------------------------- tiles
+
+.grid--tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-gutter);
+}
+
+.empty {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .filters__control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters__field {
+    flex: 1 1 100%;
+  }
+
+  .filters__reset {
+    margin-left: 0;
+  }
+}

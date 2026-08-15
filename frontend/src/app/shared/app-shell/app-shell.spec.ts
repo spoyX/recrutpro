@@ -83,9 +83,10 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         expect(el.getAttribute('aria-disabled')).toBe('true');
         expect(el.tagName.toLowerCase()).not.toBe('a');
       });
-      // Three destinations have no page at all: Rapports, Utilisateurs,
-      // Journal d'audit. « Postes » left this set when FR-14 to FR-17 landed.
-      expect(hints('à venir').length).toBe(3);
+      // TWO destinations have no page at all: Utilisateurs and Journal
+      // d'audit. « Postes » left this set with FR-14 to FR-17, « Rapports »
+      // with user stories 22/23.
+      expect(hints('à venir').length).toBe(2);
     });
   });
 
@@ -121,7 +122,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       // simply not this role's. « Candidats » (D-041) and « Postes » (D-038
       // closes that module to this role entirely) are both in that state.
       expect(hints('réservé').length).toBe(2);
-      expect(hints('à venir').length).toBe(3);
+      expect(hints('à venir').length).toBe(2);
     });
 
     it('ResponsableHierarchique: « Entretiens » IS a link — FR-35 is theirs', () => {
