@@ -6,6 +6,7 @@ import { CandidateDetails } from './candidate-details';
 import { CandidateDetail } from '../candidate.service';
 import { AuthService } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
 
 describe('CandidateDetails (D-067)', () => {
   let fixture: ComponentFixture<CandidateDetails>;
@@ -78,7 +79,12 @@ describe('CandidateDetails (D-067)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   it('D-001: requests the candidate file with credentials', () => {
     create();
@@ -94,7 +100,7 @@ describe('CandidateDetails (D-067)', () => {
 
     // The CV flag, the interview history and the evaluations all arrive in that
     // single response — no follow-up request is issued for any of them.
-    http.verify();
+    expectNoPageRequests(http);
   });
 
   describe('FR-19 / FR-24 — the candidate file', () => {
@@ -275,7 +281,7 @@ describe('CandidateDetails (D-067)', () => {
       load({ currentStage: 'Présélection CV validée' });
 
       // Nothing extra was requested just by viewing the file.
-      http.verify();
+      expectNoPageRequests(http);
 
       scheduleButton()!.click();
       fixture.detectChanges();
@@ -385,7 +391,7 @@ describe('CandidateDetails (D-067)', () => {
       reviewButton()!.click();
       fixture.detectChanges();
 
-      http.verify();
+      expectNoPageRequests(http);
       expect(fixture.nativeElement.querySelector('app-cv-review')).toBeTruthy();
       // Passed straight down from the file's payload.
       const link = fixture.nativeElement.querySelector(
@@ -503,7 +509,7 @@ describe('CandidateDetails (D-067)', () => {
       decideButton()!.click();
       fixture.detectChanges();
 
-      http.verify();
+      expectNoPageRequests(http);
       expect(fixture.nativeElement.querySelector('app-final-decision')).toBeTruthy();
     });
 

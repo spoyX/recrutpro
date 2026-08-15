@@ -1,0 +1,116 @@
+<div class="bell">
+  <button
+    matIconButton
+    type="button"
+    class="bell__button"
+    [attr.aria-expanded]="open()"
+    aria-haspopup="dialog"
+    [attr.aria-label]="
+      unread() > 0 ? 'Notifications, ' + unread() + ' non lues' : 'Notifications, aucune non lue'
+    "
+    (click)="toggle()"
+  >
+    <mat-icon>notifications</mat-icon>
+    <!-- User story 33's unread badge. Absent at zero rather than showing « 0 »:
+         a badge is a call to look, and there is nothing to look at. -->
+    @if (unread() > 0) {
+      <span class="bell__badge label-sm" aria-hidden="true">{{ unread() }}</span>
+    }
+  </button>
+
+  @if (open()) {
+    <!-- A click-catcher behind the panel, so anywhere-else closes it. Bare
+         `document` listeners would also fire for the toggle that opened it. -->
+    <div class="bell__scrim" (click)="close()"></div>
+
+    <section class="panel" role="dialog" aria-labelledby="notifications-title">
+      <header class="panel__head">
+        <h2 id="notifications-title" class="panel__title">Notifications</h2>
+        @if (!loading() && !errorMessage()) {
+          <p class="panel__count">
+            @if (total() === 0) {
+              Aucune notification
+            } @else {
+              {{ rows().length }} sur {{ total() }}
+            }
+          </p>
+        }
+      </header>
+
+      @if (errorMessage(); as message) {
+        <p class="panel__error" role="alert">
+          <mat-icon aria-hidden="true">error_outline</mat-icon>
+          <span>{{ message }}</span>
+          <button matButton type="button" (click)="load()">Réessayer</button>
+        </p>
+      }
+
+      @if (rows().length) {
+        <ul class="notes">
+          @for (note of rows(); track note.id) {
+            <!-- FR-43: unread carries a marker AND a weight, never colour
+                 alone — the chip palette is already carrying meaning here. -->
+            <li class="note" [class.note--unread]="!note.isRead">
+              <mat-icon class="note__icon" aria-hidden="true">{{ icon(note.type) }}</mat-icon>
+
+              <div class="note__body">
+                <!-- The SERVER's message, rendered as written. FR-40 to FR-42
+                     compose it; a second copy here would drift from the row. -->
+                <p class="note__message">{{ note.message }}</p>
+                <p class="note__when">
+                  {{ note.createdAt | date: 'dd/MM/yyyy à HH:mm' }}
+                  @if (!note.isRead) {
+                    <span class="note__flag label-sm">Non lue</span>
+                  }
+                </p>
+              </div>
+
+              <div class="note__actions">
+                @if (!note.isRead) {
+                  <button
+                    matIconButton
+                    type="button"
+                    aria-label="Marquer comme lue"
+                    title="Marquer comme lue"
+                    [disabled]="isBusy(note.id)"
+                    (click)="markRead(note)"
+                  >
+                    <mat-icon>done</mat-icon>
+                  </button>
+                }
+                <!-- FR-44: the only way a notification leaves the system. -->
+                <button
+                  matIconButton
+                  type="button"
+                  aria-label="Supprimer cette notification"
+                  title="Supprimer"
+                  [disabled]="isBusy(note.id)"
+                  (click)="remove(note)"
+                >
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <!-- FR-44 forbids expiry, so this list has no ceiling. Offered ONLY
+             when there is genuinely more, and the header says how much. -->
+        @if (hasMore()) {
+          <button matButton type="button" class="panel__more" [disabled]="loading()" (click)="loadMore()">
+            Charger les {{ pageSize }} suivantes
+          </button>
+        }
+      } @else if (!loading() && !errorMessage()) {
+        <p class="panel__empty">
+          Aucune notification pour le moment. Vous serez prévenu lorsqu'un candidat
+          avance dans le pipeline.
+        </p>
+      }
+
+      @if (loading()) {
+        <p class="panel__loading label-sm">Chargement…</p>
+      }
+    </section>
+  }
+</div>

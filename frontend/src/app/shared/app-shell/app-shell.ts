@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/auth.service';
+import { NotificationPanel } from '../notification-panel/notification-panel';
 
 /**
  * The application chrome: DESIGN.md's 280px fixed sidebar plus the topbar,
@@ -78,7 +79,7 @@ interface ResolvedNavItem {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, MatButtonModule, MatIconModule],
+  imports: [RouterLink, RouterLinkActive, MatButtonModule, MatIconModule, NotificationPanel],
   template: `
     <div class="shell">
       <nav class="sidebar" aria-label="Navigation principale">
@@ -129,6 +130,17 @@ interface ResolvedNavItem {
                 <span class="topbar__role label-sm">{{ user.role }}</span>
               </span>
             }
+
+            <!--
+              FR-43/FR-44 and user story 33's badge. In the CHROME, not on a
+              route: the badge has to be visible wherever the user is standing,
+              and this is the one component every protected page wraps itself
+              in. It also means the count is re-read on every navigation, since
+              each page renders its own shell (D-081).
+              Open to all three roles — D-054 gates on the RECIPIENT, not the
+              role, so there is no nav-style role check here.
+            -->
+            <app-notification-panel />
 
             <button matButton type="button" (click)="logout()">
               <mat-icon>logout</mat-icon>

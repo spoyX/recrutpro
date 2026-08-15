@@ -6,6 +6,7 @@ import { JobPositionsList } from './job-positions-list';
 import { JobPosition } from '../job-position.service';
 import { AuthService, AuthenticatedUser } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
 
 /**
  * FR-17 — the list, and the home of FR-14/FR-15/FR-16.
@@ -77,7 +78,12 @@ describe('JobPositionsList (FR-14 to FR-17)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   describe('FR-17 — the list', () => {
     it('asks for every position, unfiltered, with the session cookie', () => {

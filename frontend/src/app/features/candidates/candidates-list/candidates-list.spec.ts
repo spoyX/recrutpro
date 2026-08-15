@@ -9,6 +9,7 @@ import { provideRouter, Router } from '@angular/router';
 import { CandidatesList } from './candidates-list';
 import { CandidateListItem } from '../candidate.service';
 import { environment } from '../../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
 
 describe('CandidatesList (FR-24)', () => {
   let fixture: ComponentFixture<CandidatesList>;
@@ -75,7 +76,12 @@ describe('CandidatesList (FR-24)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   describe('D-041 — the list contract', () => {
     it('D-001: requests candidates with credentials', () => {

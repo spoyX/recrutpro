@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { Dashboard } from './dashboard';
 import { environment } from '../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../testing/shell-requests';
 
 describe('Dashboard (FR-45, FR-46, FR-47)', () => {
   let fixture: ComponentFixture<Dashboard>;
@@ -39,7 +40,12 @@ describe('Dashboard (FR-45, FR-46, FR-47)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   it('D-001: requests the dashboard with credentials', () => {
     create();

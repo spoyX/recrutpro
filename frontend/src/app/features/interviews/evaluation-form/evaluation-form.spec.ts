@@ -205,7 +205,8 @@ describe('EvaluationForm (FR-36, FR-37)', () => {
       // Belt and braces: the guard in submit(), not just the disabled attribute.
       fixture.componentInstance.submit();
 
-      http.verify();
+      // An explicit count, not a bare verify() Jasmine cannot see.
+      expect(http.match(() => true).length).toBe(0);
     });
   });
 

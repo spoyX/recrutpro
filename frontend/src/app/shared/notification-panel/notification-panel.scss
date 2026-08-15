@@ -1,0 +1,185 @@
+// The bell and its dropdown. Anchored in the topbar rather than centred like
+// the `.modal` chrome: a notification panel belongs to the control that opened
+// it, and a full-screen overlay for a peek at three rows is the wrong weight.
+
+.bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.bell__button {
+  // The badge is positioned against this button.
+  position: relative;
+  color: var(--text-slate);
+}
+
+// DESIGN.md: error-bright is the high-saturation accent, distinct from the
+// error ROLE used for messages. A count badge is an attention accent, not an
+// error message — and it must not read as the « Rejeté » chip tone.
+.bell__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background-color: var(--recrutpro-error-bright);
+  color: var(--mat-sys-on-error);
+  display: grid;
+  place-items: center;
+  // The uppercase treatment `.label-sm` applies is meaningless on digits, but
+  // its size and tracking are what keep a 2-digit count inside 18px.
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+// Catches a click anywhere else. Transparent, and BELOW the panel.
+.bell__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+// DESIGN.md Elevation Level 2: temporary interaction layer.
+.panel {
+  position: absolute;
+  top: calc(100% + var(--sp-xs));
+  right: 0;
+  z-index: 21;
+  width: min(380px, calc(100vw - 2 * var(--sp-md)));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  padding: var(--sp-md);
+  // The topbar's own text is right-aligned; the panel's is not.
+  text-align: left;
+}
+
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-sm);
+}
+
+.panel__title {
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.panel__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel__error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+  margin: 0 0 var(--sp-sm);
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-small);
+}
+
+.panel__empty,
+.panel__loading {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  padding: var(--sp-sm) 0;
+}
+
+.panel__more {
+  width: 100%;
+  margin-top: var(--sp-sm);
+}
+
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) 0;
+  border-bottom: var(--border-level-1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.note__icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.note__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.note__message {
+  font: var(--mat-sys-body-medium);
+  color: var(--text-slate);
+  margin: 0;
+}
+
+.note__when {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: var(--sp-xs) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.note__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+// UNREAD carries three cues, not one: a heavier message, a tinted row and an
+// explicit « Non lue » label. Colour alone would fail anyone who cannot see
+// the tint, and this panel already asks the reader to distinguish states.
+.note--unread {
+  background-color: var(--mat-sys-surface-container-low);
+  border-radius: var(--radius-default);
+  padding-left: var(--sp-sm);
+  padding-right: var(--sp-sm);
+
+  .note__message {
+    color: var(--mat-sys-on-surface);
+    font-weight: 600;
+  }
+
+  .note__icon {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.note__flag {
+  color: var(--mat-sys-primary);
+}

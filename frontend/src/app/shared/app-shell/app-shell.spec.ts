@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { AppShell } from './app-shell';
 import { AuthService, AuthenticatedUser } from '../../core/auth.service';
 import { environment } from '../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../testing/shell-requests';
 
 describe('AppShell — sidebar and topbar (D-067)', () => {
   let fixture: ComponentFixture<AppShell>;
@@ -38,7 +39,12 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   describe("DESIGN.md — the 280px sidebar", () => {
     it('renders a sidebar landmark', () => {
@@ -183,6 +189,50 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(fixture.nativeElement.querySelector('a[href="/job-positions"]')).toBeNull();
       // Present, so the product's shape stays honest — just not a link.
       expect(text()).toContain('Postes');
+    });
+  });
+
+  // FR-43/FR-44 and user story 33. In the CHROME, so the badge is reachable
+  // from every page rather than only from a route nobody is on.
+  describe('The notification bell (D-081)', () => {
+    const signIn = (role: AuthenticatedUser['role']): void => {
+      TestBed.inject(AuthService).currentUser.set({
+        id: 'u1',
+        name: 'Test User',
+        email: 'test@example.com',
+        role,
+        departmentId: 'd1',
+        mustChangePassword: false,
+      });
+    };
+
+    it('is in the topbar and asks for the unread count on render', () => {
+      create();
+
+      expect(fixture.nativeElement.querySelector('app-notification-panel')).toBeTruthy();
+      // The shell's ONE request. Asserted by count rather than drained blindly,
+      // so the helper every other page spec relies on is itself pinned here.
+      expect(drainShellRequests(http)).toBe(1);
+    });
+
+    it('D-054 gates on the RECIPIENT, not the role — every role gets the bell', () => {
+      for (const role of ['Recruteur', 'ResponsableHierarchique', 'Administrateur'] as const) {
+        signIn(role);
+        create();
+
+        expect(fixture.nativeElement.querySelector('app-notification-panel'))
+          .withContext(role)
+          .toBeTruthy();
+        drainShellRequests(http);
+      }
+    });
+
+    it('is NOT a sidebar destination — it belongs to the topbar', () => {
+      create();
+
+      expect(fixture.nativeElement.querySelector('a[href="/notifications"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.topbar app-notification-panel')).toBeTruthy();
+      drainShellRequests(http);
     });
   });
 

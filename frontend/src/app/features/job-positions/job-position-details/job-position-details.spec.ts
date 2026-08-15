@@ -11,6 +11,7 @@ import { JobPosition } from '../job-position.service';
 import { CandidateListItem } from '../../candidates/candidate.service';
 import { AuthService, AuthenticatedUser } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
 
 describe('JobPositionDetails (FR-14 to FR-17)', () => {
   let fixture: ComponentFixture<JobPositionDetails>;
@@ -82,7 +83,12 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   describe('D-001 — requests', () => {
     it('asks for the position with credentials', () => {

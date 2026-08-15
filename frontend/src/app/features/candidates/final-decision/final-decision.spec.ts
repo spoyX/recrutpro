@@ -69,7 +69,11 @@ describe('FinalDecision (FR-29, FR-39)', () => {
   describe('No new endpoint — the shared stage route', () => {
     it('issues NO request when it opens', () => {
       open();
-      http.verify();
+      // The COUNT is the assertion. A bare `http.verify()` throws on a stray
+      // request but records no Jasmine expectation, so Karma reports the spec
+      // as asserting nothing — and deleting the line would leave a test that
+      // could never fail.
+      expect(http.match(() => true).length).toBe(0);
     });
 
     it('offers exactly the two terminal outcomes, and no third', () => {
@@ -150,7 +154,8 @@ describe('FinalDecision (FR-29, FR-39)', () => {
 
       fixture.componentInstance.submit();
 
-      http.verify();
+      // An explicit count, not a bare verify() Jasmine cannot see.
+      expect(http.match(() => true).length).toBe(0);
     });
   });
 

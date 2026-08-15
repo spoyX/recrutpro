@@ -10,6 +10,7 @@ import { InterviewsList } from './interviews-list';
 import { InterviewListItem } from '../interview.service';
 import { AuthService, AuthenticatedUser } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
 
 describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
   let fixture: ComponentFixture<InterviewsList>;
@@ -82,7 +83,12 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   describe('D-045 / D-049 — the list contract', () => {
     it('D-001: requests with credentials', () => {
@@ -428,7 +434,7 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
 
       // The assertion that decided the design: `GET /interviews/:id` is never
       // called, because the row is the payload.
-      http.verify();
+      expectNoPageRequests(http);
       expect(fixture.nativeElement.querySelector('app-evaluation-form')).toBeTruthy();
       expect(text()).toContain('Candidat a');
     });
@@ -492,7 +498,7 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
       load([], 0);
 
       expect(text()).toContain('Aucun entretien planifié');
-      http.verify();
+      expectNoPageRequests(http);
     });
   });
 

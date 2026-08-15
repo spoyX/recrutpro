@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { CandidateRegister } from './candidate-register';
 import { environment } from '../../../../environments/environment';
+import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
 
 /**
  * FR-19 to FR-22 — registration and CV upload.
@@ -97,7 +98,12 @@ describe('CandidateRegister (FR-19 to FR-22)', () => {
     router = TestBed.inject(Router);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The topbar badge (D-081) fires on every shell render. Drained narrowly,
+    // so a stray request of any OTHER url still fails the spec.
+    drainShellRequests(http);
+    expectNoPageRequests(http);
+  });
 
   describe('The poste picker', () => {
     it('D-001: loads the positions with credentials', () => {
@@ -233,7 +239,7 @@ describe('CandidateRegister (FR-19 to FR-22)', () => {
 
       // The single assertion that matters most here: no second request went
       // out on its own.
-      http.verify();
+      expectNoPageRequests(http);
       expect(buttonLabelled('Enregistrer quand même')).toBeTruthy();
       expect(buttonLabelled('Annuler')).toBeTruthy();
     });
@@ -263,7 +269,7 @@ describe('CandidateRegister (FR-19 to FR-22)', () => {
 
       expect(fixture.nativeElement.querySelector('.duplicate')).toBeNull();
       expect(buttonLabelled('Enregistrer le candidat')).toBeTruthy();
-      http.verify();
+      expectNoPageRequests(http);
     });
 
     it('EDITING THE EMAIL drops the pending confirmation — it was about the old address', () => {
@@ -436,7 +442,7 @@ describe('CandidateRegister (FR-19 to FR-22)', () => {
 
       expect(text()).toContain('Candidat enregistré');
       expect(text()).toContain("Aucun CV n'a été joint");
-      http.verify();
+      expectNoPageRequests(http);
     });
   });
 
