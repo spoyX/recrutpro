@@ -40,8 +40,21 @@ export class Login {
   });
 
   readonly submitting = signal(false);
+
+  /**
+   * 1.4 — whether the password is shown in clear.
+   *
+   * Not persisted anywhere and reset with the component: a visibility
+   * preference that outlived the screen would be a stored decision about
+   * showing a credential, which is not ours to remember (rule 3).
+   */
+  readonly passwordVisible = signal(false);
   readonly errorMessage = signal<string | null>(null);
   /** FR-10: the account must change its password before it can go anywhere. */
+
+  togglePassword(): void {
+    this.passwordVisible.update((visible) => !visible);
+  }
 
   submit(): void {
     if (this.form.invalid) {

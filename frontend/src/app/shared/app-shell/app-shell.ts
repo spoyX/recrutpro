@@ -99,9 +99,15 @@ interface ResolvedNavItem {
   template: `
     <div class="shell">
       <nav class="sidebar" aria-label="Navigation principale">
+        <!-- 1.7: the briefcase glyph, and 0.2's tagline. The four mockups gave
+             four different taglines; « Portail RH » was chosen because it is
+             the only French one, matching the rest of the application. -->
         <span class="sidebar__brand">
-          <span class="sidebar__logo" aria-hidden="true"><mat-icon>groups</mat-icon></span>
-          RecrutPro
+          <span class="sidebar__logo" aria-hidden="true"><mat-icon>work</mat-icon></span>
+          <span class="sidebar__wordmark">
+            <span class="sidebar__name">RecrutPro</span>
+            <span class="sidebar__tagline label-sm">Portail RH</span>
+          </span>
         </span>
 
         <ul class="sidebar__nav">
@@ -211,8 +217,21 @@ interface ResolvedNavItem {
       align-items: center;
       gap: var(--sp-sm);
       padding: 0 var(--sp-sm);
-      font: var(--mat-sys-title-large);
       color: var(--mat-sys-on-surface);
+    }
+
+    .sidebar__wordmark {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .sidebar__name {
+      font: var(--mat-sys-title-large);
+    }
+
+    .sidebar__tagline {
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .sidebar__logo {
@@ -262,15 +281,34 @@ interface ResolvedNavItem {
       color: var(--mat-sys-on-surface);
     }
 
-    // DESIGN.md: primary is for "active states, critical navigation elements".
+    // DESIGN.md: primary is for "active states, critical navigation elements"
+    // — carried by the ACCENT BAR here rather than by a full fill.
+    //
+    // The solid primary fill this replaces made the active nav item the
+    // heaviest object on the entire screen, outweighing the page content it
+    // was only meant to locate. A tint plus a 3px bar marks position just as
+    // unambiguously and stops competing with the page.
     .sidebar__link--active {
+      position: relative;
+      background-color: var(--mat-sys-secondary-fixed);
+      color: var(--mat-sys-on-secondary-fixed-variant);
+      font-weight: 600;
+    }
+
+    .sidebar__link--active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      border-radius: var(--radius-full);
       background-color: var(--mat-sys-primary);
-      color: var(--mat-sys-on-primary);
     }
 
     a.sidebar__link--active:hover {
-      background-color: var(--recrutpro-primary-dark);
-      color: var(--mat-sys-on-primary);
+      background-color: var(--mat-sys-secondary-fixed-dim);
+      color: var(--mat-sys-on-secondary-fixed-variant);
     }
 
     .sidebar__link--disabled {

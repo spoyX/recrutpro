@@ -172,6 +172,102 @@ describe('Login (FR-1, FR-3)', () => {
     expect(navigate).not.toHaveBeenCalledWith(['/dashboard']);
   });
 
+  // Phase 4.1 items 1.1 to 1.4.
+  describe('4.1 — the presentation pass', () => {
+    it('1.4: the password field starts MASKED', () => {
+      const field = fixture.nativeElement.querySelector(
+        'input[formcontrolname=password]',
+      ) as HTMLInputElement;
+
+      expect(field.getAttribute('type')).toBe('password');
+      expect(component.passwordVisible()).toBeFalse();
+    });
+
+    it('1.4: the toggle reveals it and keeps the typed value', () => {
+      fill('marie@example.com', 'S3cret!Passw0rd');
+      const field = () =>
+        fixture.nativeElement.querySelector('input[formcontrolname=password]') as HTMLInputElement;
+
+      const toggle = fixture.nativeElement.querySelector(
+        'button[aria-label="Afficher le mot de passe"]',
+      ) as HTMLButtonElement;
+      expect(toggle).toBeTruthy();
+
+      toggle.click();
+      fixture.detectChanges();
+
+      expect(field().getAttribute('type')).toBe('text');
+      // `type` is BOUND rather than the attribute swapped, so the control must
+      // not lose what was typed — the whole point on a screen where FR-10
+      // hands people a 16-character string to retype.
+      expect(field().value).toBe('S3cret!Passw0rd');
+      expect(component.form.controls.password.value).toBe('S3cret!Passw0rd');
+    });
+
+    it('1.4: the toggle reports its state to a screen reader, and flips back', () => {
+      const toggle = () =>
+        fixture.nativeElement.querySelector(
+          'button[aria-label="Afficher le mot de passe"], button[aria-label="Masquer le mot de passe"]',
+        ) as HTMLButtonElement;
+
+      expect(toggle().getAttribute('aria-pressed')).toBe('false');
+
+      toggle().click();
+      fixture.detectChanges();
+      expect(toggle().getAttribute('aria-label')).toBe('Masquer le mot de passe');
+      expect(toggle().getAttribute('aria-pressed')).toBe('true');
+
+      toggle().click();
+      fixture.detectChanges();
+      // Before AND after: masked, revealed, masked again.
+      expect(toggle().getAttribute('aria-label')).toBe('Afficher le mot de passe');
+      expect(
+        (fixture.nativeElement.querySelector('input[formcontrolname=password]') as HTMLInputElement)
+          .getAttribute('type'),
+      ).toBe('password');
+    });
+
+    it('1.4: revealing the password sends NO request', () => {
+      fill('marie@example.com', 'S3cret!Passw0rd');
+
+      (
+        fixture.nativeElement.querySelector(
+          'button[aria-label="Afficher le mot de passe"]',
+        ) as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
+
+      // The COUNT is the assertion: a bare verify() records none.
+      expect(http.match(() => true).length).toBe(0);
+    });
+
+    it('1.1 / 1.2: the wordmark appears ONCE, and the card greets', () => {
+      const text = fixture.nativeElement.textContent as string;
+
+      expect(text).toContain('Bienvenue');
+      expect(text).toContain('Portail RH');
+      // It used to appear twice — logo block and card heading both said it.
+      expect(text.split('RecrutPro').length - 1).toBe(1);
+    });
+
+    it('1.1: the brand block is OUTSIDE the card', () => {
+      const card = fixture.nativeElement.querySelector('.login__card') as HTMLElement;
+      const brand = fixture.nativeElement.querySelector('.brand') as HTMLElement;
+
+      expect(brand).toBeTruthy();
+      expect(card.contains(brand)).toBeFalse();
+    });
+
+    it('1.3: each field carries a leading glyph', () => {
+      const prefixes = Array.from(
+        fixture.nativeElement.querySelectorAll('mat-icon[matPrefix], [matprefix]'),
+      ).map((el) => (el as HTMLElement).textContent?.trim());
+
+      expect(prefixes).toContain('mail');
+      expect(prefixes).toContain('lock');
+    });
+  });
+
   it('re-enables the submit button after a failure', () => {
     fill('marie@example.com', 'mauvais');
     component.submit();

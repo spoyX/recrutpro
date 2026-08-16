@@ -1,11 +1,23 @@
 <main class="login">
+  <!--
+    1.1: the brand block sits on the canvas, ABOVE the card. It used to be
+    inside it, which left one surface carrying both the product identity and
+    the form. 1.7: the briefcase glyph, matching the sidebar.
+  -->
+  <header class="brand">
+    <span class="brand__logo" aria-hidden="true">
+      <mat-icon>work</mat-icon>
+    </span>
+    <span class="brand__name">RecrutPro</span>
+    <p class="brand__tagline">Portail RH</p>
+  </header>
+
   <section class="login__card" aria-labelledby="login-title">
+    <!-- 1.2: a greeting, not the wordmark again. It appeared twice on this
+         screen before, once in the logo block and once as the card heading. -->
     <header class="login__header">
-      <span class="login__logo" aria-hidden="true">
-        <mat-icon>groups</mat-icon>
-      </span>
-      <h1 id="login-title" class="login__title">RecrutPro</h1>
-      <p class="login__subtitle">Connectez-vous pour accéder à votre espace de recrutement.</p>
+      <h1 id="login-title" class="login__title">Bienvenue</h1>
+      <p class="login__subtitle">Connectez-vous pour accéder à votre espace RH.</p>
     </header>
 
     @if (submitting()) {
@@ -16,6 +28,8 @@
       <!-- FR-1: an email field and a password field. -->
       <mat-form-field appearance="outline">
         <mat-label>Email</mat-label>
+        <!-- 1.3: a leading glyph per field, for scanning. -->
+        <mat-icon matPrefix>mail</mat-icon>
         <input
           matInput
           type="email"
@@ -32,12 +46,31 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Mot de passe</mat-label>
+        <mat-icon matPrefix>lock</mat-icon>
         <input
           matInput
-          type="password"
+          [type]="passwordVisible() ? 'text' : 'password'"
           formControlName="password"
           autocomplete="current-password"
         />
+        <!--
+          1.4 — the strongest item in the review. Since D-085 an administrator
+          hands out a 16-character generated password (FR-10), and this is the
+          field it has to be retyped into by hand. `type` is bound rather than
+          the attribute toggled, so the control never loses its value.
+        -->
+        <button
+          matIconButton
+          matSuffix
+          type="button"
+          [attr.aria-label]="
+            passwordVisible() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+          "
+          [attr.aria-pressed]="passwordVisible()"
+          (click)="togglePassword()"
+        >
+          <mat-icon>{{ passwordVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
         @if (form.controls.password.touched && form.controls.password.hasError('required')) {
           <mat-error>Le mot de passe est requis.</mat-error>
         }
