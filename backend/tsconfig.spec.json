@@ -1,6 +1,11 @@
 // Test-only config. The base tsconfig.json deliberately includes src/ alone
 // so that `npm run build` never emits specs into dist/; this one widens the
 // program to tests/ so ts-jest can type-check them and see @types/jest.
+//
+// `scripts/` is in here for the same reason tests/ is: it is real TypeScript
+// that `npm run build` must NOT emit into dist/ (tsx runs it directly), but
+// that must still be type-checked by something. `npm run typecheck` is that
+// something.
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -8,5 +13,5 @@
     "noEmit": true,
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*", "scripts/**/*"]
 }

@@ -7,7 +7,9 @@
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "test": "jest"
+    "test": "jest",
+    "seed": "tsx scripts/seed-demo-data.ts",
+    "typecheck": "tsc -p tsconfig.spec.json"
   },
   "keywords": [],
   "author": "",
