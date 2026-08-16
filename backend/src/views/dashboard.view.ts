@@ -54,6 +54,8 @@ export type PublicDashboard =
       candidatesByStage: Record<string, number>;
       upcomingInterviews: DashboardInterviewRow[];
       pendingEvaluations: number;
+      /** D-088 — FR-39's worklist. Same shape as the recent-candidate row. */
+      candidatesAwaitingDecision: DashboardCandidateRow[];
     }
   | {
       role: Role.Administrateur;
@@ -92,6 +94,18 @@ export const toPublicDashboard = (data: DashboardData): PublicDashboard => {
       departmentCandidatesInProgress: data.departmentCandidatesInProgress,
       candidatesByStage: data.candidatesByStage,
       pendingEvaluations: data.pendingEvaluations,
+      // D-088 — deliberately the SAME row shape as FR-45's recent candidates,
+      // shared rather than redeclared, so the two lists cannot drift into
+      // showing the same candidate differently. It carries no contact details:
+      // FR-35 withholds those from this role (D-067) and a dashboard must not
+      // be the one place they leak.
+      candidatesAwaitingDecision: data.candidatesAwaitingDecision.map((candidate) => ({
+        id: String(candidate._id),
+        fullName: candidate.fullName,
+        currentStage: candidate.currentStage,
+        registeredAt: candidate.registeredAt.toISOString(),
+        jobPosition: asPosition(candidate.jobPositionId as Ref),
+      })),
       upcomingInterviews: data.upcomingInterviews.map((interview) => {
         const candidate = interview.candidateId as Ref;
         return {

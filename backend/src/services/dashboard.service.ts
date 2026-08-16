@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { Candidate, ICandidate } from '../models/Candidate.model';
 import { JobPosition } from '../models/JobPosition.model';
 import { Interview, IInterview } from '../models/Interview.model';
@@ -72,6 +73,8 @@ export interface ResponsableDashboard {
   candidatesByStage: Record<string, number>;
   upcomingInterviews: IInterview[];
   pendingEvaluations: number;
+  /** D-088 — the candidates this responsable owes a decision (FR-39). */
+  candidatesAwaitingDecision: ICandidate[];
 }
 
 export interface AdministrateurDashboard {
@@ -122,6 +125,50 @@ const recruteurDashboard = async (): Promise<RecruteurDashboard> => {
  * returns counts only, never candidate rows, so no row-level access is widened
  * beyond what FR-35 already granted.
  */
+/**
+ * D-088 — the candidates a Responsable hiérarchique owes a DECISION (FR-39).
+ *
+ * *** NOT a list version of `pendingEvaluations`, which counts something else
+ * entirely. *** That counts interviews HELD but not yet evaluated — the
+ * responsable owes an EVALUATION. This returns candidates already at
+ * « Évaluation complétée »: the evaluation is in, and the decision is owed.
+ * Conflating the two would put a candidate on the wrong worklist.
+ *
+ * *** THIS IS THE FIRST TIME THE FR-46 PAYLOAD RETURNS CANDIDATE ROWS, and the
+ * scoping is what makes it safe. *** `responsableDashboard`'s docblock records
+ * that FR-46 asks for « le NOMBRE de candidats », so the branch returned counts
+ * only and widened no row-level access. These rows are filtered by the SAME two
+ * conditions `hasAssignedInterviewWith` applies — the department floor (already
+ * baked into `candidateIds`) and an interview assigned to this viewer — so
+ * every candidate returned is one FR-35 already grants them. The set is not
+ * widened; it is surfaced where the action is.
+ */
+const awaitingDecisionFor = async (
+  viewer: IUser,
+  candidateIds: Types.ObjectId[],
+): Promise<ICandidate[]> => {
+  const assigned = await Interview.find(
+    { interviewerId: viewer._id, candidateId: { $in: candidateIds } },
+    'candidateId',
+  );
+
+  const assignedIds = assigned.map((interview) => interview.candidateId);
+  if (assignedIds.length === 0) {
+    return [];
+  }
+
+  return Candidate.find({
+    _id: { $in: assignedIds },
+    currentStage: CandidateStage.EvaluationCompletee,
+  })
+    .populate('jobPositionId', 'title')
+    // Newest first with an `_id` tiebreaker (D-069): candidates evaluated in
+    // one batch share a timestamp, and an unstable order would reshuffle a
+    // worklist between two loads of the same page.
+    .sort({ registeredAt: -1, _id: 1 })
+    .limit(RECENT_LIMIT);
+};
+
 const responsableDashboard = async (viewer: IUser): Promise<ResponsableDashboard> => {
   // Rule 2 has nothing to scope against without a department. D-016 makes it
   // required for this role, so this is a fail-closed guard, not a real path.
@@ -145,7 +192,8 @@ const responsableDashboard = async (viewer: IUser): Promise<ResponsableDashboard
 
   const now = new Date();
 
-  const [candidatesByStage, upcomingInterviews, pendingEvaluations] = await Promise.all([
+  const [candidatesByStage, upcomingInterviews, pendingEvaluations, candidatesAwaitingDecision] =
+    await Promise.all([
     stageBreakdown({ jobPositionId: { $in: positionIds } }),
 
     // « Les entretiens à venir » — assigned to them, still planned, in the
@@ -181,6 +229,9 @@ const responsableDashboard = async (viewer: IUser): Promise<ResponsableDashboard
       status: InterviewStatus.Planifie,
       scheduledAt: { $lte: now },
     }),
+
+    // D-088 — « Candidats en attente de décision »: FR-39's worklist.
+    awaitingDecisionFor(viewer, candidateIds),
   ]);
 
   const departmentCandidatesInProgress = Object.entries(candidatesByStage)
@@ -193,6 +244,7 @@ const responsableDashboard = async (viewer: IUser): Promise<ResponsableDashboard
     candidatesByStage,
     upcomingInterviews,
     pendingEvaluations,
+    candidatesAwaitingDecision,
   };
 };
 

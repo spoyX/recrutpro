@@ -104,6 +104,11 @@ const candidateRows = [
   { _id: 'c4', position: POS_A, stage: CandidateStage.RejeteCv, name: 'Dan A' },
   { _id: 'c5', position: POS_B, stage: CandidateStage.CandidatureRecue, name: 'Emma B' },
   { _id: 'c6', position: POS_B, stage: CandidateStage.Rejete, name: 'Femi B' },
+  // D-088's worklist fixture. Both sit at « Évaluation complétée » in DEPT A;
+  // only c7 has an interview assigned to Pierre, so the pair separates the two
+  // halves of `hasAssignedInterviewWith` — department AND assignment.
+  { _id: 'c7', position: POS_A, stage: CandidateStage.EvaluationCompletee, name: 'Gaelle A' },
+  { _id: 'c8', position: POS_A, stage: CandidateStage.EvaluationCompletee, name: 'Hugo A' },
 ];
 
 const interviewRows = [
@@ -139,6 +144,18 @@ const interviewRows = [
     status: InterviewStatus.Annule,
     offsetMs: 5 * 24 * 3600 * 1000,
   },
+  // D-088: Pierre's link to c7. ANNULÉ deliberately — `hasAssignedInterviewWith`
+  // states that a cancelled interview still grants access, so the worklist must
+  // use "any assigned interview" too. It also keeps this row out of
+  // `upcomingInterviews` (Planifié only) and out of `pendingEvaluations`.
+  {
+    _id: 'i5',
+    interviewerId: PIERRE_ID,
+    candidateId: 'c7',
+    position: POS_A,
+    status: InterviewStatus.Annule,
+    offsetMs: -6 * 24 * 3600 * 1000,
+  },
 ];
 
 /** Resolve the position ids a `{ department }` / `{ $in }` filter selects. */
@@ -151,9 +168,17 @@ const positionsFor = (filter: Record<string, unknown>): string[] => {
 
 const matchCandidates = (filter: Record<string, unknown>) => {
   const posFilter = filter.jobPositionId as { $in?: string[] } | undefined;
-  return candidateRows.filter(
-    (c) => !posFilter?.$in || posFilter.$in.map(String).includes(c.position),
-  );
+  // D-088's worklist query filters by _id and currentStage instead of by
+  // position, so both are honoured here — a mock that ignored them would let
+  // the worklist "pass" while returning every candidate in the fixture.
+  const idFilter = filter._id as { $in?: unknown[] } | undefined;
+  const stage = filter.currentStage as string | undefined;
+  return candidateRows.filter((c) => {
+    if (posFilter?.$in && !posFilter.$in.map(String).includes(c.position)) return false;
+    if (idFilter?.$in && !idFilter.$in.map(String).includes(String(c._id))) return false;
+    if (stage && c.stage !== stage) return false;
+    return true;
+  });
 };
 
 const matchInterviews = (filter: Record<string, unknown>) => {
@@ -208,12 +233,16 @@ beforeEach(() => {
   // Candidate.find serves two callers: the department id lookup (awaited
   // directly) and the recruiter's recent list (a populate/sort/limit chain).
   mockedCandidate.find.mockImplementation((filter?: Record<string, unknown>) => {
-    const rows = matchCandidates(filter ?? {}).map((c) => ({ _id: c._id }));
+    const matched = matchCandidates(filter ?? {});
+    const rows = matched.map((c) => ({ _id: c._id }));
     const chain = {
       populate: jest.fn().mockReturnValue({
         sort: jest.fn().mockReturnValue({
+          // MATCHED, not `candidateRows`: the recruiter's recent list passed no
+          // filter so the difference never showed, and D-088's worklist would
+          // have returned every candidate regardless of stage.
           limit: jest.fn().mockImplementation(async (n: number) =>
-            candidateRows.slice(0, n).map((c) => ({
+            matched.slice(0, n).map((c) => ({
               _id: c._id,
               fullName: c.name,
               currentStage: c.stage,
@@ -248,6 +277,13 @@ beforeEach(() => {
           }),
         }),
       }),
+      // D-088 awaits `Interview.find(filter, 'candidateId')` DIRECTLY, with a
+      // projection and no chain — the same two-caller shape Candidate.find
+      // already had. Resolves the bare ids the projection would return.
+      then: (resolve: (v: unknown) => unknown) =>
+        Promise.resolve(
+          matchInterviews(filter).map((i) => ({ _id: i._id, candidateId: i.candidateId })),
+        ).then(resolve),
     };
   });
 
@@ -306,7 +342,8 @@ describe('FR-45: Recruteur dashboard', () => {
       expect(typeof res.body.candidatesByStage[stage]).toBe('number');
     }
     // A stage nobody is in must be present at 0, not absent.
-    expect(res.body.candidatesByStage[CandidateStage.EvaluationCompletee]).toBe(0);
+    // Two since D-088 added c7 and c8 to the fixture.
+    expect(res.body.candidatesByStage[CandidateStage.EvaluationCompletee]).toBe(2);
   });
 
   it('FR-45: the breakdown counts every candidate, across all departments', async () => {
@@ -354,12 +391,88 @@ describe('FR-46: Responsable hiérarchique dashboard — department-scoped', () 
     expect(typeof res.body.pendingEvaluations).toBe('number');
   });
 
+  // D-088 — FR-39's decision worklist. The value of this field is entirely in
+  // what it EXCLUDES, so most of these assert absence.
+  describe('D-088: candidatesAwaitingDecision', () => {
+    it('lists the candidates this responsable owes a decision', async () => {
+      const res = await dashboardAs(pierre);
+
+      expect(Array.isArray(res.body.candidatesAwaitingDecision)).toBe(true);
+      // Exact set, not a spot check: a substring or length-only assertion would
+      // pass on the wrong candidates.
+      expect(res.body.candidatesAwaitingDecision.map((c: { id: string }) => c.id)).toEqual(['c7']);
+      expect(res.body.candidatesAwaitingDecision[0].fullName).toBe('Gaelle A');
+      expect(res.body.candidatesAwaitingDecision[0].currentStage).toBe(
+        CandidateStage.EvaluationCompletee,
+      );
+    });
+
+    it('EXCLUDES a candidate at the same stage they are not assigned to', async () => {
+      const res = await dashboardAs(pierre);
+
+      // c8 is « Évaluation complétée » in Pierre's own department, with no
+      // interview assigned to him. The department floor alone would return it;
+      // `hasAssignedInterviewWith` is the half that must also hold.
+      const ids = res.body.candidatesAwaitingDecision.map((c: { id: string }) => c.id);
+      expect(ids).not.toContain('c8');
+    });
+
+    it('EXCLUDES candidates who are not at « Évaluation complétée »', async () => {
+      const res = await dashboardAs(pierre);
+
+      // c2 is assigned to Pierre but only « Entretien planifié » — no decision
+      // is owed yet. This is what separates the worklist from
+      // `pendingEvaluations`, which counts a different thing entirely.
+      const ids = res.body.candidatesAwaitingDecision.map((c: { id: string }) => c.id);
+      expect(ids).not.toContain('c2');
+      expect(ids).not.toContain('c1');
+    });
+
+    it('a cancelled interview still counts as an assignment', async () => {
+      const res = await dashboardAs(pierre);
+
+      // c7's only link to Pierre is an ANNULÉ interview. hasAssignedInterviewWith
+      // grants access on exactly that basis, and this list must agree with it or
+      // the worklist and the decision guard would disagree about the same person.
+      expect(res.body.candidatesAwaitingDecision.map((c: { id: string }) => c.id)).toContain('c7');
+    });
+
+    it('is empty for a responsable in ANOTHER department', async () => {
+      const res = await dashboardAs(sofia);
+
+      // Sofia is in DEPT B; c7 and c8 are in DEPT A.
+      expect(res.body.candidatesAwaitingDecision).toEqual([]);
+    });
+
+    it('carries NO contact details — FR-35 withholds them from this role', async () => {
+      const res = await dashboardAs(pierre);
+
+      const row = res.body.candidatesAwaitingDecision[0];
+      expect(row).not.toHaveProperty('email');
+      expect(row).not.toHaveProperty('phone');
+      // The exact field set, so a later addition cannot slip through.
+      expect(Object.keys(row).sort().join(',')).toBe(
+        'currentStage,fullName,id,jobPosition,registeredAt',
+      );
+    });
+
+    it('is absent from the OTHER two roles’ payloads', async () => {
+      const forMarie = await dashboardAs(marie);
+      expect(forMarie.body).not.toHaveProperty('candidatesAwaitingDecision');
+
+      const forAdmin = await dashboardAs(admin);
+      expect(forAdmin.body).not.toHaveProperty('candidatesAwaitingDecision');
+    });
+  });
+
   it('FR-46: "en cours" excludes the three terminal stages', async () => {
     const res = await dashboardAs(pierre);
 
     // Department A holds 4 candidates: 1 reçue, 1 entretien planifié,
     // 1 Accepté, 1 Rejeté (CV). Only the first two are in progress.
-    expect(res.body.departmentCandidatesInProgress).toBe(2);
+    // Four since D-088: c1 reçue, c2 entretien, c7 and c8 évaluation complétée.
+    // c3 Accepté and c4 Rejeté (CV) are terminal and still excluded.
+    expect(res.body.departmentCandidatesInProgress).toBe(4);
   });
 
   // ---- the two-principal comparison D-047 requires -----------------------
