@@ -1,0 +1,29 @@
+// The modal chrome is global — src/styles/_modal.scss. These two are the
+// dialog's own, and must live here rather than in admin-users.scss: that
+// stylesheet is attribute-scoped to the PAGE, and this template belongs to a
+// different component, so its classes would never match.
+
+.user__hint {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: var(--sp-xs) 0 0;
+}
+
+// The variant used where the hint replaces a field rather than annotating one:
+// an edit form's immutable email, and an Administrateur's absent department.
+.user__hint--block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0 0 var(--sp-md);
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}

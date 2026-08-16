@@ -55,6 +55,14 @@ export const routes: Routes = [
     title: 'Entretiens — RecrutPro',
   },
   {
+    // FR-6 to FR-13 — accounts AND departments on one screen. Administrateur
+    // only, enforced server-side on every route it calls (NFR-04).
+    path: 'admin/users',
+    loadComponent: () =>
+      import('./features/admin/admin-users/admin-users').then((m) => m.AdminUsers),
+    title: 'Administration — RecrutPro',
+  },
+  {
     // SRS Section 1.5, user stories 22 and 23. Both `GET /reports/*` routes
     // have existed since D-059; all three roles reach them, with the
     // Responsable's results scoped server-side (D-047, D-068).

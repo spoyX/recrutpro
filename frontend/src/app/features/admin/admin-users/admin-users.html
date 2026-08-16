@@ -1,0 +1,332 @@
+<app-shell>
+  <header class="head">
+    <h1 class="page__title">Administration</h1>
+  </header>
+
+  <!-- ============================================ FR-6 to FR-12: accounts -->
+  <section class="card" aria-labelledby="users-title">
+    <div class="section__head">
+      <h2 id="users-title" class="card__title">Comptes</h2>
+      <div class="section__actions">
+        @if (!usersLoading() && !usersError()) {
+          <p class="section__count">
+            {{ users().length }} compte{{ users().length > 1 ? 's' : '' }}
+          </p>
+        }
+        <button matButton="filled" type="button" (click)="creating.set(true)">
+          <mat-icon>person_add</mat-icon>
+          Nouveau compte
+        </button>
+      </div>
+    </div>
+
+    <!-- FR-12: filtrable par rôle et par statut. -->
+    <div class="filters">
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-role">Rôle</label>
+        <select
+          id="filter-role"
+          class="filters__control"
+          [value]="filters().role ?? ''"
+          (change)="setFilter('role', $any($event.target).value)"
+        >
+          <option value="">Tous les rôles</option>
+          @for (role of roles; track role) {
+            <option [value]="role">{{ role }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-active">Statut</label>
+        <select
+          id="filter-active"
+          class="filters__control"
+          [value]="filters().isActive ?? ''"
+          (change)="setFilter('isActive', $any($event.target).value)"
+        >
+          <option value="">Tous les statuts</option>
+          <option value="true">Actifs</option>
+          <option value="false">Désactivés</option>
+        </select>
+      </div>
+
+      @if (isFiltered()) {
+        <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+          <mat-icon>filter_alt_off</mat-icon>
+          Réinitialiser
+        </button>
+      }
+    </div>
+
+    @if (usersLoading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Chargement des comptes" />
+    }
+
+    @if (usersError(); as message) {
+      <p class="page__error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ message }}</span>
+        <button matButton type="button" (click)="loadUsers()">Réessayer</button>
+      </p>
+    }
+
+    @if (rowError(); as message) {
+      <p class="page__error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ message }}</span>
+      </p>
+    }
+
+    @if (!usersError() && users().length) {
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Nom</th>
+              <th scope="col">Email</th>
+              <th scope="col">Rôle</th>
+              <th scope="col">Département</th>
+              <th scope="col">Statut</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr [class.row--inactive]="!user.isActive">
+                <td>
+                  {{ user.name }}
+                  @if (isSelf(user)) {
+                    <span class="row__self label-sm">vous</span>
+                  }
+                </td>
+                <td class="table__meta">{{ user.email }}</td>
+                <td>{{ user.role }}</td>
+                <!-- An Administrateur has none by design (D-016), so « — »
+                     here is a rule, not missing data. -->
+                <td class="table__meta">{{ departmentName(user.departmentId) }}</td>
+                <td>
+                  <!-- D-084's field, and the reason this column can exist. -->
+                  @if (user.isActive) {
+                    <span class="pill pill--on">Actif</span>
+                  } @else {
+                    <span class="pill pill--off">Désactivé</span>
+                  }
+                  <!-- FR-10: an account sitting on a temporary credential. -->
+                  @if (user.mustChangePassword) {
+                    <span class="pill pill--warn">Mot de passe à changer</span>
+                  }
+                </td>
+                <td class="table__actions">
+                  <button
+                    matButton
+                    type="button"
+                    [disabled]="rowBusy() === user.id"
+                    (click)="editing.set(user)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                    Modifier
+                  </button>
+                  <button
+                    matButton
+                    type="button"
+                    [disabled]="rowBusy() === user.id"
+                    (click)="resetting.set(user)"
+                  >
+                    <mat-icon>key</mat-icon>
+                    Mot de passe
+                  </button>
+                  <!--
+                    FR-8/FR-9. D-029: an administrator cannot deactivate their
+                    OWN account — nobody else could undo it — so the action is
+                    absent rather than offered into a 400.
+                  -->
+                  @if (isSelf(user)) {
+                    <span class="row__note label-sm">Votre compte</span>
+                  } @else if (user.isActive) {
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="rowBusy() === user.id"
+                      (click)="deactivating.set(user)"
+                    >
+                      <mat-icon>block</mat-icon>
+                      Désactiver
+                    </button>
+                  } @else {
+                    <button
+                      matButton
+                      type="button"
+                      [disabled]="rowBusy() === user.id"
+                      (click)="reactivate(user)"
+                    >
+                      <mat-icon>check_circle</mat-icon>
+                      Réactiver
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!usersLoading() && !usersError()) {
+      <p class="empty">
+        @if (isFiltered()) {
+          Aucun compte ne correspond à ces filtres.
+        } @else {
+          Aucun compte enregistré.
+        }
+      </p>
+    }
+  </section>
+
+  <!-- ==================================================== FR-13: departments -->
+  <section class="card" aria-labelledby="departments-title">
+    <div class="section__head">
+      <h2 id="departments-title" class="card__title">Départements</h2>
+      <div class="section__actions">
+        <p class="section__count">
+          {{ departments().length }} département{{ departments().length > 1 ? 's' : '' }}
+        </p>
+        <button matButton="filled" type="button" (click)="openDepartmentForm(null)">
+          <mat-icon>add</mat-icon>
+          Nouveau département
+        </button>
+      </div>
+    </div>
+
+    @if (departmentsError(); as message) {
+      <p class="page__error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ message }}</span>
+        <button matButton type="button" (click)="loadDepartments()">Réessayer</button>
+      </p>
+    }
+
+    @if (departments().length) {
+      <ul class="rows">
+        @for (department of departments(); track department.id) {
+          <li class="rows__row" [class.row--inactive]="!department.isActive">
+            <span class="rows__primary">{{ department.name }}</span>
+            @if (department.isActive) {
+              <span class="pill pill--on">Actif</span>
+            } @else {
+              <span class="pill pill--off">Désactivé</span>
+            }
+            <span class="rows__actions">
+              <button
+                matButton
+                type="button"
+                [disabled]="rowBusy() === department.id"
+                (click)="openDepartmentForm(department)"
+              >
+                <mat-icon>edit</mat-icon>
+                Renommer
+              </button>
+              <button
+                matButton
+                type="button"
+                [disabled]="rowBusy() === department.id"
+                (click)="toggleDepartment(department)"
+              >
+                @if (department.isActive) {
+                  <mat-icon>block</mat-icon>
+                  Désactiver
+                } @else {
+                  <mat-icon>check_circle</mat-icon>
+                  Réactiver
+                }
+              </button>
+            </span>
+          </li>
+        }
+      </ul>
+
+      <!-- FR-13: a deactivated department disappears from the PICKERS, not from
+           the records that already point at it. Said, so its continued presence
+           in this list does not read as a bug. -->
+      <p class="note">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          Un département désactivé n'est plus proposé lors de la création d'un compte
+          ou d'un poste. Les comptes et les postes qui y sont déjà rattachés le restent.
+        </span>
+      </p>
+    } @else if (!departmentsError()) {
+      <p class="empty">Aucun département. Créez-en un avant d'ajouter des comptes.</p>
+    }
+  </section>
+
+  <!-- FR-6 -->
+  @if (creating()) {
+    <app-user-form
+      [departments]="departments()"
+      (saved)="onUserSaved()"
+      (dismissed)="creating.set(false)"
+    />
+  }
+
+  <!-- FR-7 -->
+  @if (editing(); as user) {
+    <app-user-form
+      [user]="user"
+      [departments]="departments()"
+      (saved)="onUserSaved()"
+      (dismissed)="editing.set(null)"
+    />
+  }
+
+  <!-- FR-10 -->
+  @if (resetting(); as user) {
+    <app-reset-password
+      [userId]="user.id"
+      [userName]="user.name"
+      [userEmail]="user.email"
+      (finished)="onResetFinished()"
+      (dismissed)="resetting.set(null)"
+    />
+  }
+
+  <!-- FR-13 -->
+  @if (departmentFormOpen()) {
+    <app-department-form
+      [department]="departmentForm() ?? null"
+      (saved)="onDepartmentSaved()"
+      (dismissed)="closeDepartmentForm()"
+    />
+  }
+
+  <!-- FR-8 — inline, like the FR-34 cancellation prompt: one host, one use. -->
+  @if (deactivating(); as user) {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-title">
+      <div class="modal__panel">
+        <h2 id="deactivate-title" class="modal__title">Désactiver ce compte</h2>
+        <p class="modal__body">
+          {{ user.name }} ({{ user.email }}) ne pourra plus se connecter, et
+          <strong>sa session en cours cessera de fonctionner immédiatement</strong>.
+          Son historique est conservé et le compte peut être réactivé à tout moment.
+        </p>
+
+        <div class="modal__actions">
+          <button
+            matButton
+            type="button"
+            [disabled]="rowBusy() === user.id"
+            (click)="deactivating.set(null)"
+          >
+            Retour
+          </button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="rowBusy() === user.id"
+            (click)="confirmDeactivate()"
+          >
+            Confirmer la désactivation
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</app-shell>

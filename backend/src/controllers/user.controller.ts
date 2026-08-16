@@ -9,7 +9,7 @@ import {
   getUserById,
   MIN_PASSWORD_LENGTH,
 } from '../services/user.service';
-import { toPublicUser, toInterviewerOption } from '../views/user.view';
+import { toAdminUser, toInterviewerOption } from '../views/user.view';
 import { Role } from '../common/constants';
 import { AppError } from '../common/errors';
 
@@ -84,7 +84,7 @@ export const list: RequestHandler = async (req, res, next) => {
       .status(200)
       .json(
         viewer.role === Role.Administrateur
-          ? users.map(toPublicUser)
+          ? users.map(toAdminUser)
           : users.map(toInterviewerOption),
       );
   } catch (error) {
@@ -96,7 +96,7 @@ export const list: RequestHandler = async (req, res, next) => {
 export const getOne: RequestHandler = async (req, res, next) => {
   try {
     const user = await getUserById(String(req.params.id));
-    res.status(200).json(toPublicUser(user));
+    res.status(200).json(toAdminUser(user));
   } catch (error) {
     next(error);
   }
@@ -123,7 +123,7 @@ export const create: RequestHandler = async (req, res, next) => {
       String(req.currentUser?._id),
     );
 
-    res.status(201).json(toPublicUser(user));
+    res.status(201).json(toAdminUser(user));
   } catch (error) {
     next(error);
   }
@@ -144,7 +144,7 @@ export const update: RequestHandler = async (req, res, next) => {
       String(req.currentUser?._id),
     );
 
-    res.status(200).json(toPublicUser(user));
+    res.status(200).json(toAdminUser(user));
   } catch (error) {
     next(error);
   }
@@ -154,7 +154,7 @@ export const update: RequestHandler = async (req, res, next) => {
 export const deactivate: RequestHandler = async (req, res, next) => {
   try {
     const user = await deactivateUser(String(req.params.id), String(req.currentUser?._id));
-    res.status(200).json(toPublicUser(user));
+    res.status(200).json(toAdminUser(user));
   } catch (error) {
     next(error);
   }
@@ -164,7 +164,7 @@ export const deactivate: RequestHandler = async (req, res, next) => {
 export const reactivate: RequestHandler = async (req, res, next) => {
   try {
     const user = await reactivateUser(String(req.params.id), String(req.currentUser?._id));
-    res.status(200).json(toPublicUser(user));
+    res.status(200).json(toAdminUser(user));
   } catch (error) {
     next(error);
   }
@@ -185,7 +185,7 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
     );
 
     res.status(200).json({
-      user: toPublicUser(user),
+      user: toAdminUser(user),
       temporaryPassword,
       message:
         "Communiquez ce mot de passe temporaire à l'utilisateur. Il ne sera plus affiché et devra être changé à la prochaine connexion.",

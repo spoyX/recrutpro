@@ -1,0 +1,274 @@
+// Same shapes as the other list screens — card, filter row, 56px table rows.
+// The only new element is the status pill, and it is deliberately NOT a chip:
+// see the note on `.pill` below.
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-md);
+}
+
+.section__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.section__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: var(--sp-md) 0 0;
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+// ---------------------------------------------------------------- filters
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  min-width: 0;
+}
+
+.filters__label {
+  color: var(--text-slate);
+  margin: 0;
+}
+
+.filters__control {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: var(--sp-sm);
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  min-width: 200px;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+.filters__reset {
+  margin-left: auto;
+}
+
+// ------------------------------------------------------------------ table
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1040px;
+
+  th,
+  td {
+    text-align: left;
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: var(--border-level-1);
+    white-space: nowrap;
+  }
+
+  th {
+    font: var(--mat-sys-label-small);
+    letter-spacing: var(--recrutpro-tracking-label-sm);
+    text-transform: uppercase;
+    color: var(--text-slate);
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  tbody tr {
+    height: var(--layout-row-height);
+  }
+
+  tbody tr:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.table__meta {
+  font: var(--mat-sys-body-small);
+  color: var(--text-slate);
+}
+
+.table__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  height: var(--layout-row-height);
+}
+
+// A deactivated row stays fully READABLE — this is an administration screen and
+// the deactivated accounts are exactly what an administrator comes here to find.
+// Muted, never hidden, and never below the contrast floor.
+.row--inactive {
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.row__self,
+.row__note {
+  color: var(--mat-sys-on-surface-variant);
+  margin-left: var(--sp-xs);
+}
+
+// ------------------------------------------------------------------ pills
+//
+// NOT `app-stage-chip`. That component owns two closed vocabularies — the seven
+// pipeline stages and the three job-position statuses (D-080) — and account
+// state is a third, unrelated one. Feeding it strings it has no tone for would
+// silently fall through to `neutral`, and adding them would put « Actif » one
+// typo away from a candidate stage. These use the same DESIGN.md recipe (low
+// saturation tint, same-hue text) without borrowing the vocabulary.
+.pill {
+  display: inline-block;
+  padding: 2px var(--sp-sm);
+  border-radius: var(--radius-sm);
+  font: var(--mat-sys-label-small);
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  & + & {
+    margin-left: var(--sp-xs);
+  }
+}
+
+.pill--on {
+  background-color: var(--recrutpro-success-container);
+  color: var(--recrutpro-on-success-container);
+}
+
+.pill--off {
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// The ATTENTION role (D-080): wants notice, neither good nor bad.
+.pill--warn {
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+  color: var(--mat-sys-on-tertiary-fixed-variant);
+}
+
+// ------------------------------------------------------------------- rows
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rows__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-sm);
+  border-bottom: var(--border-level-1);
+  border-radius: var(--radius-default);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.rows__primary {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+}
+
+.rows__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+
+.empty {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+.user__hint {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: var(--sp-xs) 0 0;
+}
+
+@media (max-width: 900px) {
+  .filters__control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters__field {
+    flex: 1 1 100%;
+  }
+
+  .filters__reset {
+    margin-left: 0;
+  }
+}

@@ -48,3 +48,33 @@ export const toPublicUser = (user: IUser): PublicUser => ({
   // FR-10: the client needs this to force the password-change flow.
   mustChangePassword: user.mustChangePassword,
 });
+
+/**
+ * D-084 — FR-8 / FR-9 / FR-12: what the ADMINISTRATION screen sees.
+ *
+ * `PublicUser` plus `isActive`, and a separate shape for the reason the
+ * `InterviewerOption` note above already gives: widening `PublicUser` reaches
+ * every caller, and two of them are login and `/auth/me`. `auth.spec.ts`
+ * asserts the login response's exact field set AND, in as many words, that it
+ * carries no `isActive` — three tests that exist to pin that contract. Loosening
+ * them to suit an admin list would be changing a guard to fit the thing it
+ * guards against.
+ *
+ * It is also correct on its own terms: a user reading their OWN record is
+ * active by definition, since a deactivated account cannot authenticate
+ * (D-027), so the flag would be noise there and is load-bearing only here.
+ *
+ * NOT a new database field and NOT a new route — `isActive` has been on the
+ * User model since the beginning (ARCHITECTURE.md Section 7) and `GET /users`
+ * has always accepted it as a FILTER. Only the response omitted it, while
+ * `PublicDepartment` has carried the same flag all along.
+ */
+export interface AdminUser extends PublicUser {
+  isActive: boolean;
+}
+
+export const toAdminUser = (user: IUser): AdminUser => ({
+  ...toPublicUser(user),
+  // FR-8 / FR-9: which of the two actions this row may offer.
+  isActive: user.isActive,
+});

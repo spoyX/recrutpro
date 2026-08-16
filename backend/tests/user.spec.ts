@@ -115,6 +115,47 @@ const asAdmin = (method: 'get' | 'post' | 'patch', url: string) =>
   request(app)[method](url).set('Cookie', adminCookie);
 
 describe('User management — FR-6 to FR-9', () => {
+  // FR-8 / FR-9 / FR-12 (D-084). The administration screen cannot offer the
+  // right action on a row without knowing which state the account is in, and
+  // the response used to omit it while PublicDepartment carried the same flag.
+  //
+  // These mutate the shared `target` rather than re-stubbing `findById`:
+  // requireAuth reloads the SESSION user through the same mock (D-027), so
+  // overriding it made the admin resolve to the target and answered 401/403.
+  describe('D-084: the response carries isActive', () => {
+    it('FR-12: an ACTIVE account reports isActive true', async () => {
+      target.isActive = true;
+
+      const res = await asAdmin('get', `/api/v1/users/${TARGET_ID}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.isActive).toBe(true);
+      // Rule 3: the hash is absent by construction and stays absent.
+      expect(res.body.passwordHash).toBeUndefined();
+    });
+
+    it('FR-8: a DEACTIVATED account reports isActive false, not an absent key', async () => {
+      target.isActive = false;
+
+      const res = await asAdmin('get', `/api/v1/users/${TARGET_ID}`);
+
+      expect(res.status).toBe(200);
+      // `false`, not undefined: a missing key and a deactivated account would
+      // be indistinguishable to a client reading it as a boolean.
+      expect(res.body.isActive).toBe(false);
+      expect('isActive' in res.body).toBe(true);
+    });
+
+    it('FR-9: reactivating answers with the NEW state', async () => {
+      target.isActive = false;
+
+      const res = await asAdmin('patch', `/api/v1/users/${TARGET_ID}/reactivate`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.isActive).toBe(true);
+    });
+  });
+
   describe('FR-6: create a user', () => {
     it('FR-6: creates an account with name, email, role and department', async () => {
       mockedUser.create.mockResolvedValue({

@@ -67,7 +67,14 @@ const NAV: readonly NavItem[] = [
   // names the Recruteur and the Responsable, and D-068 added the
   // Administrateur. No `roles` key, therefore — the same as the dashboard.
   { label: 'Rapports', icon: 'insights', route: '/reports' },
-  { label: 'Utilisateurs', icon: 'manage_accounts', route: null },
+  // FR-6 to FR-13. Administrateur only — every route the page calls is, and
+  // the two other roles would get a 403 rather than a 404.
+  {
+    label: 'Utilisateurs',
+    icon: 'manage_accounts',
+    route: '/admin/users',
+    roles: ['Administrateur'],
+  },
   { label: "Journal d'audit", icon: 'receipt_long', route: null },
 ];
 

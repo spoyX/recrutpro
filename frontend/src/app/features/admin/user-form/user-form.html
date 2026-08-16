@@ -1,0 +1,148 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="user-form-title">
+  <div class="modal__panel">
+    <h2 id="user-form-title" class="modal__title">
+      @if (isEdit()) {
+        Modifier le compte
+      } @else {
+        Nouveau compte
+      }
+    </h2>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="user-name">Nom complet</label>
+      <input
+        id="user-name"
+        class="modal__input"
+        type="text"
+        [disabled]="busy()"
+        [value]="name()"
+        (input)="name.set($any($event.target).value)"
+      />
+    </div>
+
+    <!--
+      Email is create-only. PATCH /users/:id accepts name, role and department
+      and nothing else — an editable box here would promise a change no route
+      performs, and the address is the account's key (D-004's opposite).
+    -->
+    @if (!isEdit()) {
+      <div class="modal__field">
+        <label class="modal__label label-sm" for="user-email">Email</label>
+        <input
+          id="user-email"
+          class="modal__input"
+          type="email"
+          [disabled]="busy()"
+          [value]="email()"
+          (input)="email.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="modal__field">
+        <label class="modal__label label-sm" for="user-password">
+          Mot de passe initial — 8 caractères minimum
+        </label>
+        <input
+          id="user-password"
+          class="modal__input"
+          type="password"
+          autocomplete="new-password"
+          [disabled]="busy()"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+        />
+        <!-- FR-10: the account must change it at first sign-in, so this is a
+             handover credential rather than a password chosen for someone. -->
+        <p class="user__hint">
+          Le titulaire devra le changer à sa première connexion.
+        </p>
+      </div>
+    } @else {
+      <!-- Stated rather than shown as a disabled box: "you cannot change this
+           here" and "there is a way to change it" are different facts. -->
+      <p class="user__hint user__hint--block">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          {{ email() }} — l'adresse et le mot de passe ne se modifient pas ici.
+          Utilisez « Réinitialiser le mot de passe » pour délivrer un accès temporaire.
+        </span>
+      </p>
+    }
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="user-role">Rôle</label>
+      <select
+        id="user-role"
+        class="modal__input"
+        [disabled]="busy()"
+        (change)="setRole($any($event.target).value)"
+      >
+        <!-- `[selected]` per option, not `[value]` on the select: the binding
+             is applied before @for creates the options (D-079). -->
+        @for (option of roles; track option) {
+          <option [value]="option" [selected]="option === role()">{{ option }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- D-016/D-030: only a Recruteur or a Responsable carries one, and the
+         server CLEARS any department left on an Administrateur. -->
+    @if (needsDepartment()) {
+      <div class="modal__field">
+        <label class="modal__label label-sm" for="user-department">Département</label>
+        <select
+          id="user-department"
+          class="modal__input"
+          [disabled]="busy()"
+          (change)="departmentId.set($any($event.target).value)"
+        >
+          <option value="" [selected]="departmentId() === ''">Choisir un département</option>
+          @for (department of departmentChoices(); track department.id) {
+            <option [value]="department.id" [selected]="department.id === departmentId()">
+              {{ department.name }}@if (!department.isActive) {&nbsp;(désactivé)}
+            </option>
+          }
+        </select>
+      </div>
+
+      @if (departmentInactive()) {
+        <p class="modal__warning">
+          Ce département a été désactivé. Il reste affiché parce que ce compte y est
+          déjà rattaché, mais l'y renvoyer sera refusé : choisissez un département actif.
+        </p>
+      }
+    } @else {
+      <p class="user__hint user__hint--block">
+        <mat-icon aria-hidden="true">public</mat-icon>
+        <span>Un administrateur n'est rattaché à aucun département : son accès est global.</span>
+      </p>
+    }
+
+    @if (!canSubmit() && !busy()) {
+      <p class="modal__body">
+        @if (!isEdit() && password().length > 0 && password().length < 8) {
+          Le mot de passe doit contenir au moins 8 caractères.
+        } @else {
+          Renseignez les champs obligatoires.
+        }
+      </p>
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      <button matButton type="button" [disabled]="busy()" (click)="dismissed.emit()">
+        Annuler
+      </button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        @if (isEdit()) {
+          Enregistrer
+        } @else {
+          Créer le compte
+        }
+      </button>
+    </div>
+  </div>
+</div>
