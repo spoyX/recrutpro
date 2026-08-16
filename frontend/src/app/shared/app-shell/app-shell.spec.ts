@@ -83,10 +83,11 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         expect(el.getAttribute('aria-disabled')).toBe('true');
         expect(el.tagName.toLowerCase()).not.toBe('a');
       });
-      // ONE destination has no page at all: the Journal d'audit. « Postes »
-      // left this set with FR-14 to FR-17, « Rapports » with user stories
-      // 22/23, « Utilisateurs » with FR-6 to FR-13.
-      expect(hints('à venir').length).toBe(1);
+      // ZERO. Every sidebar destination is now built — « Journal d'audit » was
+      // the last, and « à venir » no longer appears anywhere in the app. The
+      // remaining disabled entries are all « réservé », which is a different
+      // fact: the page exists and is not this role's.
+      expect(hints('à venir').length).toBe(0);
     });
   });
 
@@ -121,10 +122,10 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       // The two disabled reasons must not be conflated: the page EXISTS, it is
       // simply not this role's. « Candidats » (D-041) and « Postes » (D-038
       // closes that module to this role entirely) are both in that state.
-      // « Candidats » (D-041), « Postes » (D-038) and now « Utilisateurs »
-      // (Administrateur-only) are all « réservé » for this role.
-      expect(hints('réservé').length).toBe(3);
-      expect(hints('à venir').length).toBe(1);
+      // « Candidats » (D-041), « Postes » (D-038), « Utilisateurs » and
+      // « Journal d'audit » (both Administrateur-only) are all « réservé ».
+      expect(hints('réservé').length).toBe(4);
+      expect(hints('à venir').length).toBe(0);
     });
 
     it('ResponsableHierarchique: « Entretiens » IS a link — FR-35 is theirs', () => {
@@ -149,8 +150,9 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       // Entretiens too: neither FR-33 nor FR-35 names that role.
       expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
       expect(hints('réservé').length).toBe(2);
-      // …and « Utilisateurs » IS theirs, alone among the three roles.
+      // …and both admin destinations ARE theirs, alone among the three roles.
       expect(fixture.nativeElement.querySelector('a[href="/admin/users"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('a[href="/admin/audit-log"]')).toBeTruthy();
     });
 
     it('FR-6 to FR-13: only the Administrateur gets « Utilisateurs »', () => {
@@ -158,6 +160,9 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         signIn(role);
         create();
         expect(fixture.nativeElement.querySelector('a[href="/admin/users"]'))
+          .withContext(role)
+          .toBeNull();
+        expect(fixture.nativeElement.querySelector('a[href="/admin/audit-log"]'))
           .withContext(role)
           .toBeNull();
         // Present but disabled, so the product's shape stays honest.
@@ -183,7 +188,8 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('a[href="/job-positions"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('a[href="/admin/users"]')).toBeNull();
-      expect(hints('réservé').length).toBe(4);
+      expect(fixture.nativeElement.querySelector('a[href="/admin/audit-log"]')).toBeNull();
+      expect(hints('réservé').length).toBe(5);
     });
 
     // FR-14 to FR-17. D-038 opened the module's READS to two roles and closed

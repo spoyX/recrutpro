@@ -56,15 +56,6 @@
       }
 
       <!-- FR-10: authenticated, but locked out until the password is changed. -->
-      @if (mustChangePassword()) {
-        <p class="login__notice" role="alert">
-          <mat-icon aria-hidden="true">lock_reset</mat-icon>
-          <span>
-            Votre mot de passe temporaire doit être changé avant de continuer.
-            L'écran de changement de mot de passe n'est pas encore disponible.
-          </span>
-        </p>
-      }
 
       <button
         matButton="filled"

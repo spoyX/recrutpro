@@ -75,7 +75,13 @@ const NAV: readonly NavItem[] = [
     route: '/admin/users',
     roles: ['Administrateur'],
   },
-  { label: "Journal d'audit", icon: 'receipt_long', route: null },
+  // FR-11 / UC-04. Administrateur only (D-060), like the accounts module.
+  {
+    label: "Journal d'audit",
+    icon: 'receipt_long',
+    route: '/admin/audit-log',
+    roles: ['Administrateur'],
+  },
 ];
 
 /** What the sidebar actually renders for one entry. */
@@ -151,6 +157,15 @@ interface ResolvedNavItem {
               role, so there is no nav-style role check here.
             -->
             <app-notification-panel />
+
+            <!-- FR-10's voluntary half. Without it POST /auth/change-password
+                 would be reachable only when an administrator has forced it —
+                 the same "endpoint with no UI" gap the audit keeps finding.
+                 NOTE: no backticks in this template literal — they close it. -->
+            <a matButton routerLink="/change-password">
+              <mat-icon>password</mat-icon>
+              Mot de passe
+            </a>
 
             <button matButton type="button" (click)="logout()">
               <mat-icon>logout</mat-icon>

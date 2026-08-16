@@ -77,4 +77,33 @@ export class AuthService {
       .post<void>(`${environment.apiUrl}/auth/logout`, {}, { withCredentials: true })
       .pipe(tap(() => this.currentUser.set(null)));
   }
+
+  /**
+   * FR-10 / D-032 — change one's own password.
+   *
+   * Answers **204, not 200**, and carries no body: rule 3 keeps a password out
+   * of every response, including this one. The server clears
+   * `mustChangePassword`, so the local signal is updated to match rather than
+   * left stale — otherwise the guard would keep redirecting a user who has
+   * just complied.
+   *
+   * The one route reachable while flagged, alongside logout
+   * (`requireAuthAllowingPasswordChange`).
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http
+      .post<void>(
+        `${environment.apiUrl}/auth/change-password`,
+        { currentPassword, newPassword },
+        { withCredentials: true },
+      )
+      .pipe(
+        tap(() => {
+          const user = this.currentUser();
+          if (user) {
+            this.currentUser.set({ ...user, mustChangePassword: false });
+          }
+        }),
+      );
+  }
 }

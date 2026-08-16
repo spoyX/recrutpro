@@ -155,7 +155,7 @@ describe('Login (FR-1, FR-3)', () => {
     expect(component.errorMessage()).toContain('injoignable');
   });
 
-  it('FR-10: a forced password change is announced and does NOT navigate', () => {
+  it('FR-10: a forced password change goes to the change-password screen', () => {
     const navigate = spyOn(router, 'navigate');
     fill('marie@example.com', 'TempPass123');
     component.submit();
@@ -163,9 +163,13 @@ describe('Login (FR-1, FR-3)', () => {
     http.expectOne(LOGIN_URL).flush({ ...user, mustChangePassword: true });
     fixture.detectChanges();
 
-    expect(component.mustChangePassword()).toBeTrue();
-    expect(navigate).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('mot de passe temporaire');
+    // This test used to assert the OPPOSITE — that the flow stopped here and
+    // announced itself — which was right while no change-password screen
+    // existed. FR-10 says « contraint de le changer à la prochaine connexion »,
+    // and requireAuth 403s every protected route while the flag is set, so
+    // stopping here is a dead end rather than a constraint (D-086).
+    expect(navigate).toHaveBeenCalledWith(['/change-password']);
+    expect(navigate).not.toHaveBeenCalledWith(['/dashboard']);
   });
 
   it('re-enables the submit button after a failure', () => {

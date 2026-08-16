@@ -1,0 +1,140 @@
+<app-shell>
+  <header class="head">
+    <h1 class="page__title">Journal d'audit</h1>
+    @if (!loading() && !errorMessage()) {
+      <p class="head__count">
+        @if (total() === 0) {
+          Aucune entrée
+        } @else if (truncated()) {
+          <!--
+            The endpoint caps at X-Page-Limit and accepts no offset (UC-04 is a
+            recent-history view, not an export). Saying « 50 entrées » would let
+            a capped page look like the whole history.
+          -->
+          Les {{ rows().length }} plus récentes sur {{ total() }}
+        } @else {
+          {{ total() }} entrée{{ total() > 1 ? 's' : '' }}
+        }
+      </p>
+    }
+  </header>
+
+  <section class="card" aria-label="Filtres">
+    <div class="filters">
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-action">Action</label>
+        <select
+          id="filter-action"
+          class="filters__control"
+          [value]="action()"
+          (change)="setAction($any($event.target).value)"
+        >
+          <option value="">Toutes les actions</option>
+          @for (option of actions; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-target">Type d'objet</label>
+        <select
+          id="filter-target"
+          class="filters__control"
+          [value]="targetType()"
+          (change)="setTargetType($any($event.target).value)"
+        >
+          <option value="">Tous les types</option>
+          @for (option of targetTypes; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </div>
+
+      @if (isFiltered()) {
+        <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+          <mat-icon>filter_alt_off</mat-icon>
+          Réinitialiser
+        </button>
+      }
+    </div>
+  </section>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement du journal" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="page__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+      <button matButton type="button" (click)="load()">Réessayer</button>
+    </p>
+  }
+
+  @if (!errorMessage() && rows().length) {
+    <section class="card table-card" aria-labelledby="audit-title">
+      <h2 id="audit-title" class="visually-hidden">Entrées du journal</h2>
+
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Date et heure</th>
+              <th scope="col">Auteur</th>
+              <th scope="col">Action</th>
+              <th scope="col">Type d'objet</th>
+              <th scope="col">Identifiant de l'objet</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of rows(); track entry.id) {
+              <tr>
+                <td class="table__date">{{ entry.timestamp | date: 'dd/MM/yyyy à HH:mm:ss' }}</td>
+                <td>
+                  <!-- Null-tolerant by contract: an entry whose actor was
+                       removed still has to render, and « qui » is the point. -->
+                  {{ entry.user?.name ?? 'Auteur inconnu' }}
+                </td>
+                <td>{{ entry.action }}</td>
+                <td class="table__meta">{{ entry.targetType }}</td>
+                <!-- The raw id, on purpose: it is what the entry stores, and
+                     resolving it would need one lookup per row across five
+                     collections — with no route that answers "what was this?"
+                     for a record that may since have been renamed. -->
+                <td class="table__id">{{ entry.targetId }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!--
+        D-033: an entry is WHO / WHAT / WHEN and carries no payload. Said out
+        loud, because a reader who expects a diff will otherwise conclude the
+        page is broken rather than that the record is deliberately minimal.
+      -->
+      <p class="note">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          Une entrée enregistre l'auteur, l'action, l'objet et la date — jamais le
+          détail de ce qui a changé, ni aucune donnée personnelle.
+          @if (truncated()) {
+            Seules les {{ limit() }} entrées les plus récentes sont affichées ;
+            affinez les filtres pour explorer le reste.
+          }
+        </span>
+      </p>
+    </section>
+  } @else if (!loading() && !errorMessage()) {
+    <section class="card">
+      <p class="empty">
+        @if (isFiltered()) {
+          Aucune entrée ne correspond à ces filtres.
+        } @else {
+          Le journal d'audit est vide.
+        }
+      </p>
+    </section>
+  }
+</app-shell>

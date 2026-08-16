@@ -42,7 +42,6 @@ export class Login {
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
   /** FR-10: the account must change its password before it can go anywhere. */
-  readonly mustChangePassword = signal(false);
 
   submit(): void {
     if (this.form.invalid) {
@@ -53,7 +52,6 @@ export class Login {
 
     this.submitting.set(true);
     this.errorMessage.set(null);
-    this.mustChangePassword.set(false);
 
     const { email, password } = this.form.getRawValue();
 
@@ -61,13 +59,14 @@ export class Login {
       next: (user) => {
         this.submitting.set(false);
 
-        // FR-10: requireAuth refuses every protected route with 403
-        // PASSWORD_CHANGE_REQUIRED while this flag is set, so navigating to the
-        // dashboard would only produce a confusing error. The change-password
-        // screen is its own backlog item ("Password Reset flow"); until it
-        // exists, say plainly what has happened rather than inventing a flow.
+        // FR-10 — « contraint de le changer à la prochaine connexion ». This
+        // is that connexion, so the constraint is applied here rather than
+        // announced: `requireAuth` refuses every protected route with a 403
+        // while the flag is set, so the dashboard would be a dead end.
+        // `passwordChangeGuard` catches the refresh and deep-link cases; this
+        // catches the one FR-10 actually names.
         if (user.mustChangePassword) {
-          this.mustChangePassword.set(true);
+          void this.router.navigate(['/change-password']);
           return;
         }
 

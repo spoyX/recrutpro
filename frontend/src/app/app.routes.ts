@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { passwordChangeGuard } from './core/password-change.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -8,11 +9,21 @@ export const routes: Routes = [
     title: 'Connexion — RecrutPro',
   },
   {
+    // FR-10's second half. Deliberately NOT guarded by `passwordChangeGuard` —
+    // it is the one destination a flagged user must reach, and guarding it
+    // would redirect it to itself.
+    path: 'change-password',
+    loadComponent: () =>
+      import('./features/auth/change-password/change-password').then((m) => m.ChangePassword),
+    title: 'Changer le mot de passe — RecrutPro',
+  },
+  {
     // FR-45 / FR-46 / FR-47. The role-scoped payload is decided server-side
     // (D-057), so one route serves all three dashboards.
     path: 'dashboard',
     loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
     title: 'Tableau de bord — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // FR-24. Registered BEFORE `candidates/:id` for readability only — the two
@@ -21,6 +32,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/candidates/candidates-list/candidates-list').then((m) => m.CandidatesList),
     title: 'Candidats — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // FR-19 to FR-22. Registered BEFORE `candidates/:id` because « new » would
@@ -32,6 +44,7 @@ export const routes: Routes = [
         (m) => m.CandidateRegister,
       ),
     title: 'Nouveau candidat — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // D-067. `:id` binds to the component's `id` input via
@@ -43,6 +56,7 @@ export const routes: Routes = [
         (m) => m.CandidateDetails,
       ),
     title: 'Dossier candidat — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // FR-33 (Recruteur, unscoped) and FR-35 (Responsable, scoped) — ONE route,
@@ -53,6 +67,7 @@ export const routes: Routes = [
         (m) => m.InterviewsList,
       ),
     title: 'Entretiens — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // FR-6 to FR-13 — accounts AND departments on one screen. Administrateur
@@ -61,6 +76,16 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/admin/admin-users/admin-users').then((m) => m.AdminUsers),
     title: 'Administration — RecrutPro',
+    canActivate: [passwordChangeGuard],
+  },
+  {
+    // FR-11 / UC-04 — the audit log. Administrateur only (D-060), read-only,
+    // and capped at 50 rows by the endpoint rather than paged.
+    path: 'admin/audit-log',
+    loadComponent: () =>
+      import('./features/admin/audit-log/audit-log').then((m) => m.AuditLog),
+    title: "Journal d'audit — RecrutPro",
+    canActivate: [passwordChangeGuard],
   },
   {
     // SRS Section 1.5, user stories 22 and 23. Both `GET /reports/*` routes
@@ -69,6 +94,7 @@ export const routes: Routes = [
     path: 'reports',
     loadComponent: () => import('./features/reports/reports/reports').then((m) => m.Reports),
     title: 'Rapports — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // FR-17, and the home of FR-14/FR-15/FR-16. Registered BEFORE
@@ -80,6 +106,7 @@ export const routes: Routes = [
         (m) => m.JobPositionsList,
       ),
     title: 'Postes — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   {
     // FR-14 to FR-17. `GET /job-positions/:id` already existed (D-038). Reached
@@ -90,6 +117,7 @@ export const routes: Routes = [
         (m) => m.JobPositionDetails,
       ),
     title: 'Poste — RecrutPro',
+    canActivate: [passwordChangeGuard],
   },
   { path: '**', redirectTo: 'login' },
 ];
