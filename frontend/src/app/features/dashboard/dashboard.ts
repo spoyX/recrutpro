@@ -7,11 +7,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { ApiError } from '../../core/auth.service';
-import { DashboardService, Dashboard as DashboardData } from './dashboard.service';
+import {
+  DashboardService,
+  Dashboard as DashboardData,
+  DashboardCandidateRow,
+} from './dashboard.service';
 import { AppShell } from '../../shared/app-shell/app-shell';
 import { StatTile } from '../../shared/stat-tile/stat-tile';
 import { StageChip } from '../../shared/stage-chip/stage-chip';
 import { PipelineBreakdown } from '../../shared/pipeline-breakdown/pipeline-breakdown';
+import { FinalDecision } from '../candidates/final-decision/final-decision';
 
 /**
  * FR-45, FR-46, FR-47 — the role-scoped dashboard. Replaces the placeholder
@@ -35,6 +40,7 @@ import { PipelineBreakdown } from '../../shared/pipeline-breakdown/pipeline-brea
     StatTile,
     StageChip,
     PipelineBreakdown,
+    FinalDecision,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
@@ -90,4 +96,68 @@ export class Dashboard {
   humanise(action: string): string {
     return action.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
+  /**
+   * 4.1 items 2.3 / 3.6 — initials for an avatar circle.
+   *
+   * Derived, never stored. It is also the fallback Phase 4.3's real avatars
+   * will fall back TO, so the same function serves both.
+   */
+  initials(name: string | null | undefined): string {
+    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return '?';
+    }
+    const first = parts[0][0] ?? '';
+    const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
+    return (first + last).toUpperCase();
+  }
+
+  /**
+   * 4.1 item 2.5 — « Candidats actifs ».
+   *
+   * A summary of data FR-45 already mandates (« la répartition des candidats
+   * par étape »), not a new metric: the non-terminal stages, added up. No
+   * payload change, and it cannot disagree with the breakdown beside it
+   * because it is computed FROM the breakdown.
+   */
+  activeCandidates(byStage: Record<string, number>): number {
+    const terminal = ['Accepté', 'Rejeté', 'Rejeté (CV)'];
+    return Object.entries(byStage ?? {})
+      .filter(([stage]) => !terminal.includes(stage))
+      .reduce((total, [, count]) => total + count, 0);
+  }
+
+  /**
+   * 4.1 item 2.9 — « AUJ » / « DEM » / a weekday, for an interview date chip.
+   * Computed from `scheduledAt`; nothing is stored.
+   */
+  dayLabel(iso: string): string {
+    const when = new Date(iso);
+    const midnight = (d: Date): number =>
+      new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const days = Math.round((midnight(when) - midnight(new Date())) / 86_400_000);
+    if (days === 0) {
+      return 'AUJ';
+    }
+    if (days === 1) {
+      return 'DEM';
+    }
+    return when.toLocaleDateString('fr-FR', { weekday: 'short' }).slice(0, 3).toUpperCase();
+  }
+
+  dayNumber(iso: string): string {
+    return String(new Date(iso).getDate()).padStart(2, '0');
+  }
+
+  // --------------------------------------------------- 4.1 item 3.1 (D-088)
+
+  /** The candidate whose final decision is open, or null while none is. */
+  readonly deciding = signal<DashboardCandidateRow | null>(null);
+
+  /** FR-39 moves the candidate to a terminal stage, so the page is re-read. */
+  onDecided(): void {
+    this.deciding.set(null);
+    this.load();
+  }
+
 }

@@ -107,3 +107,65 @@
     flex-basis: 100%;
   }
 }
+
+// ------------------------------------------------- Phase 4.1 presentation
+
+// 2.4 — a card header that carries a link alongside its title.
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+
+.card__more {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// 2.3 / 3.6 — initials, derived from the name and never stored. Phase 4.3's
+// real avatars will fall back to exactly this, so the shape is already final.
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background-color: var(--mat-sys-secondary-fixed);
+  color: var(--mat-sys-on-secondary-fixed-variant);
+  font: var(--mat-sys-label-large);
+  letter-spacing: 0.02em;
+}
+
+// 2.9 — the relative day chip on an interview row.
+.daychip {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  padding: var(--sp-xs) 0;
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.1;
+}
+
+.daychip__label {
+  font: var(--mat-sys-label-small);
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+}
+
+.daychip__number {
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+}

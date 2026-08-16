@@ -119,6 +119,18 @@ describe('Dashboard (FR-45, FR-46, FR-47)', () => {
       departmentCandidatesInProgress: 4,
       candidatesByStage: ALL_STAGES,
       pendingEvaluations: 2,
+      // D-088. Deliberately a DIFFERENT candidate from the interview below:
+      // the two lists answer different questions and a shared fixture would
+      // let one pass on the other's data.
+      candidatesAwaitingDecision: [
+        {
+          id: 'c9',
+          fullName: 'Sarah Lucas',
+          currentStage: 'Évaluation complétée',
+          registeredAt: '2026-08-01T09:00:00.000Z',
+          jobPosition: { id: 'p2', title: 'Data analyst' },
+        },
+      ],
       upcomingInterviews: [
         {
           id: 'i1',
@@ -153,6 +165,216 @@ describe('Dashboard (FR-45, FR-46, FR-47)', () => {
       expect(text()).not.toContain('Utilisateurs actifs');
     });
 
+  });
+
+  // Phase 4.1 — the presentation pass, plus D-088's worklist.
+  describe('4.1 — presentation', () => {
+    const responsablePayload = {
+      role: 'ResponsableHierarchique' as const,
+      departmentCandidatesInProgress: 4,
+      candidatesByStage: ALL_STAGES,
+      pendingEvaluations: 2,
+      candidatesAwaitingDecision: [
+        {
+          id: 'c9',
+          fullName: 'Sarah Lucas',
+          currentStage: 'Évaluation complétée',
+          registeredAt: '2026-08-01T09:00:00.000Z',
+          jobPosition: { id: 'p2', title: 'Data analyst' },
+        },
+      ],
+      upcomingInterviews: [],
+    };
+
+    const loadResponsable = (over: Record<string, unknown> = {}): void => {
+      create();
+      http.expectOne(URL).flush({ ...responsablePayload, ...over });
+      fixture.detectChanges();
+    };
+
+    describe('3.1 / D-088 — the decision worklist', () => {
+      it('lists the candidates a decision is owed on', () => {
+        loadResponsable();
+
+        expect(text()).toContain('Candidats en attente de décision');
+        expect(text()).toContain('Sarah Lucas');
+        expect(text()).toContain('Data analyst');
+      });
+
+      it('3.8: the stage uses StageChip’s SETTLED tone, not a grey badge', () => {
+        loadResponsable();
+
+        const chip = Array.from(
+          fixture.nativeElement.querySelectorAll('app-stage-chip .chip'),
+        ).find((c) => (c as HTMLElement).textContent?.trim() === 'Évaluation complétée') as
+          | HTMLElement
+          | undefined;
+
+        expect(chip).toBeTruthy();
+        // D-080 settled this tone ten days ago; the mockup drew it grey.
+        expect(chip!.className).toContain('chip--attention');
+        expect(chip!.className).not.toContain('chip--neutral');
+      });
+
+      it('opens the SAME FinalDecision dialog, with no follow-up request', () => {
+        loadResponsable();
+
+        const decide = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+          (b as HTMLElement).textContent?.includes('Décider'),
+        ) as HTMLButtonElement;
+        decide.click();
+        fixture.detectChanges();
+
+        // D-051's mandatory comment lives in that dialog and is untouched.
+        expect(fixture.nativeElement.querySelector('app-final-decision')).toBeTruthy();
+        // The SHELL's notification badge (D-081) is not the page's request.
+        expectNoPageRequests(http);
+      });
+
+      it('re-reads the dashboard once a decision is taken', () => {
+        loadResponsable();
+        fixture.componentInstance.onDecided();
+
+        // FR-39 moves the candidate to a terminal stage, so both the tile and
+        // the list must change — a patched row would leave the count stale.
+        const req = http.expectOne(URL);
+        req.flush({ ...responsablePayload, candidatesAwaitingDecision: [] });
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('app-final-decision')).toBeNull();
+        expect(text()).toContain('Aucune décision en attente');
+      });
+
+      it('says so plainly when nothing is owed', () => {
+        loadResponsable({ candidatesAwaitingDecision: [] });
+
+        expect(text()).toContain('Aucune décision en attente');
+      });
+    });
+
+    describe('2.2 — the pipeline card separates outcomes from the queue', () => {
+      it('renders the terminal stages as figures, NOT as bars', () => {
+        loadResponsable();
+
+        const barLabels = Array.from(
+          fixture.nativeElement.querySelectorAll('.pipeline__label'),
+        ).map((el) => (el as HTMLElement).textContent?.trim());
+
+        // Exact membership, not a substring sweep — « Rejeté » is a substring
+        // of « Rejeté (CV) » and a loose check would agree with either.
+        expect(barLabels).toContain('Candidature reçue');
+        expect(barLabels).not.toContain('Accepté');
+        expect(barLabels).not.toContain('Rejeté');
+        expect(barLabels).not.toContain('Rejeté (CV)');
+
+        const outcomeLabels = Array.from(
+          fixture.nativeElement.querySelectorAll('.outcome__label'),
+        ).map((el) => (el as HTMLElement).textContent?.trim());
+        expect(outcomeLabels).toEqual(['Accepté', 'Rejeté', 'Rejeté (CV)']);
+      });
+
+      it('the counts still come from the SAME payload', () => {
+        loadResponsable();
+
+        const counts = Array.from(
+          fixture.nativeElement.querySelectorAll('.outcome__count'),
+        ).map((el) => Number((el as HTMLElement).textContent?.trim()));
+
+        expect(counts).toEqual([
+          ALL_STAGES['Accepté'],
+          ALL_STAGES['Rejeté'],
+          ALL_STAGES['Rejeté (CV)'],
+        ]);
+      });
+    });
+
+    describe('3.3 — an urgent hint when work is waiting', () => {
+      it('marks a non-zero pending count as requiring action', () => {
+        loadResponsable();
+
+        expect(text()).toContain('Action requise');
+        expect(fixture.nativeElement.querySelector('.tile__hint--urgent')).toBeTruthy();
+      });
+
+      it('and does NOT when there is nothing to do', () => {
+        loadResponsable({ pendingEvaluations: 0, candidatesAwaitingDecision: [] });
+
+        expect(text()).not.toContain('Action requise');
+        expect(fixture.nativeElement.querySelector('.tile__hint--urgent')).toBeNull();
+      });
+    });
+
+    describe('2.3 / 2.5 — the Recruteur branch', () => {
+      const recruteurPayload = {
+        role: 'Recruteur' as const,
+        openPositions: 3,
+        candidatesByStage: ALL_STAGES,
+        recentCandidates: [
+          {
+            id: 'c1',
+            fullName: 'Alice Martin',
+            currentStage: 'Candidature reçue',
+            registeredAt: '2026-08-10T09:00:00.000Z',
+            jobPosition: { id: 'p1', title: 'Dev backend' },
+          },
+        ],
+      };
+
+      const loadRecruteur = (): void => {
+        create();
+        http.expectOne(URL).flush(recruteurPayload);
+        fixture.detectChanges();
+      };
+
+      it('2.3: renders initials derived from the name', () => {
+        loadRecruteur();
+
+        const avatar = fixture.nativeElement.querySelector('.avatar') as HTMLElement;
+        expect(avatar.textContent!.trim()).toBe('AM');
+      });
+
+      it('2.5: the active count is DERIVED from the breakdown beside it', () => {
+        loadRecruteur();
+
+        // Not a new metric — the non-terminal stages, summed. Computed from the
+        // same object, so the tile cannot disagree with the bars.
+        const expected =
+          ALL_STAGES['Candidature reçue'] +
+          ALL_STAGES['Présélection CV validée'] +
+          ALL_STAGES['Entretien planifié'] +
+          ALL_STAGES['Évaluation complétée'];
+        expect(fixture.componentInstance.activeCandidates(ALL_STAGES)).toBe(expected);
+        expect(text()).toContain('Candidats actifs');
+      });
+
+      it('2.4: offers the full list', () => {
+        loadRecruteur();
+
+        const link = fixture.nativeElement.querySelector('a.card__more') as HTMLAnchorElement;
+        expect(link.getAttribute('href')).toBe('/candidates');
+      });
+    });
+
+    describe('initials — the edge cases that would otherwise crash a row', () => {
+      it('handles one name, extra spaces, and nothing at all', () => {
+        create();
+        const c = fixture.componentInstance;
+
+        expect(c.initials('Alice Martin')).toBe('AM');
+        expect(c.initials('  Alice   Bernard Martin ')).toBe('AM');
+        expect(c.initials('Cher')).toBe('C');
+        expect(c.initials('')).toBe('?');
+        expect(c.initials(null)).toBe('?');
+        expect(c.initials(undefined)).toBe('?');
+
+        http.expectOne(URL).flush({
+          role: 'Recruteur',
+          openPositions: 0,
+          candidatesByStage: ALL_STAGES,
+          recentCandidates: [],
+        });
+      });
+    });
   });
 
   describe('FR-47: Administrateur', () => {
@@ -219,6 +441,7 @@ describe('Dashboard (FR-45, FR-46, FR-47)', () => {
         departmentCandidatesInProgress: 0,
         candidatesByStage: ALL_STAGES,
         pendingEvaluations: 0,
+        candidatesAwaitingDecision: [],
         upcomingInterviews: [],
       });
       fixture.detectChanges();

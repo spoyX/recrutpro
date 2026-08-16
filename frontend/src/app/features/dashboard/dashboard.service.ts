@@ -48,6 +48,15 @@ export type Dashboard =
       candidatesByStage: Record<string, number>;
       upcomingInterviews: DashboardInterviewRow[];
       pendingEvaluations: number;
+      /**
+       * D-088 — the candidates this responsable owes a DECISION (FR-39).
+       *
+       * NOT a list version of `pendingEvaluations`, which counts something
+       * else: interviews HELD but not yet evaluated. These are candidates
+       * already at « Évaluation complétée », where the evaluation is in and
+       * the decision is owed.
+       */
+      candidatesAwaitingDecision: DashboardCandidateRow[];
     }
   | {
       role: 'Administrateur';

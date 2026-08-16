@@ -26,6 +26,15 @@
             label="Postes ouverts"
             [value]="dashboard.openPositions"
             hint="Statut « Ouvert » uniquement"
+            icon="work"
+          />
+          <!-- 2.5: a summary of the breakdown FR-45 already mandates, computed
+               FROM it, so the two can never disagree. -->
+          <app-stat-tile
+            label="Candidats actifs"
+            [value]="activeCandidates(dashboard.candidatesByStage)"
+            hint="Hors étapes terminales"
+            icon="group"
           />
         </section>
 
@@ -35,11 +44,18 @@
         </section>
 
         <section class="card" aria-labelledby="recent-title">
-          <h2 id="recent-title" class="card__title">Derniers candidats ajoutés</h2>
+          <div class="card__head">
+            <h2 id="recent-title" class="card__title">Derniers candidats ajoutés</h2>
+            <!-- 2.4: the full list exists; the card is a preview of it. -->
+            <a class="card__more" routerLink="/candidates">Voir tout</a>
+          </div>
           @if (dashboard.recentCandidates.length) {
             <ul class="rows">
               @for (candidate of dashboard.recentCandidates; track candidate.id) {
                 <li class="rows__row">
+                  <!-- 2.3: initials, derived from the name. Phase 4.3's real
+                       avatars will fall back to exactly this. -->
+                  <span class="avatar" aria-hidden="true">{{ initials(candidate.fullName) }}</span>
                   <!-- The natural next click: straight into the candidate's file (D-067). -->
                   <a class="rows__primary rows__link" [routerLink]="['/candidates', candidate.id]">
                     {{ candidate.fullName }}
@@ -65,11 +81,31 @@
             label="Candidats en cours"
             [value]="dashboard.departmentCandidatesInProgress"
             hint="Dans votre département, hors étapes terminales"
+            icon="group"
           />
+          <!-- 3.3: an urgent hint when there is work waiting. Not the error
+               role — nothing has gone wrong, something is owed. -->
           <app-stat-tile
             label="Évaluations en attente"
             [value]="dashboard.pendingEvaluations"
-            hint="Entretiens passés restant à évaluer"
+            [hint]="
+              dashboard.pendingEvaluations > 0
+                ? 'Action requise — entretiens passés restant à évaluer'
+                : 'Entretiens passés restant à évaluer'
+            "
+            [urgent]="dashboard.pendingEvaluations > 0"
+            icon="fact_check"
+          />
+          <app-stat-tile
+            label="Décisions à prendre"
+            [value]="dashboard.candidatesAwaitingDecision.length"
+            [hint]="
+              dashboard.candidatesAwaitingDecision.length > 0
+                ? 'Action requise — évaluation reçue, décision attendue'
+                : 'Aucune décision en attente'
+            "
+            [urgent]="dashboard.candidatesAwaitingDecision.length > 0"
+            icon="gavel"
           />
         </section>
 
@@ -78,12 +114,60 @@
           <app-pipeline-breakdown [breakdown]="dashboard.candidatesByStage" />
         </section>
 
+        <!--
+          4.1 item 3.1 / D-088 — « Candidats en attente de décision ».
+          FR-39's decision was reachable ONLY from a candidate's file, so a
+          responsable had to already know who was waiting. Every row here is a
+          candidate `hasAssignedInterviewWith` already grants them; the payload
+          widens nothing. The button opens the SAME FinalDecision dialog, so
+          D-051's mandatory comment is untouched.
+        -->
+        <section class="card" aria-labelledby="decisions-title">
+          <div class="card__head">
+            <h2 id="decisions-title" class="card__title">Candidats en attente de décision</h2>
+          </div>
+          @if (dashboard.candidatesAwaitingDecision.length) {
+            <ul class="rows">
+              @for (candidate of dashboard.candidatesAwaitingDecision; track candidate.id) {
+                <li class="rows__row">
+                  <span class="avatar" aria-hidden="true">{{ initials(candidate.fullName) }}</span>
+                  <a class="rows__primary rows__link" [routerLink]="['/candidates', candidate.id]">
+                    {{ candidate.fullName }}
+                  </a>
+                  <span class="rows__secondary">
+                    {{ candidate.jobPosition?.title ?? 'Poste inconnu' }}
+                  </span>
+                  <!-- 3.8: the SETTLED tone for this stage (D-080), never the
+                       mockup's grey badge. -->
+                  <app-stage-chip [stage]="candidate.currentStage" />
+                  <button matButton="filled" type="button" (click)="deciding.set(candidate)">
+                    <mat-icon>gavel</mat-icon>
+                    Décider
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty">Aucune décision en attente.</p>
+          }
+        </section>
+
         <section class="card" aria-labelledby="upcoming-title">
           <h2 id="upcoming-title" class="card__title">Entretiens à venir</h2>
           @if (dashboard.upcomingInterviews.length) {
             <ul class="rows">
               @for (interview of dashboard.upcomingInterviews; track interview.id) {
                 <li class="rows__row">
+                  <!-- 2.9: a relative day chip, computed from scheduledAt. -->
+                  <span class="daychip" aria-hidden="true">
+                    <span class="daychip__label">{{ dayLabel(interview.scheduledAt) }}</span>
+                    <span class="daychip__number">{{ dayNumber(interview.scheduledAt) }}</span>
+                  </span>
+                  <!-- 3.6: initials. The time RANGE the mockup shows is not
+                       stored — Interview has scheduledAt and no duration. -->
+                  <span class="avatar" aria-hidden="true">
+                    {{ initials(interview.candidate?.fullName) }}
+                  </span>
                   <span class="rows__primary">
                     {{ interview.candidate?.fullName ?? 'Candidat inconnu' }}
                   </span>
@@ -109,6 +193,7 @@
             label="Utilisateurs actifs"
             [value]="dashboard.activeUsers"
             hint="Comptes non désactivés"
+            icon="manage_accounts"
           />
         </section>
 
@@ -132,6 +217,16 @@
           }
         </section>
       }
+    }
+
+    <!-- FR-39 / D-051 — the same dialog the candidate file hosts. -->
+    @if (deciding(); as candidate) {
+      <app-final-decision
+        [candidateId]="candidate.id"
+        [candidateName]="candidate.fullName"
+        (decided)="onDecided()"
+        (dismissed)="deciding.set(null)"
+      />
     }
   }
 </app-shell>
