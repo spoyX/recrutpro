@@ -4,6 +4,16 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
+ * D-091 — how a user appears when named inside someone else's payload.
+ * Mirrors the backend's `NamedUserRef`; `avatarUrl` is a proxy path or null.
+ */
+export interface NamedUserRef {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+/**
  * Mirrors the backend's `CandidateDetail` (views/candidate.view.ts, D-067).
  *
  * `email` and `phone` are NULLABLE by design, not by accident: FR-35 grants a
@@ -15,14 +25,14 @@ export interface CandidateDetailEvaluation {
   id: string;
   scores: { technicalSkills: number; communication: number; overallFit: number };
   comments: string | null;
-  submittedBy: { id: string; name: string } | null;
+  submittedBy: NamedUserRef | null;
 }
 
 export interface CandidateDetailInterview {
   id: string;
   scheduledAt: string;
   status: string;
-  interviewer: { id: string; name: string } | null;
+  interviewer: NamedUserRef | null;
   cancellationReason: string | null;
   evaluation: CandidateDetailEvaluation | null;
 }
@@ -34,7 +44,7 @@ export interface CandidateDetail {
   phone: string | null;
   jobPosition: { id: string; title: string } | null;
   currentStage: string;
-  registeredBy: { id: string; name: string } | null;
+  registeredBy: NamedUserRef | null;
   registeredAt: string;
   decidedAt: string | null;
   rejectionReason: string | null;

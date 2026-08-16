@@ -150,6 +150,9 @@
 }
 
 .rows__interviewer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
   font: var(--mat-sys-body-small);
   color: var(--text-slate);
   flex: 0 1 20%;

@@ -32,7 +32,7 @@ describe('EvaluationForm (FR-36, FR-37)', () => {
       resumeUrl: '/api/v1/candidates/c1/resume',
     },
     jobPosition: { id: 'p1', title: 'Développeur backend' },
-    interviewer: { id: 'u2', name: 'Pierre' },
+    interviewer: { id: 'u2', name: 'Pierre', avatarUrl: null },
     cancellationReason: null,
   };
 

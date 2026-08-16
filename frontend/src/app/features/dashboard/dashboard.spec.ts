@@ -355,26 +355,6 @@ describe('Dashboard (FR-45, FR-46, FR-47)', () => {
       });
     });
 
-    describe('initials — the edge cases that would otherwise crash a row', () => {
-      it('handles one name, extra spaces, and nothing at all', () => {
-        create();
-        const c = fixture.componentInstance;
-
-        expect(c.initials('Alice Martin')).toBe('AM');
-        expect(c.initials('  Alice   Bernard Martin ')).toBe('AM');
-        expect(c.initials('Cher')).toBe('C');
-        expect(c.initials('')).toBe('?');
-        expect(c.initials(null)).toBe('?');
-        expect(c.initials(undefined)).toBe('?');
-
-        http.expectOne(URL).flush({
-          role: 'Recruteur',
-          openPositions: 0,
-          candidatesByStage: ALL_STAGES,
-          recentCandidates: [],
-        });
-      });
-    });
   });
 
   describe('FR-47: Administrateur', () => {

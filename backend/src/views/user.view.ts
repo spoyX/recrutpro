@@ -8,6 +8,36 @@ import { Role } from '../common/constants';
  * It is absent here by construction rather than deleted after the fact, so a
  * new field cannot leak it by accident.
  */
+/**
+ * D-091 — THE ONE GENUINELY CONFUSING THING IN THE AVATAR DESIGN, stated here
+ * because every user-shaped response goes through this file.
+ *
+ * `User.avatarUrl` in the DATABASE is the Cloudinary `secure_url`, and it NEVER
+ * leaves the server. The `avatarUrl` in a RESPONSE is this API's own proxy
+ * path, or null. Same name, two different values — exactly as `Resume.fileUrl`
+ * stays server-side while `resume.url` is the proxy route clients call.
+ *
+ * The argument is `hasAvatar`, not the stored URL, so it is impossible to pass
+ * the Cloudinary URL through by mistake: this function has no way to emit it.
+ */
+export const avatarPathFor = (id: string, hasAvatar: boolean): string | null =>
+  hasAvatar ? `/api/v1/users/${id}/avatar` : null;
+
+/** True when a (possibly lean or projected) user document carries a photo. */
+export const hasAvatar = (user: { avatarPublicId?: unknown }): boolean =>
+  typeof user.avatarPublicId === 'string' && user.avatarPublicId.length > 0;
+
+/**
+ * How a user appears when they are named INSIDE someone else's payload — the
+ * interviewer on an interview, the author of an evaluation. One shape, so the
+ * five places D-091's survey chose cannot drift apart field by field.
+ */
+export interface NamedUserRef {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
 export interface PublicUser {
   id: string;
   name: string;
@@ -15,6 +45,8 @@ export interface PublicUser {
   role: Role;
   departmentId: string | null;
   mustChangePassword: boolean;
+  /** D-091: this API's own proxy route, never a storage URL. Null = initials. */
+  avatarUrl: string | null;
 }
 
 /**
@@ -47,6 +79,11 @@ export const toPublicUser = (user: IUser): PublicUser => ({
   departmentId: user.departmentId ? String(user.departmentId) : null,
   // FR-10: the client needs this to force the password-change flow.
   mustChangePassword: user.mustChangePassword,
+  // D-091. Widening PublicUser rather than adding a parallel shape, unlike
+  // D-084's `isActive`: that flag is administration business and meaningless
+  // to a user reading their own record, whereas EVERY consumer of PublicUser
+  // — the topbar, the admin table — wants the photo.
+  avatarUrl: avatarPathFor(String(user._id), hasAvatar(user)),
 });
 
 /**

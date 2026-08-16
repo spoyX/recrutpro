@@ -234,6 +234,7 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
         role,
         departmentId: DEPT,
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 

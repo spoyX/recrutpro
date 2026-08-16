@@ -9,6 +9,7 @@ export interface IUser extends Document {
   departmentId?: Types.ObjectId;
   isActive: boolean;
   mustChangePassword: boolean;
+  avatarPublicId?: string;
 }
 
 const userSchema = new Schema<IUser>({
@@ -48,6 +49,29 @@ const userSchema = new Schema<IUser>({
 
   // FR-10: set when an admin resets the password, forcing a change at next login
   mustChangePassword: { type: Boolean, required: true, default: false },
+
+  // D-091 — the profile image. The Cloudinary handle, and ONLY the handle.
+  //
+  // *** THE STORED `secure_url` WAS DROPPED AFTER LIVE VERIFICATION, and the
+  // reason is worth keeping. *** D-091 was ratified with an `avatarUrl` field
+  // beside this one, mirroring `Resume.fileUrl`. Fetching that stored URL with
+  // no credentials at all returned **HTTP 200**: for `resource_type: 'image'`,
+  // Cloudinary's `secure_url` for an `authenticated` asset embeds a signature
+  // that is PERMANENTLY valid, so the value was a working, never-expiring
+  // public link to an employee's face sitting at rest in the database.
+  //
+  // The same test against a resume returns 401 — `raw` authenticated assets
+  // need a full download token, so D-040's identical claim is true for CVs and
+  // was false only for images. The precedent was sound; copying it here was not.
+  //
+  // Nothing ever read the field: delivery signs a 60-second URL from this
+  // handle instead. So it was pure liability, and removing it costs nothing.
+  //
+  // NEVER RETURNED TO A CLIENT. `GET /users/:id/avatar` proxies the bytes
+  // behind requireAuth, and the `avatarUrl` in an API RESPONSE is this API's
+  // own proxy path — a different thing entirely, and now unambiguous, since no
+  // field of that name exists here any more.
+  avatarPublicId: { type: String, trim: true },
 });
 
 export const User = model<IUser>('User', userSchema);

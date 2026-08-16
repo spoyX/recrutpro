@@ -17,6 +17,7 @@ import { StatTile } from '../../shared/stat-tile/stat-tile';
 import { StageChip } from '../../shared/stage-chip/stage-chip';
 import { PipelineBreakdown } from '../../shared/pipeline-breakdown/pipeline-breakdown';
 import { FinalDecision } from '../candidates/final-decision/final-decision';
+import { UserAvatar } from '../../shared/user-avatar/user-avatar';
 
 /**
  * FR-45, FR-46, FR-47 — the role-scoped dashboard. Replaces the placeholder
@@ -37,6 +38,7 @@ import { FinalDecision } from '../candidates/final-decision/final-decision';
     MatIconModule,
     MatProgressBarModule,
     AppShell,
+    UserAvatar,
     StatTile,
     StageChip,
     PipelineBreakdown,
@@ -96,22 +98,6 @@ export class Dashboard {
   humanise(action: string): string {
     return action.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
-  /**
-   * 4.1 items 2.3 / 3.6 — initials for an avatar circle.
-   *
-   * Derived, never stored. It is also the fallback Phase 4.3's real avatars
-   * will fall back TO, so the same function serves both.
-   */
-  initials(name: string | null | undefined): string {
-    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return '?';
-    }
-    const first = parts[0][0] ?? '';
-    const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
-    return (first + last).toUpperCase();
-  }
-
   /**
    * 4.1 item 2.5 — « Candidats actifs ».
    *

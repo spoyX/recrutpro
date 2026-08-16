@@ -13,6 +13,7 @@ import { CvReview } from '../cv-review/cv-review';
 import { ReplaceResume } from '../replace-resume/replace-resume';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
+import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 
 /**
  * The Candidate Details page — a candidate's whole file on one screen.
@@ -37,6 +38,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     MatProgressBarModule,
     AppShell,
     StageChip,
+    UserAvatar,
     ScheduleInterview,
     FinalDecision,
     CvReview,
@@ -104,17 +106,6 @@ export class CandidateDetails {
 
   /** FR-36's scale is 1–5, so a score renders as a filled/empty run of 5. */
   readonly scaleMax = [1, 2, 3, 4, 5];
-
-  /** 4.1 — initials for the header avatar. Derived, never stored. */
-  initials(name: string | null | undefined): string {
-    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return '?';
-    }
-    const first = parts[0][0] ?? '';
-    const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
-    return (first + last).toUpperCase();
-  }
 
   /**
    * 4.4 — the soonest PLANNED interview still ahead, or null.

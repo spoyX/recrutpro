@@ -17,6 +17,7 @@ describe('AuthService — session rehydration (D-070, closes D-065)', () => {
     role: 'Recruteur',
     departmentId: 'd1',
     mustChangePassword: false,
+    avatarUrl: null,
   };
 
   beforeEach(() => {

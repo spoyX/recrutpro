@@ -30,7 +30,7 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
       resumeUrl: `/api/v1/candidates/c-${id}/resume`,
     },
     jobPosition: { id: 'p1', title: 'Développeur backend' },
-    interviewer: { id: 'u2', name: 'Pierre Blanc' },
+    interviewer: { id: 'u2', name: 'Pierre Blanc', avatarUrl: null },
     cancellationReason: null,
     ...overrides,
   });
@@ -43,6 +43,7 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
       role,
       departmentId: 'd1',
       mustChangePassword: false,
+      avatarUrl: null,
     });
   };
 
@@ -246,9 +247,9 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
       // options must come from data they already have.
       load(
         [
-          row('a', { interviewer: { id: 'u2', name: 'Pierre' } }),
-          row('b', { interviewer: { id: 'u3', name: 'Sofia' } }),
-          row('c', { interviewer: { id: 'u2', name: 'Pierre' } }),
+          row('a', { interviewer: { id: 'u2', name: 'Pierre', avatarUrl: null } }),
+          row('b', { interviewer: { id: 'u3', name: 'Sofia', avatarUrl: null } }),
+          row('c', { interviewer: { id: 'u2', name: 'Pierre', avatarUrl: null } }),
         ],
         3,
       );

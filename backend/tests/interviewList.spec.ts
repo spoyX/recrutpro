@@ -116,7 +116,7 @@ describe('Interview list — FR-33', () => {
           resumeUrl: `/api/v1/candidates/${CANDIDATE_ID}/resume`,
         },
         jobPosition: { id: POSITION_ID, title: 'Développeur backend' },
-        interviewer: { id: INTERVIEWER_ID, name: 'Pierre' },
+        interviewer: { id: INTERVIEWER_ID, name: 'Pierre', avatarUrl: null },
         cancellationReason: null,
       });
     });

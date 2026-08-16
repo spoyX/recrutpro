@@ -21,6 +21,7 @@ describe('Login (FR-1, FR-3)', () => {
     role: 'Recruteur' as const,
     departmentId: 'd1',
     mustChangePassword: false,
+    avatarUrl: null,
   };
 
   beforeEach(async () => {

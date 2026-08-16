@@ -62,6 +62,7 @@ describe('Reports (user stories 22, 23)', () => {
       role,
       departmentId: 'd1',
       mustChangePassword: false,
+      avatarUrl: null,
     });
   };
 

@@ -4,6 +4,16 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
+ * D-091 — how a user appears when named inside someone else's payload.
+ * Mirrors the backend's `NamedUserRef`; `avatarUrl` is a proxy path or null.
+ */
+export interface NamedUserRef {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+/**
  * Mirrors the backend's `InterviewListItem` (views/interview.view.ts).
  *
  * D-045 claimed this row "returns everything a calendar needs"; checked against
@@ -18,7 +28,7 @@ export interface InterviewListItem {
   status: string;
   candidate: { id: string; fullName: string; hasResume: boolean; resumeUrl: string } | null;
   jobPosition: { id: string; title: string } | null;
-  interviewer: { id: string; name: string } | null;
+  interviewer: NamedUserRef | null;
   cancellationReason: string | null;
 }
 

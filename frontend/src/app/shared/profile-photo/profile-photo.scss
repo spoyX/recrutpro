@@ -1,0 +1,43 @@
+// The modal chrome is global — src/styles/_modal.scss.
+
+.photo__preview {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+
+.photo__caption {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+// Same shape as the CV dialog's info strip: a stated fact, not a warning.
+// Neutral on purpose — the tertiary tone means « attention » (D-080), and this
+// is a plain description of what the buttons do.
+.photo__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0 0 var(--sp-md);
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+// Pushed away from the confirming pair, so « Retirer » is not adjacent to
+// « Enregistrer ». Destructive and constructive actions should not sit a
+// mis-click apart.
+.photo__remove {
+  margin-right: auto;
+  color: var(--mat-sys-error);
+}

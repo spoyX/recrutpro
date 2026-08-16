@@ -428,7 +428,7 @@ export const listInterviews = async (
       select: 'fullName jobPositionId',
       populate: { path: 'jobPositionId', select: 'title' },
     })
-    .populate('interviewerId', 'name')
+    .populate('interviewerId', 'name avatarPublicId')
     // `_id` tiebreaker (D-069) — same defect as the candidate list, and worse
     // here: `sortBy=status` has only THREE distinct values, so ties are
     // guaranteed rather than merely likely, and an unstable sort under

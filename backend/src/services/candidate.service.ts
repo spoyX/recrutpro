@@ -514,11 +514,11 @@ export const getCandidateDetail = async (
 
   await candidate.populate([
     { path: 'jobPositionId', select: 'title' },
-    { path: 'registeredBy', select: 'name' },
+    { path: 'registeredBy', select: 'name avatarPublicId' },
   ]);
 
   const interviews = await Interview.find({ candidateId: candidate._id })
-    .populate('interviewerId', 'name')
+    .populate('interviewerId', 'name avatarPublicId')
     // Newest first. FR-33's schedule sorts FORWARD because it is a queue of
     // work still to come; this is a HISTORY, where the most recent event is
     // the one being read — the same newest-first rule as D-041 and D-060.
@@ -528,7 +528,7 @@ export const getCandidateDetail = async (
   // interview — the D-041 rule about `hasResume`, applied again.
   const evaluations = await InterviewEvaluation.find({
     interviewId: { $in: interviews.map((i) => i._id) },
-  }).populate('submittedBy', 'name');
+  }).populate('submittedBy', 'name avatarPublicId');
   const byInterview = new Map(evaluations.map((e) => [String(e.interviewId), e]));
 
   // Only an ACTIVE resume counts, so an FR-22 replacement's superseded row does

@@ -92,6 +92,112 @@ export const assertResumeSignature = (buffer: Buffer, declaredMimeType: string):
   }
 };
 
+// ---------------------------------------------------------------------------
+// D-091 — profile images. Same three-gate discipline as above, different
+// constants: a smaller cap, an image allowlist, and image signatures.
+// ---------------------------------------------------------------------------
+
+/** D-091 — 2 Mo. A normalised 256px avatar has no honest reason to be larger. */
+export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+/**
+ * D-091 — JPEG, PNG and WebP.
+ *
+ * SVG IS EXCLUDED ON PURPOSE and must not be added. It is a document format
+ * that can carry `<script>`, and unlike the three above there is no magic-byte
+ * test that makes it safe to serve back — an SVG is valid XML whatever it
+ * contains. GIF is left out simply because nothing needs it.
+ */
+export const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_AVATAR_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!(ALLOWED_AVATAR_MIME_TYPES as readonly string[]).includes(file.mimetype)) {
+      cb(
+        new AppError(
+          400,
+          'UNSUPPORTED_FILE_TYPE',
+          'Seules les images JPEG, PNG et WebP sont acceptées. Choisissez une image dans un de ces formats.',
+        ),
+      );
+      return;
+    }
+    cb(null, true);
+  },
+}).single('file');
+
+const JPEG_SIGNATURE = [0xff, 0xd8, 0xff];
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const RIFF_SIGNATURE = [0x52, 0x49, 0x46, 0x46]; // "RIFF"
+
+/**
+ * D-007 applied to images — the content decides, never the extension.
+ *
+ * WebP needs two checks, not one: the container is RIFF, which is also AVI and
+ * WAV, so the four bytes at offset 8 must spell "WEBP". Checking "RIFF" alone
+ * would accept an audio file declared as an image.
+ */
+export const assertImageSignature = (buffer: Buffer, declaredMimeType: string): void => {
+  const rejected = (): never => {
+    throw new AppError(
+      400,
+      'INVALID_FILE_CONTENT',
+      "Le contenu du fichier ne correspond pas à une image JPEG, PNG ou WebP valide. " +
+        'Vérifiez que le fichier n’est pas corrompu et que son extension n’a pas été modifiée.',
+    );
+  };
+
+  if (buffer.length === 0) {
+    throw new AppError(400, 'EMPTY_FILE', 'Le fichier est vide. Sélectionnez une image.');
+  }
+
+  if (declaredMimeType === 'image/jpeg') {
+    if (!startsWith(buffer, JPEG_SIGNATURE)) {
+      rejected();
+    }
+    return;
+  }
+
+  if (declaredMimeType === 'image/png') {
+    if (!startsWith(buffer, PNG_SIGNATURE)) {
+      rejected();
+    }
+    return;
+  }
+
+  // WebP
+  if (!startsWith(buffer, RIFF_SIGNATURE) || buffer.toString('latin1', 8, 12) !== 'WEBP') {
+    rejected();
+  }
+};
+
+/** Same error translation as `uploadResume`, with the avatar's own limit. */
+export const uploadAvatar: RequestHandler = (req, res, next) => {
+  avatarUpload(req, res, (error: unknown) => {
+    if (error instanceof MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        next(
+          new AppError(
+            400,
+            'FILE_TOO_LARGE',
+            "L'image dépasse la taille maximale de 2 Mo. Choisissez une image plus légère.",
+          ),
+        );
+        return;
+      }
+      next(new AppError(400, 'INVALID_UPLOAD', `Téléversement invalide : ${error.message}.`));
+      return;
+    }
+    if (error) {
+      next(error);
+      return;
+    }
+    next();
+  });
+};
+
 /**
  * Wraps multer so its own errors become the Section 9 {error:{code,message}}
  * shape instead of multer's, and so an oversized upload is reported as such.

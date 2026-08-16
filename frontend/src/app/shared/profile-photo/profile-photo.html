@@ -1,0 +1,81 @@
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="profile-photo-title">
+  <div class="modal__panel">
+    <h2 id="profile-photo-title" class="modal__title">Photo de profil</h2>
+
+    <p class="modal__body">
+      Votre photo apparaît dans l'en-tête, sur la liste des entretiens et partout
+      où votre nom est affiché à vos collègues.
+    </p>
+
+    <!-- What is there now, or what has just been chosen. Showing the preview in
+         the same circle the application uses means the crop is not a surprise. -->
+    <div class="photo__preview">
+      <app-user-avatar
+        [name]="user()?.name"
+        [src]="previewUrl() ?? user()?.avatarUrl"
+        [large]="true"
+      />
+      <p class="photo__caption label-sm">
+        @if (previewUrl()) {
+          Aperçu — non enregistré
+        } @else if (hasPhoto()) {
+          Photo actuelle
+        } @else {
+          Vos initiales, faute de photo
+        }
+      </p>
+    </div>
+
+    <div class="modal__field">
+      <label class="modal__label label-sm" for="profile-photo-file">
+        Image — JPEG, PNG ou WebP, 2 Mo maximum
+      </label>
+      <input
+        id="profile-photo-file"
+        class="modal__input"
+        type="file"
+        [accept]="accept"
+        [disabled]="busy()"
+        (change)="chooseFile($any($event.target).files)"
+      />
+      <!--
+        D-007/D-091: `accept` is a picker convenience, NOT a check. The real
+        gate is the server's magic-byte signature test, which no browser API
+        performs — so nothing here inspects the CONTENT and the server's
+        refusal is what the reader sees. The SIZE is checked locally, since a
+        length can be measured honestly and it saves uploading a doomed file.
+      -->
+    </div>
+
+    @if (hasPhoto()) {
+      <p class="photo__note">
+        <mat-icon aria-hidden="true">info</mat-icon>
+        <span>
+          Remplacer ou retirer votre photo supprime définitivement l'image
+          précédente. Vos initiales reprennent sa place.
+        </span>
+      </p>
+    }
+
+    @if (busy()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Enregistrement en cours" />
+    }
+
+    @if (errorMessage(); as message) {
+      <p class="modal__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="modal__actions">
+      @if (hasPhoto()) {
+        <button matButton type="button" class="photo__remove" [disabled]="busy()" (click)="remove()">
+          <mat-icon>delete</mat-icon>
+          Retirer
+        </button>
+      }
+      <button matButton type="button" [disabled]="busy()" (click)="cancel()">Annuler</button>
+      <button matButton="filled" type="button" [disabled]="!canSubmit()" (click)="submit()">
+        Enregistrer
+      </button>
+    </div>
+  </div>
+</div>

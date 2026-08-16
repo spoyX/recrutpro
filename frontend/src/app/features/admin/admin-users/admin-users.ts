@@ -10,6 +10,7 @@ import { UserForm } from '../user-form/user-form';
 import { ResetPassword } from '../reset-password/reset-password';
 import { DepartmentForm } from '../department-form/department-form';
 import { AppShell } from '../../../shared/app-shell/app-shell';
+import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 
 /**
  * FR-6 to FR-13 — the administration screen: accounts and departments.
@@ -37,6 +38,7 @@ import { AppShell } from '../../../shared/app-shell/app-shell';
     MatIconModule,
     MatProgressBarModule,
     AppShell,
+    UserAvatar,
     UserForm,
     ResetPassword,
     DepartmentForm,

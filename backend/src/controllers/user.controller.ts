@@ -9,7 +9,8 @@ import {
   getUserById,
   MIN_PASSWORD_LENGTH,
 } from '../services/user.service';
-import { toAdminUser, toInterviewerOption } from '../views/user.view';
+import { toAdminUser, toInterviewerOption, toPublicUser } from '../views/user.view';
+import { setAvatar, removeAvatar, downloadAvatar } from '../services/avatar.service';
 import { Role } from '../common/constants';
 import { AppError } from '../common/errors';
 
@@ -190,6 +191,60 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
       message:
         "Communiquez ce mot de passe temporaire à l'utilisateur. Il ne sera plus affiché et devra être changé à la prochaine connexion.",
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// D-091 — profile images (Phase 4.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/v1/users/me/avatar
+ *
+ * `me`, never `:id`. The target is `req.currentUser`, the session user
+ * requireAuth reloads on every request (D-027) — there is no id in the path to
+ * validate, and therefore no self-check to forget.
+ */
+export const setMyAvatar: RequestHandler = async (req, res, next) => {
+  try {
+    const user = await setAvatar(req.currentUser!, req.file);
+    res.status(200).json(toPublicUser(user));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** DELETE /api/v1/users/me/avatar — restores the initials fallback. */
+export const deleteMyAvatar: RequestHandler = async (req, res, next) => {
+  try {
+    const user = await removeAvatar(req.currentUser!);
+    res.status(200).json(toPublicUser(user));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/users/:id/avatar — D-040's proxy, applied to a photo.
+ *
+ * The bytes are streamed from Cloudinary by the backend; no storage URL is
+ * ever sent to a client, so a photo cannot be reached without passing
+ * requireAuth first.
+ *
+ * `Cache-Control: private` is load-bearing rather than an optimisation: an
+ * avatar can appear twenty times on one list page, and without it every render
+ * would re-proxy every face. `private` keeps it out of any shared cache, since
+ * these bytes are only served to authenticated callers.
+ */
+export const getAvatar: RequestHandler = async (req, res, next) => {
+  try {
+    const { buffer, contentType } = await downloadAvatar(String(req.params.id));
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buffer);
   } catch (error) {
     next(error);
   }

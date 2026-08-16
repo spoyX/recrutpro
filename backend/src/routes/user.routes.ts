@@ -7,8 +7,12 @@ import {
   resetPassword,
   list,
   getOne,
+  setMyAvatar,
+  deleteMyAvatar,
+  getAvatar,
 } from '../controllers/user.controller';
 import { requireAuth, requireRole } from '../middleware/rbac.middleware';
+import { uploadAvatar } from '../middleware/upload.middleware';
 import { Role } from '../common/constants';
 
 const router = Router();
@@ -49,6 +53,67 @@ const router = Router();
 // user.service.ts, not here: it is an authorisation rule, and rule 1 wants
 // those where the data is read.
 router.get('/', requireAuth, requireRole(Role.Administrateur, Role.Recruteur), list);
+
+/**
+ * @openapi
+ * /users/me/avatar:
+ *   post:
+ *     summary: Définit la photo de profil du compte connecté (D-091)
+ *     description: >
+ *       Image JPEG, PNG ou WebP, 2 Mo maximum. Le contenu est validé par ses
+ *       octets de signature (D-007), jamais par son extension. Remplacer une
+ *       photo détruit la précédente.
+ *     tags: [Users]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file: { type: string, format: binary }
+ *     responses:
+ *       200: { description: Le compte mis à jour. }
+ *       400: { description: Fichier absent, trop lourd, ou contenu invalide., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       503: { description: Stockage non configuré., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *   delete:
+ *     summary: Retire la photo de profil du compte connecté (D-091)
+ *     tags: [Users]
+ *     responses:
+ *       200: { description: Le compte mis à jour. }
+ */
+/**
+ * @openapi
+ * /users/{id}/avatar:
+ *   get:
+ *     summary: La photo de profil d'un utilisateur (D-091)
+ *     description: >
+ *       Les octets sont relayés par le backend (D-040) : aucune URL de stockage
+ *       n'est jamais transmise au client. Ouvert à tout utilisateur authentifié.
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: L'image. }
+ *       404: { description: Compte inconnu, ou aucune photo., content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+// D-091 — mounted BEFORE the Administrateur guard below, because none of the
+// three is administration: a user manages their OWN photo, and any
+// authenticated colleague may see one.
+//
+// `me` BEFORE `:id` is not cosmetic — Express matches in order, so with the
+// parameterised route first, `/users/me/avatar` would bind `id = 'me'` and 404
+// against a lookup for a user whose id is the literal string "me".
+//
+// The two writes take NO id at all. That is the point (FR-18 / D-066's "the
+// route not existing IS the guarantee"): `POST /users/:id/avatar` would need a
+// check that `:id` is the caller, and a check can be forgotten, whereas a route
+// with nowhere to put someone else's id cannot target them at any cost.
+router.post('/me/avatar', requireAuth, uploadAvatar, setMyAvatar);
+router.delete('/me/avatar', requireAuth, deleteMyAvatar);
+router.get('/:id/avatar', requireAuth, getAvatar);
 
 // Everything else is Administrateur-only (FR-6 to FR-12). Applied to the whole
 // router rather than per route, so rule 1 ("no unprotected routes, no

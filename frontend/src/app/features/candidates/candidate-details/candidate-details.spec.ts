@@ -23,7 +23,7 @@ describe('CandidateDetails (D-067)', () => {
     phone: '0612345678',
     jobPosition: { id: 'p1', title: 'Développeur backend' },
     currentStage: 'Accepté',
-    registeredBy: { id: 'u1', name: 'Marie' },
+    registeredBy: { id: 'u1', name: 'Marie', avatarUrl: null },
     registeredAt: '2026-08-01T09:00:00.000Z',
     decidedAt: '2026-08-11T17:30:00.000Z',
     rejectionReason: null,
@@ -34,20 +34,20 @@ describe('CandidateDetails (D-067)', () => {
         id: 'i2',
         scheduledAt: '2026-08-10T14:00:00.000Z',
         status: 'Réalisé',
-        interviewer: { id: 'u2', name: 'Pierre' },
+        interviewer: { id: 'u2', name: 'Pierre', avatarUrl: null },
         cancellationReason: null,
         evaluation: {
           id: 'e1',
           scores: { technicalSkills: 4, communication: 5, overallFit: 4 },
           comments: 'Très bonne maîtrise technique.',
-          submittedBy: { id: 'u2', name: 'Pierre' },
+          submittedBy: { id: 'u2', name: 'Pierre', avatarUrl: null },
         },
       },
       {
         id: 'i1',
         scheduledAt: '2026-08-05T09:00:00.000Z',
         status: 'Annulé',
-        interviewer: { id: 'u2', name: 'Pierre' },
+        interviewer: { id: 'u2', name: 'Pierre', avatarUrl: null },
         cancellationReason: 'Candidat indisponible.',
         evaluation: null,
       },
@@ -244,6 +244,7 @@ describe('CandidateDetails (D-067)', () => {
         role: role as 'Recruteur',
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 
@@ -329,6 +330,7 @@ describe('CandidateDetails (D-067)', () => {
         role: role as 'Recruteur',
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 
@@ -458,6 +460,7 @@ describe('CandidateDetails (D-067)', () => {
         role: role as 'ResponsableHierarchique',
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 
@@ -559,8 +562,12 @@ describe('CandidateDetails (D-067)', () => {
     it('4.1: the header carries initials, the stage chip and the contact facts', () => {
       load();
 
-      const avatar = fixture.nativeElement.querySelector('.head__avatar') as HTMLElement;
+      // D-091: the circle is `app-user-avatar` now. A candidate has no
+      // account, so it renders initials and NEVER an image — asserted here so
+      // that wiring a photo into this header would fail loudly.
+      const avatar = fixture.nativeElement.querySelector('app-user-avatar') as HTMLElement;
       expect(avatar.textContent!.trim()).toBe('JM');
+      expect(avatar.querySelector('img')).toBeNull();
 
       // The chip sits INSIDE the identity block now, beside the name.
       const line = fixture.nativeElement.querySelector('.head__line') as HTMLElement;
@@ -586,7 +593,7 @@ describe('CandidateDetails (D-067)', () => {
             id: 'i-late',
             scheduledAt: future(9),
             status: 'Planifié',
-            interviewer: { id: 'r1', name: 'Pierre Tard' },
+            interviewer: { id: 'r1', name: 'Pierre Tard', avatarUrl: null },
             cancellationReason: null,
             evaluation: null,
           },
@@ -594,7 +601,7 @@ describe('CandidateDetails (D-067)', () => {
             id: 'i-soon',
             scheduledAt: future(2),
             status: 'Planifié',
-            interviewer: { id: 'r2', name: 'Sofia Proche' },
+            interviewer: { id: 'r2', name: 'Sofia Proche', avatarUrl: null },
             cancellationReason: null,
             evaluation: null,
           },
@@ -615,7 +622,7 @@ describe('CandidateDetails (D-067)', () => {
             id: 'i-past',
             scheduledAt: past(3),
             status: 'Planifié',
-            interviewer: { id: 'r1', name: 'Passé' },
+            interviewer: { id: 'r1', name: 'Passé', avatarUrl: null },
             cancellationReason: null,
             evaluation: null,
           },
@@ -623,7 +630,7 @@ describe('CandidateDetails (D-067)', () => {
             id: 'i-cancelled',
             scheduledAt: future(4),
             status: 'Annulé',
-            interviewer: { id: 'r2', name: 'Annulé' },
+            interviewer: { id: 'r2', name: 'Annulé', avatarUrl: null },
             cancellationReason: 'Indisponible',
             evaluation: null,
           },
@@ -732,6 +739,7 @@ describe('CandidateDetails (D-067)', () => {
         role: role as 'Recruteur',
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 

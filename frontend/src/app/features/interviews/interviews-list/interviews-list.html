@@ -137,7 +137,13 @@
                   </span>
                 </span>
 
+                <!-- D-091: a schedule is scanned for WHO, so this is one of
+                     the five sites the survey chose. -->
                 <span class="rows__interviewer">
+                  <app-user-avatar
+                    [name]="interview.interviewer?.name"
+                    [src]="interview.interviewer?.avatarUrl"
+                  />
                   {{ interview.interviewer?.name ?? 'Responsable inconnu' }}
                 </span>
 

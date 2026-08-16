@@ -169,6 +169,12 @@
   background-color: var(--mat-sys-surface-container-low);
 }
 
+.row__person {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
 .row__self,
 .row__note {
   color: var(--mat-sys-on-surface-variant);

@@ -1,9 +1,11 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/auth.service';
 import { NotificationPanel } from '../notification-panel/notification-panel';
+import { UserAvatar } from '../user-avatar/user-avatar';
+import { ProfilePhoto } from '../profile-photo/profile-photo';
 
 /**
  * The application chrome: DESIGN.md's 280px fixed sidebar plus the topbar,
@@ -95,7 +97,15 @@ interface ResolvedNavItem {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, MatButtonModule, MatIconModule, NotificationPanel],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    MatButtonModule,
+    MatIconModule,
+    NotificationPanel,
+    UserAvatar,
+    ProfilePhoto,
+  ],
   template: `
     <div class="shell">
       <nav class="sidebar" aria-label="Navigation principale">
@@ -147,6 +157,22 @@ interface ResolvedNavItem {
               guarded, because an anonymous visitor legitimately has no user.
             -->
             @if (auth.currentUser(); as user) {
+              <!-- D-091: the topbar is the canonical "this is you", so it is
+                   also where you change the photo. The AVATAR is the button,
+                   not the whole identity block — the name and role are
+                   information, and making them clickable would imply they lead
+                   somewhere. D-089 rejected restructuring this block; nothing
+                   moves here, a control is added inside it. -->
+              <button
+                type="button"
+                class="topbar__photo"
+                [attr.aria-label]="
+                  user.avatarUrl ? 'Modifier votre photo de profil' : 'Ajouter une photo de profil'
+                "
+                (click)="photoOpen.set(true)"
+              >
+                <app-user-avatar [name]="user.name" [src]="user.avatarUrl" />
+              </button>
               <span class="topbar__identity">
                 <span class="topbar__name">{{ user.name }}</span>
                 <span class="topbar__role label-sm">{{ user.role }}</span>
@@ -185,6 +211,10 @@ interface ResolvedNavItem {
         </main>
       </div>
     </div>
+
+    @if (photoOpen()) {
+      <app-profile-photo (dismissed)="photoOpen.set(false)" />
+    }
   `,
   styles: `
     .shell {
@@ -352,6 +382,20 @@ interface ResolvedNavItem {
       gap: var(--sp-md);
     }
 
+    .topbar__photo {
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+      border-radius: 50%;
+      display: inline-flex;
+
+      &:focus-visible {
+        outline: 2px solid var(--recrutpro-focus);
+        outline-offset: 2px;
+      }
+    }
+
     .topbar__identity {
       display: flex;
       flex-direction: column;
@@ -412,6 +456,9 @@ interface ResolvedNavItem {
   `,
 })
 export class AppShell {
+  /** D-091 — the profile-photo dialog, opened from the topbar avatar. */
+  protected readonly photoOpen = signal(false);
+
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 

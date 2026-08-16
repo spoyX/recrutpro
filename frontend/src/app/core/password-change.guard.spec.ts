@@ -29,6 +29,7 @@ describe('passwordChangeGuard (FR-10)', () => {
       role: 'Recruteur',
       departmentId: 'd1',
       mustChangePassword,
+      avatarUrl: null,
     } satisfies AuthenticatedUser);
   };
 

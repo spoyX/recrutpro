@@ -100,6 +100,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         role,
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 
@@ -228,6 +229,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         role,
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
     };
 
@@ -270,6 +272,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         role: 'Recruteur',
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
       create();
 
@@ -295,6 +298,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         role: 'Recruteur',
         departmentId: 'd1',
         mustChangePassword: false,
+        avatarUrl: null,
       });
       create();
 

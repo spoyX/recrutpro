@@ -53,9 +53,15 @@
             <ul class="rows">
               @for (candidate of dashboard.recentCandidates; track candidate.id) {
                 <li class="rows__row">
-                  <!-- 2.3: initials, derived from the name. Phase 4.3's real
-                       avatars will fall back to exactly this. -->
-                  <span class="avatar" aria-hidden="true">{{ initials(candidate.fullName) }}</span>
+                  <!-- 2.3: initials, derived from the name.
+                       D-091: a CANDIDATE has no account and therefore no
+                       profile photo — `src` is omitted permanently, not
+                       pending. Initials are the finished design here. The
+                       comment this replaces said Phase 4.3's avatars would
+                       "fall back to exactly this", which read as though an
+                       image was coming for candidates too. It is not: avatars
+                       belong to User, and the two are separate by entity. -->
+                  <app-user-avatar [name]="candidate.fullName" />
                   <!-- The natural next click: straight into the candidate's file (D-067). -->
                   <a class="rows__primary rows__link" [routerLink]="['/candidates', candidate.id]">
                     {{ candidate.fullName }}
@@ -130,7 +136,8 @@
             <ul class="rows">
               @for (candidate of dashboard.candidatesAwaitingDecision; track candidate.id) {
                 <li class="rows__row">
-                  <span class="avatar" aria-hidden="true">{{ initials(candidate.fullName) }}</span>
+                  <!-- D-091: a candidate, so initials permanently. -->
+                  <app-user-avatar [name]="candidate.fullName" />
                   <a class="rows__primary rows__link" [routerLink]="['/candidates', candidate.id]">
                     {{ candidate.fullName }}
                   </a>
@@ -165,9 +172,9 @@
                   </span>
                   <!-- 3.6: initials. The time RANGE the mockup shows is not
                        stored — Interview has scheduledAt and no duration. -->
-                  <span class="avatar" aria-hidden="true">
-                    {{ initials(interview.candidate?.fullName) }}
-                  </span>
+                  <!-- D-091: the CANDIDATE being met, not the interviewer —
+                       so initials permanently, for the reason above. -->
+                  <app-user-avatar [name]="interview.candidate?.fullName" />
                   <span class="rows__primary">
                     {{ interview.candidate?.fullName ?? 'Candidat inconnu' }}
                   </span>

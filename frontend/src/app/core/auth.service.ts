@@ -11,6 +11,12 @@ export interface AuthenticatedUser {
   role: 'Administrateur' | 'Recruteur' | 'ResponsableHierarchique';
   departmentId: string | null;
   mustChangePassword: boolean;
+  /**
+   * D-091 — this API's own proxy path (`/api/v1/users/:id/avatar`), or null
+   * when the account has no photo. NEVER a Cloudinary URL: storage URLs stay
+   * server-side, exactly as for a CV.
+   */
+  avatarUrl: string | null;
 }
 
 /** ARCHITECTURE.md Section 9 fixes one error shape for the whole API. */
@@ -105,5 +111,43 @@ export class AuthService {
           }
         }),
       );
+  }
+
+  // -------------------------------------------------------------------------
+  // D-091 — the profile image
+  // -------------------------------------------------------------------------
+
+  /** JPEG, PNG and WebP. Picker convenience only — the server decides. */
+  readonly avatarAccept = 'image/jpeg,image/png,image/webp';
+  readonly avatarMaxBytes = 2 * 1024 * 1024;
+
+  /**
+   * D-091 — set the signed-in user's own photo.
+   *
+   * `/users/me/avatar`, with no id anywhere: the target is the session user,
+   * so this client cannot address anyone else even if it tried.
+   *
+   * The response is the updated account, and `currentUser` is replaced from
+   * THE SERVER'S answer rather than patched with an assumption about what the
+   * upload produced — the same rule the admin screens follow.
+   */
+  uploadAvatar(file: File): Observable<AuthenticatedUser> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+
+    return this.http
+      .post<AuthenticatedUser>(`${environment.apiUrl}/users/me/avatar`, body, {
+        withCredentials: true,
+      })
+      .pipe(tap((user) => this.currentUser.set(user)));
+  }
+
+  /** D-091 — remove it, restoring the initials. */
+  removeAvatar(): Observable<AuthenticatedUser> {
+    return this.http
+      .delete<AuthenticatedUser>(`${environment.apiUrl}/users/me/avatar`, {
+        withCredentials: true,
+      })
+      .pipe(tap((user) => this.currentUser.set(user)));
   }
 }

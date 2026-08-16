@@ -34,6 +34,7 @@ describe('UserForm (FR-6, FR-7)', () => {
     departmentId: 'd1',
     isActive: true,
     mustChangePassword: false,
+    avatarUrl: null,
   };
 
   const open = (user: AdminUser | null = null, departments = DEPTS): void => {

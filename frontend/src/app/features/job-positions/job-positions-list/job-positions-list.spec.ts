@@ -47,6 +47,7 @@ describe('JobPositionsList (FR-14 to FR-17)', () => {
       role,
       departmentId: 'd1',
       mustChangePassword: false,
+      avatarUrl: null,
     });
   };
 

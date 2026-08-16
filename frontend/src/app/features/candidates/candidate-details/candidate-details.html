@@ -16,8 +16,11 @@
       <div class="head__identity">
         <!-- 4.1: initials, the stage chip beside the name, and the contact
              details inline under it. Everything here was already in the
-             payload; only the arrangement changed. -->
-        <span class="head__avatar" aria-hidden="true">{{ initials(candidate.fullName) }}</span>
+             payload; only the arrangement changed.
+             D-091: `src` is null and PERMANENTLY so — a candidate has no
+             account and therefore no profile photo. These initials are the
+             finished design here, not a placeholder waiting for an image. -->
+        <app-user-avatar [name]="candidate.fullName" [large]="true" />
         <div class="head__text">
           <div class="head__line">
             <h1 class="page__title">{{ candidate.fullName }}</h1>
@@ -95,8 +98,14 @@
           Prochain entretien
         </h2>
         <p class="next__when">{{ next.scheduledAt | date: 'EEEE d MMMM, HH:mm' }}</p>
+        <!-- D-091: one of the five sites the survey chose. One person, made
+             prominent, answering "who am I meeting". -->
         <p class="next__who">
-          Avec {{ next.interviewer?.name ?? 'un responsable non identifié' }}
+          <app-user-avatar
+            [name]="next.interviewer?.name"
+            [src]="next.interviewer?.avatarUrl"
+          />
+          <span>Avec {{ next.interviewer?.name ?? 'un responsable non identifié' }}</span>
         </p>
       </section>
     }
@@ -117,6 +126,10 @@
                     </span>
                     <span class="interview__status label-sm">{{ interview.status }}</span>
                     <span class="interview__who">
+                      <app-user-avatar
+                        [name]="interview.interviewer?.name"
+                        [src]="interview.interviewer?.avatarUrl"
+                      />
                       {{ interview.interviewer?.name ?? 'Responsable inconnu' }}
                     </span>
                   </div>
@@ -133,6 +146,10 @@
                   @if (interview.evaluation; as evaluation) {
                     <div class="evaluation">
                       <h3 class="evaluation__title label-sm">
+                        <app-user-avatar
+                          [name]="evaluation.submittedBy?.name"
+                          [src]="evaluation.submittedBy?.avatarUrl"
+                        />
                         Évaluation — {{ evaluation.submittedBy?.name ?? 'Auteur inconnu' }}
                       </h3>
 

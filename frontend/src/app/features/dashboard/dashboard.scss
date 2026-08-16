@@ -129,20 +129,9 @@
   }
 }
 
-// 2.3 / 3.6 — initials, derived from the name and never stored. Phase 4.3's
-// real avatars will fall back to exactly this, so the shape is already final.
-.avatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  background-color: var(--mat-sys-secondary-fixed);
-  color: var(--mat-sys-on-secondary-fixed-variant);
-  font: var(--mat-sys-label-large);
-  letter-spacing: 0.02em;
-}
+// D-091: the avatar circle moved into `app-user-avatar`, which owns its own
+// styles. Nothing here renders one any more — the dashboard only ever shows
+// CANDIDATES, who have no photo, and the shared component draws their initials.
 
 // 2.9 — the relative day chip on an interview row.
 .daychip {

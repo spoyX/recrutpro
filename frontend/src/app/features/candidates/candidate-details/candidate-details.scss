@@ -109,6 +109,9 @@
 }
 
 .interview__who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
   font: var(--mat-sys-body-small);
   color: var(--text-slate);
   margin-left: auto;
@@ -138,6 +141,9 @@
 }
 
 .evaluation__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
   color: var(--mat-sys-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: var(--recrutpro-tracking-label-sm);
@@ -287,17 +293,6 @@
   min-width: 0;
 }
 
-.head__avatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-full);
-  background-color: var(--mat-sys-secondary-fixed);
-  color: var(--mat-sys-on-secondary-fixed-variant);
-  font: var(--mat-sys-title-large);
-}
 
 .head__text {
   min-width: 0;
@@ -369,6 +364,9 @@
 }
 
 .next__who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
   font: var(--mat-sys-body-small);
   margin: var(--sp-xs) 0 0;
   opacity: 0.9;

@@ -99,11 +99,18 @@
           <tbody>
             @for (user of users(); track user.id) {
               <tr [class.row--inactive]="!user.isActive">
+                <!-- D-091: an account directory is the one screen that is
+                     ABOUT the people, so the photo belongs here. -->
                 <td>
-                  {{ user.name }}
-                  @if (isSelf(user)) {
-                    <span class="row__self label-sm">vous</span>
-                  }
+                  <span class="row__person">
+                    <app-user-avatar [name]="user.name" [src]="user.avatarUrl" />
+                    <span>
+                      {{ user.name }}
+                      @if (isSelf(user)) {
+                        <span class="row__self label-sm">vous</span>
+                      }
+                    </span>
+                  </span>
                 </td>
                 <td class="table__meta">{{ user.email }}</td>
                 <!-- 5.1: a badge, reusing `.pill` from D-085 so a role is

@@ -84,6 +84,9 @@ describe('POST /auth/login — FR-1, FR-2, FR-3', () => {
       role: Role.Recruteur,
       departmentId: '507f1f77bcf86cd799439012',
       mustChangePassword: false,
+      // D-091: null because this fixture has no photo. The field is asserted
+      // rather than allowed through, so the shape stays pinned exactly.
+      avatarUrl: null,
     });
   });
 
@@ -353,7 +356,22 @@ describe('GET /auth/me — session rehydration (D-070, closes D-065)', () => {
       role: user.role,
       departmentId: String(user.departmentId),
       mustChangePassword: false,
+      avatarUrl: null,
     });
+  });
+
+  it('D-091: avatarUrl is the proxy path, never the Cloudinary URL', async () => {
+    // What comes back must be the proxy route, derived from the handle. The
+    // stored Cloudinary URL was DROPPED after a live check found it publicly
+    // readable, so there is no longer a storage URL on the document at all —
+    // which is why this asserts against the whole body, not just the field.
+    const user = { ...makeUser(), avatarPublicId: 'recrutpro/avatars/x' };
+    const cookie = await signIn(user);
+
+    const res = await me(cookie);
+
+    expect(res.body.avatarUrl).toBe(`/api/v1/users/${String(user._id)}/avatar`);
+    expect(JSON.stringify(res.body)).not.toContain('cloudinary.com');
   });
 
   it('rule 3: never returns the password hash', async () => {

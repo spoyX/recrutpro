@@ -1,4 +1,5 @@
 import { IInterview } from '../models/Interview.model';
+import { NamedUserRef, avatarPathFor, hasAvatar } from './user.view';
 import { InterviewStatus } from '../common/constants';
 
 /** The "V" of MVC (D-003): the JSON shape an Interview takes on the way out. */
@@ -25,7 +26,7 @@ export interface InterviewListItem {
    */
   candidate: { id: string; fullName: string; hasResume: boolean; resumeUrl: string } | null;
   jobPosition: { id: string; title: string } | null;
-  interviewer: { id: string; name: string } | null;
+  interviewer: NamedUserRef | null;
   cancellationReason: string | null;
 }
 
@@ -34,7 +35,7 @@ type PopulatedInterview = Omit<IInterview, 'candidateId' | 'interviewerId'> & {
   candidateId:
     | { _id: unknown; fullName: string; jobPositionId?: { _id: unknown; title: string } | null }
     | null;
-  interviewerId: { _id: unknown; name: string } | null;
+  interviewerId: { _id: unknown; name: string; avatarPublicId?: unknown } | null;
 };
 
 export const toInterviewListItem = (
@@ -59,7 +60,16 @@ export const toInterviewListItem = (
       : null,
     jobPosition: position ? { id: String(position._id), title: position.title } : null,
     interviewer: interview.interviewerId
-      ? { id: String(interview.interviewerId._id), name: interview.interviewerId.name }
+      ? {
+          id: String(interview.interviewerId._id),
+          name: interview.interviewerId.name,
+          // D-091 — the interviewer is one of the five sites the survey chose:
+          // a schedule is scanned for WHO, and a face is the fastest index.
+          avatarUrl: avatarPathFor(
+            String(interview.interviewerId._id),
+            hasAvatar(interview.interviewerId),
+          ),
+        }
       : null,
     cancellationReason: interview.cancellationReason ?? null,
   };

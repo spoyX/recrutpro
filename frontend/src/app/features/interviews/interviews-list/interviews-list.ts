@@ -15,6 +15,7 @@ import {
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { EvaluationForm } from '../evaluation-form/evaluation-form';
+import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 
 /** One day's interviews, so the list reads as a schedule rather than a table. */
 export interface InterviewDay {
@@ -61,6 +62,7 @@ export interface InterviewDay {
     MatIconModule,
     MatProgressBarModule,
     AppShell,
+    UserAvatar,
     StageChip,
     EvaluationForm,
   ],

@@ -43,4 +43,30 @@ export const RESUME_UPLOAD_OPTIONS = {
   type: 'authenticated',
 } as const;
 
+/**
+ * D-091 — profile images. Same `authenticated` delivery as a resume, so no
+ * publicly readable URL exists and the FR-23-style proxy is the only way in.
+ *
+ * THREE DELIBERATE DIFFERENCES from RESUME_UPLOAD_OPTIONS above:
+ *
+ *  - `resource_type: 'image'`, not `'raw'`. A resume is `raw` precisely so it
+ *    comes back byte for byte with no processing. Here the opposite is wanted.
+ *  - An eager transformation normalises the upload to a 256px square. A 2MB
+ *    phone photo is otherwise re-served at full size into a 32px circle.
+ *    `gravity: 'face'` keeps the head in frame when the crop is not centred.
+ *  - `format: 'jpg'`, so whatever came in (JPEG, PNG or WebP) leaves as one
+ *    known type. The proxy can then declare a single Content-Type instead of
+ *    tracking what each user happened to upload.
+ */
+export const AVATAR_UPLOAD_OPTIONS = {
+  folder: 'recrutpro/avatars',
+  resource_type: 'image',
+  type: 'authenticated',
+  format: 'jpg',
+  transformation: [{ width: 256, height: 256, crop: 'fill', gravity: 'face' }],
+} as const;
+
+/** What `AVATAR_UPLOAD_OPTIONS.format` guarantees every stored avatar is. */
+export const AVATAR_CONTENT_TYPE = 'image/jpeg';
+
 export { cloudinary };

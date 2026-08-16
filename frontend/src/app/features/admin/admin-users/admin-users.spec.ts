@@ -30,6 +30,7 @@ describe('AdminUsers (FR-6 to FR-13)', () => {
     departmentId: 'd1',
     isActive: true,
     mustChangePassword: false,
+    avatarUrl: null,
     ...over,
   });
 
@@ -46,6 +47,7 @@ describe('AdminUsers (FR-6 to FR-13)', () => {
       role: 'Administrateur',
       departmentId: null,
       mustChangePassword: false,
+      avatarUrl: null,
     });
   };
 

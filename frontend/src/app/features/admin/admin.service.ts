@@ -21,6 +21,12 @@ export interface AdminUser {
   isActive: boolean;
   /** FR-10 — the account is sitting on an administrator-issued credential. */
   mustChangePassword: boolean;
+  /**
+   * D-091 — this API's own proxy path (`/api/v1/users/:id/avatar`), or null
+   * when the account has no photo. NEVER a Cloudinary URL: storage URLs stay
+   * server-side, exactly as for a CV.
+   */
+  avatarUrl: string | null;
 }
 
 export interface Department {

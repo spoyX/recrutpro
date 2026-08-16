@@ -1,4 +1,5 @@
 import { ICandidate } from '../models/Candidate.model';
+import { NamedUserRef, avatarPathFor, hasAvatar } from './user.view';
 import { IInterview } from '../models/Interview.model';
 import { IInterviewEvaluation } from '../models/InterviewEvaluation.model';
 import { CandidateStage, InterviewStatus } from '../common/constants';
@@ -87,7 +88,7 @@ export interface CandidateDetail {
   phone: string | null;
   jobPosition: { id: string; title: string } | null;
   currentStage: CandidateStage;
-  registeredBy: { id: string; name: string } | null;
+  registeredBy: NamedUserRef | null;
   registeredAt: string;
   decidedAt: string | null;
   rejectionReason: string | null;
@@ -101,7 +102,7 @@ export interface CandidateDetailInterview {
   id: string;
   scheduledAt: string;
   status: InterviewStatus;
-  interviewer: { id: string; name: string } | null;
+  interviewer: NamedUserRef | null;
   cancellationReason: string | null;
   evaluation: CandidateDetailEvaluation | null;
 }
@@ -110,18 +111,27 @@ export interface CandidateDetailEvaluation {
   id: string;
   scores: { technicalSkills: number; communication: number; overallFit: number };
   comments: string | null;
-  submittedBy: { id: string; name: string } | null;
+  submittedBy: NamedUserRef | null;
 }
 
 /** A ref that may or may not have been populated into a `{_id, name}` object. */
-type MaybePopulatedUser = { _id: unknown; name: string } | null | undefined;
+type MaybePopulatedUser =
+  { _id: unknown; name: string; avatarPublicId?: unknown } | null | undefined;
 
-const toNamedRef = (ref: MaybePopulatedUser): { id: string; name: string } | null =>
+const toNamedRef = (ref: MaybePopulatedUser): NamedUserRef | null =>
   // A ref that was never populated arrives as a bare ObjectId with no `name`.
   // Returning null beats emitting `{id, name: undefined}`, which would render
   // as an empty label the reader cannot distinguish from a person with no name.
   ref && typeof ref === 'object' && 'name' in ref && typeof ref.name === 'string'
-    ? { id: String(ref._id), name: ref.name }
+    ? {
+        id: String(ref._id),
+        name: ref.name,
+        // D-091. `avatarPublicId` is present only where the populate
+        // projection asked for it; where it was not, `hasAvatar` is false and
+        // the client falls back to initials. That is the right failure
+        // direction — a missing projection costs a photo, never a broken page.
+        avatarUrl: avatarPathFor(String(ref._id), hasAvatar(ref)),
+      }
     : null;
 
 export interface CandidateDetailSource {
