@@ -562,10 +562,46 @@ const phoneFor = (index: number): string => {
 };
 
 /**
- * A generated password: 96 bits from the CSPRNG, URL-safe so it survives a
- * copy-paste out of a terminal. Never persisted in clear — only its hash is.
+ * The password every seeded account gets, read from `--password <value>`.
+ *
+ * WHY A FLAG AND NOT A CONSTANT. A memorable shared password is genuinely
+ * convenient for a live demo — one credential to type instead of thirteen —
+ * and against a scratch database on loopback it costs nothing. But writing it
+ * into THIS FILE would put a plaintext credential in git, which is exactly what
+ * D-089 settled against: a committed password outlives every later rotation and
+ * is read by everyone who reads the repo. Passing it at run time gives the same
+ * convenience and leaves nothing behind.
+ *
+ * MIN_PASSWORD_LENGTH is 8, and it is enforced here too — a seed that writes a
+ * password the application would refuse produces accounts whose credential
+ * cannot be re-entered through the FR-10 change-password screen.
  */
-const generatePassword = (): string => randomBytes(12).toString('base64url');
+const MIN_PASSWORD_LENGTH = 8;
+
+const chosenPassword = (): string | null => {
+  const index = process.argv.indexOf('--password');
+  if (index === -1) {
+    return null;
+  }
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith('--')) {
+    throw new Error('--password attend une valeur : --password <mot-de-passe>');
+  }
+  if (value.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(
+      `Le mot de passe doit faire au moins ${MIN_PASSWORD_LENGTH} caractères ` +
+        `(l'application refuserait « ${value} » à la première connexion).`,
+    );
+  }
+  return value;
+};
+
+/**
+ * Without `--password`: a distinct generated password per account, 96 bits from
+ * the CSPRNG, URL-safe so it survives a copy-paste out of a terminal. Never
+ * persisted in clear — only its hash is.
+ */
+const generatePassword = (): string => chosenPassword() ?? randomBytes(12).toString('base64url');
 
 // ---------------------------------------------------------------------------
 // Seeding
@@ -1170,7 +1206,12 @@ const run = async (): Promise<void> => {
   // ---- The one-time disclosure
   console.log('\n' + '='.repeat(78));
   console.log('IDENTIFIANTS — AFFICHÉS UNE SEULE FOIS, ILS NE SONT STOCKÉS QUE HACHÉS.');
-  console.log('Copiez-les maintenant : seule une nouvelle exécution du script peut les remplacer.');
+  if (chosenPassword()) {
+    console.log('Mot de passe COMMUN fourni via --password : pratique pour une démo,');
+    console.log('à ne pas réutiliser ailleurs. Omettez --password pour en générer un par compte.');
+  } else {
+    console.log('Copiez-les maintenant : seule une nouvelle exécution du script peut les remplacer.');
+  }
   console.log('='.repeat(78));
 
   const width = Math.max(...passwords.map(({ user }) => user.email.length));
