@@ -549,6 +549,117 @@ describe('CandidateDetails (D-067)', () => {
     });
   });
 
+  // Phase 4.1 items 4.1, 4.2 and 4.4.
+  describe('4.1 — the presentation pass', () => {
+    const future = (days: number): string =>
+      new Date(Date.now() + days * 86_400_000).toISOString();
+    const past = (days: number): string =>
+      new Date(Date.now() - days * 86_400_000).toISOString();
+
+    it('4.1: the header carries initials, the stage chip and the contact facts', () => {
+      load();
+
+      const avatar = fixture.nativeElement.querySelector('.head__avatar') as HTMLElement;
+      expect(avatar.textContent!.trim()).toBe('JM');
+
+      // The chip sits INSIDE the identity block now, beside the name.
+      const line = fixture.nativeElement.querySelector('.head__line') as HTMLElement;
+      expect(line.querySelector('app-stage-chip')).toBeTruthy();
+
+      expect(fixture.nativeElement.querySelector('.head__contact')).toBeTruthy();
+    });
+
+    it('4.1: a Responsable sees no contact facts, because there are none', () => {
+      // FR-35 nulls them for that role (D-067); the header must not render an
+      // empty glyph row rather than omitting the fact.
+      load({ email: null, phone: null });
+
+      const contact = fixture.nativeElement.querySelector('.head__contact') as HTMLElement;
+      expect(contact.querySelectorAll('.head__fact').length).toBe(1);
+      expect(contact.textContent).toContain('Enregistré le');
+    });
+
+    it('4.4: shows the SOONEST upcoming interview, not merely the first', () => {
+      load({
+        interviews: [
+          {
+            id: 'i-late',
+            scheduledAt: future(9),
+            status: 'Planifié',
+            interviewer: { id: 'r1', name: 'Pierre Tard' },
+            cancellationReason: null,
+            evaluation: null,
+          },
+          {
+            id: 'i-soon',
+            scheduledAt: future(2),
+            status: 'Planifié',
+            interviewer: { id: 'r2', name: 'Sofia Proche' },
+            cancellationReason: null,
+            evaluation: null,
+          },
+        ],
+      });
+
+      const panel = fixture.nativeElement.querySelector('.next') as HTMLElement;
+      expect(panel).toBeTruthy();
+      // The payload order puts the later one first; « prochain » means soonest.
+      expect(panel.textContent).toContain('Sofia Proche');
+      expect(panel.textContent).not.toContain('Pierre Tard');
+    });
+
+    it('4.4: ignores PAST and CANCELLED interviews', () => {
+      load({
+        interviews: [
+          {
+            id: 'i-past',
+            scheduledAt: past(3),
+            status: 'Planifié',
+            interviewer: { id: 'r1', name: 'Passé' },
+            cancellationReason: null,
+            evaluation: null,
+          },
+          {
+            id: 'i-cancelled',
+            scheduledAt: future(4),
+            status: 'Annulé',
+            interviewer: { id: 'r2', name: 'Annulé' },
+            cancellationReason: 'Indisponible',
+            evaluation: null,
+          },
+        ],
+      });
+
+      // « Prochain » means one that is going to happen. Both rows still appear
+      // in the history below; only the panel is absent.
+      expect(fixture.nativeElement.querySelector('.next')).toBeNull();
+    });
+
+    it('4.4: absent entirely when nothing is scheduled', () => {
+      load({ interviews: [] });
+
+      expect(fixture.nativeElement.querySelector('.next')).toBeNull();
+    });
+
+    it('4.2: the CV card claims ONLY what the payload carries', () => {
+      load({ resume: { hasResume: true, url: `/api/v1/candidates/${ID}/resume` } });
+
+      const card = fixture.nativeElement.querySelector('.resume') as HTMLElement;
+      expect(card).toBeTruthy();
+      // The mockup showed a filename, a size and an upload date. None of the
+      // three is in the payload, so none may appear here.
+      expect(card.textContent).not.toMatch(/\.pdf|Mo|MB|\d{2}\/\d{2}\/\d{4}/);
+      expect(fixture.nativeElement.textContent).toContain('Télécharger le CV');
+    });
+
+    it('4.2: no file card at all when there is no CV', () => {
+      load({ resume: { hasResume: false, url: null } });
+
+      expect(fixture.nativeElement.querySelector('.resume')).toBeNull();
+      expect(text()).toContain('Aucun CV téléversé');
+    });
+  });
+
   describe('Null-tolerance', () => {
     it('renders a candidate whose position or registrant is missing', () => {
       load({ jobPosition: null, registeredBy: null });

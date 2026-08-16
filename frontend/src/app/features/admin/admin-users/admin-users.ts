@@ -51,6 +51,13 @@ export class AdminUsers {
 
   protected readonly roles = ROLES;
 
+  /** 5.2 — the three states of FR-12's `isActive` filter, as a segmented control. */
+  protected readonly statusOptions = [
+    { value: '', label: 'Tous' },
+    { value: 'true', label: 'Actifs' },
+    { value: 'false', label: 'Désactivés' },
+  ] as const;
+
   // ------------------------------------------------------ FR-6 to FR-12
 
   readonly users = signal<AdminUser[]>([]);

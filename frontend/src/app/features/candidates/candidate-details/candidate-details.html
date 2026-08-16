@@ -14,16 +14,43 @@
   @if (candidate(); as candidate) {
     <header class="head">
       <div class="head__identity">
-        <h1 class="page__title">{{ candidate.fullName }}</h1>
-        <p class="head__position">
-          @if (candidate.jobPosition; as position) {
-            <a class="head__link" [routerLink]="['/job-positions', position.id]">
-              {{ position.title }}
-            </a>
-          } @else {
-            Poste inconnu
-          }
-        </p>
+        <!-- 4.1: initials, the stage chip beside the name, and the contact
+             details inline under it. Everything here was already in the
+             payload; only the arrangement changed. -->
+        <span class="head__avatar" aria-hidden="true">{{ initials(candidate.fullName) }}</span>
+        <div class="head__text">
+          <div class="head__line">
+            <h1 class="page__title">{{ candidate.fullName }}</h1>
+            <app-stage-chip [stage]="candidate.currentStage" />
+          </div>
+          <p class="head__position">
+            @if (candidate.jobPosition; as position) {
+              <a class="head__link" [routerLink]="['/job-positions', position.id]">
+                {{ position.title }}
+              </a>
+            } @else {
+              Poste inconnu
+            }
+          </p>
+          <p class="head__contact">
+            @if (candidate.email) {
+              <span class="head__fact">
+                <mat-icon aria-hidden="true">mail</mat-icon>
+                <a href="mailto:{{ candidate.email }}">{{ candidate.email }}</a>
+              </span>
+            }
+            @if (candidate.phone) {
+              <span class="head__fact">
+                <mat-icon aria-hidden="true">call</mat-icon>
+                {{ candidate.phone }}
+              </span>
+            }
+            <span class="head__fact">
+              <mat-icon aria-hidden="true">event</mat-icon>
+              Enregistré le {{ candidate.registeredAt | date: 'dd/MM/yyyy' }}
+            </span>
+          </p>
+        </div>
       </div>
       <div class="head__actions">
         <!-- FR-25/FR-26: the pipeline's first decision. Offered only from
@@ -52,10 +79,27 @@
             Décision finale
           </button>
         }
-
-        <app-stage-chip [stage]="candidate.currentStage" />
       </div>
     </header>
+
+    <!--
+      4.4 — « Prochain RDV ». Derived from the interviews this page already
+      holds, so it costs no request: the soonest PLANNED interview still in the
+      future. The next appointment is the most actionable fact on a file and it
+      was previously buried in the history list.
+    -->
+    @if (nextInterview(candidate); as next) {
+      <section class="next" aria-labelledby="next-title">
+        <h2 id="next-title" class="next__title">
+          <mat-icon aria-hidden="true">event_upcoming</mat-icon>
+          Prochain entretien
+        </h2>
+        <p class="next__when">{{ next.scheduledAt | date: 'EEEE d MMMM, HH:mm' }}</p>
+        <p class="next__who">
+          Avec {{ next.interviewer?.name ?? 'un responsable non identifié' }}
+        </p>
+      </section>
+    }
 
     <div class="columns">
       <div class="columns__main">
@@ -211,7 +255,22 @@
         <!-- --------------------------------------------------------- CV -->
         <section class="card" aria-labelledby="resume-title">
           <h2 id="resume-title" class="card__title">CV</h2>
+          <!--
+            4.2 — a file card rather than a lone button. NOTE what it does NOT
+            claim: the mockup showed a filename, a size and an upload date, and
+            the payload carries none of the three (`resume: { hasResume, url }`).
+            Inventing them here would be inventing data.
+          -->
           @if (candidate.resume.hasResume && candidate.resume.url) {
+            <div class="resume">
+              <span class="resume__glyph" aria-hidden="true">
+                <mat-icon>description</mat-icon>
+              </span>
+              <div class="resume__text">
+                <p class="resume__name">Curriculum vitae</p>
+                <p class="resume__meta">Joint à ce dossier</p>
+              </div>
+            </div>
             <a matButton="filled" [href]="candidate.resume.url" target="_blank" rel="noopener">
               <mat-icon>download</mat-icon>
               Télécharger le CV

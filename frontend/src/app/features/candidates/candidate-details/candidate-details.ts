@@ -105,6 +105,32 @@ export class CandidateDetails {
   /** FR-36's scale is 1–5, so a score renders as a filled/empty run of 5. */
   readonly scaleMax = [1, 2, 3, 4, 5];
 
+  /** 4.1 — initials for the header avatar. Derived, never stored. */
+  initials(name: string | null | undefined): string {
+    const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return '?';
+    }
+    const first = parts[0][0] ?? '';
+    const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
+    return (first + last).toUpperCase();
+  }
+
+  /**
+   * 4.4 — the soonest PLANNED interview still ahead, or null.
+   *
+   * Computed from the interviews the page already loaded, so it costs no
+   * request. Cancelled and past interviews are excluded: « prochain » means
+   * one that is going to happen.
+   */
+  nextInterview(candidate: CandidateDetail): CandidateDetail['interviews'][number] | null {
+    const now = Date.now();
+    const upcoming = candidate.interviews
+      .filter((i) => i.status === 'Planifié' && new Date(i.scheduledAt).getTime() > now)
+      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+    return upcoming[0] ?? null;
+  }
+
   // ------------------------------------------------------------- FR-22
 
   readonly replacing = signal(false);

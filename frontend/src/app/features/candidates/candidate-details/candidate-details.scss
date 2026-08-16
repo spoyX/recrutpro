@@ -276,3 +276,136 @@
 .resume__action {
   margin-top: var(--sp-sm);
 }
+
+// ------------------------------------------------- Phase 4.1 presentation
+
+// 4.1 — the header: avatar, name + stage on one line, contact beneath.
+.head__identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-md);
+  min-width: 0;
+}
+
+.head__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background-color: var(--mat-sys-secondary-fixed);
+  color: var(--mat-sys-on-secondary-fixed-variant);
+  font: var(--mat-sys-title-large);
+}
+
+.head__text {
+  min-width: 0;
+}
+
+.head__line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+}
+
+.head__contact {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  margin: var(--sp-sm) 0 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.head__fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  a {
+    color: inherit;
+  }
+}
+
+// 4.4 — the next appointment. `primary` as a fill, which DESIGN.md permits for
+// critical elements, and the only such surface on the page so it stays the
+// single loudest thing.
+.next {
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-md) var(--sp-lg);
+}
+
+.next__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font: var(--mat-sys-label-large);
+  margin: 0 0 var(--sp-xs);
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.next__when {
+  font: var(--mat-sys-title-medium);
+  margin: 0;
+  // The date is the subject of this panel.
+  text-transform: capitalize;
+}
+
+.next__who {
+  font: var(--mat-sys-body-small);
+  margin: var(--sp-xs) 0 0;
+  opacity: 0.9;
+}
+
+// 4.2 — the CV as a file card. It deliberately states only what the payload
+// carries: no filename, no size, no upload date.
+.resume {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-md);
+  padding: var(--sp-sm);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.resume__glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.resume__name {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.resume__meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}

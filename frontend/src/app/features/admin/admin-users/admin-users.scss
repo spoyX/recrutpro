@@ -272,3 +272,60 @@
     margin-left: 0;
   }
 }
+
+// 5.2 — the segmented status control. Three options, current one visible.
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-default);
+  border: 1px solid var(--input-border);
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.segmented__option {
+  border: none;
+  background: none;
+  padding: var(--sp-xs) var(--sp-md);
+  border-radius: calc(var(--radius-default) - 2px);
+  font: var(--mat-sys-body-medium);
+  color: var(--text-slate);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--recrutpro-focus);
+    outline-offset: 1px;
+  }
+}
+
+.segmented__option--on {
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font-weight: 600;
+  box-shadow: var(--elevation-1);
+}
+
+// 5.1 — the role badge, OUTLINED rather than filled.
+//
+// The review proposed "a tone per role". Measured against the live palette,
+// that is not achievable with DESIGN.md's existing tokens and it is not mine
+// to add one (rule 8):
+//   - `primary-fixed` rgb(220,225,255) and `secondary-fixed` rgb(216,226,255)
+//     are FOUR channel-units apart — indistinguishable, the D-080 problem;
+//   - `tertiary-fixed-dim` is already the « Mot de passe à changer » status
+//     pill, so a role wearing it would be identical to a status ON THE SAME ROW;
+//   - `surface-container-high` is already « Désactivé », same collision.
+//
+// So the badge distinguishes itself by FORM, not hue: an outline against the
+// filled status pills. That is also the truer signal — a role and an account
+// state are different kinds of fact, and they now look like different kinds of
+// thing rather than two shades of one. A per-role colour remains available as
+// a DESIGN.md decision; it is flagged, not taken here.
+.pill--role {
+  background-color: transparent;
+  border: 1px solid var(--input-border);
+  color: var(--text-slate);
+}

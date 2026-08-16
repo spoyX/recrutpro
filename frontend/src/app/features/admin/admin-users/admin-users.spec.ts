@@ -282,6 +282,104 @@ describe('AdminUsers (FR-6 to FR-13)', () => {
     });
   });
 
+  // Phase 4.1 items 5.1 and 5.2.
+  describe('4.1 — the presentation pass', () => {
+    it('5.1: the role renders as an OUTLINED badge, not a tinted one', () => {
+      load([
+        user({ name: 'Un Admin', role: 'Administrateur', departmentId: null }),
+        user({ id: 'u2', name: 'Un Recruteur', role: 'Recruteur' }),
+        user({ id: 'u3', name: 'Un Responsable', role: 'ResponsableHierarchique' }),
+      ]);
+
+      for (const name of ['Un Admin', 'Un Recruteur', 'Un Responsable']) {
+        const badge = rowFor(name).querySelector('.pill') as HTMLElement;
+        expect(badge).withContext(name).toBeTruthy();
+        // ONE treatment for all three. A per-role tint was proposed and cannot
+        // be done with the existing tokens: two of the three candidates are
+        // four channel-units from each other, and a third is identical to the
+        // « Mot de passe à changer » status pill on the same row.
+        expect(badge.className).withContext(name).toContain('pill--role');
+      }
+    });
+
+    it('5.1: the role badge is a DIFFERENT kind of thing from a status pill', () => {
+      load([user({ mustChangePassword: true })]);
+
+      const row = rowFor('Marie Dupont');
+      const role = row.querySelector('.pill--role') as HTMLElement;
+      const statuses = Array.from(row.querySelectorAll('.pill:not(.pill--role)'));
+
+      // Role and account state are two vocabularies. They must not read as two
+      // shades of one — the D-080 lesson, applied within a single row.
+      expect(role).toBeTruthy();
+      expect(statuses.length).toBeGreaterThan(0);
+      expect(statuses.some((s) => (s as HTMLElement).className.includes('pill--role'))).toBeFalse();
+    });
+
+    it('5.1: it is NOT app-stage-chip', () => {
+      load();
+
+      // That component owns the pipeline and job-position vocabularies (D-080).
+      // A role is a third, unrelated set and would fall through to `neutral`.
+      expect(rowFor('Marie Dupont').querySelector('app-stage-chip')).toBeNull();
+    });
+
+    it('5.2: the status filter is a segmented control showing its state', () => {
+      load();
+
+      const options = Array.from(
+        fixture.nativeElement.querySelectorAll('.segmented__option'),
+      ) as HTMLElement[];
+      expect(options.map((o) => o.textContent?.trim())).toEqual([
+        'Tous',
+        'Actifs',
+        'Désactivés',
+      ]);
+      // « Tous » is the state on load, and it says so to a screen reader too.
+      expect(options[0].getAttribute('aria-pressed')).toBe('true');
+      expect(options[1].getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('5.2: choosing one sends the filter and marks itself pressed', () => {
+      load();
+
+      const inactive = Array.from(
+        fixture.nativeElement.querySelectorAll('.segmented__option'),
+      ).find((o) => (o as HTMLElement).textContent?.trim() === 'Désactivés') as HTMLButtonElement;
+      inactive.click();
+
+      const req = usersRequest();
+      expect(req.request.params.get('isActive')).toBe('false');
+      req.flush([user({ isActive: false })]);
+      fixture.detectChanges();
+
+      const after = Array.from(
+        fixture.nativeElement.querySelectorAll('.segmented__option'),
+      ) as HTMLElement[];
+      // Before AND after: « Tous » was pressed, now « Désactivés » is.
+      expect(after[0].getAttribute('aria-pressed')).toBe('false');
+      expect(after[2].getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('5.2: « Tous » clears the filter rather than sending an empty value', () => {
+      load();
+      fixture.componentInstance.setFilter('isActive', 'true');
+      usersRequest().flush([user()]);
+      fixture.detectChanges();
+
+      (
+        Array.from(fixture.nativeElement.querySelectorAll('.segmented__option')).find(
+          (o) => (o as HTMLElement).textContent?.trim() === 'Tous',
+        ) as HTMLButtonElement
+      ).click();
+
+      const req = usersRequest();
+      // An empty `isActive=` is an unknown filter value the server 400s.
+      expect(req.request.params.has('isActive')).toBeFalse();
+      req.flush([user()]);
+    });
+  });
+
   describe('Errors', () => {
     it('a failed DEPARTMENT list does not blank the accounts', () => {
       fixture = TestBed.createComponent(AdminUsers);

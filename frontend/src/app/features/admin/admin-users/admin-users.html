@@ -37,18 +37,23 @@
         </select>
       </div>
 
+      <!-- 5.2: a segmented control. Three options, and the current one is
+           visible without opening anything. -->
       <div class="filters__field">
-        <label class="filters__label label-sm" for="filter-active">Statut</label>
-        <select
-          id="filter-active"
-          class="filters__control"
-          [value]="filters().isActive ?? ''"
-          (change)="setFilter('isActive', $any($event.target).value)"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="true">Actifs</option>
-          <option value="false">Désactivés</option>
-        </select>
+        <span class="filters__label label-sm" id="filter-active-label">Statut</span>
+        <div class="segmented" role="group" aria-labelledby="filter-active-label">
+          @for (option of statusOptions; track option.value) {
+            <button
+              type="button"
+              class="segmented__option"
+              [class.segmented__option--on]="(filters().isActive ?? '') === option.value"
+              [attr.aria-pressed]="(filters().isActive ?? '') === option.value"
+              (click)="setFilter('isActive', option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
       </div>
 
       @if (isFiltered()) {
@@ -101,7 +106,13 @@
                   }
                 </td>
                 <td class="table__meta">{{ user.email }}</td>
-                <td>{{ user.role }}</td>
+                <!-- 5.1: a badge, reusing `.pill` from D-085 so a role is
+                     scannable down the column rather than read line by line.
+                     OUTLINED, not tinted — see the note in the stylesheet: the
+                     palette cannot supply three distinguishable role tones, and
+                     two of the candidates collide with a STATUS pill on the
+                     same row. -->
+                <td><span class="pill pill--role">{{ user.role }}</span></td>
                 <!-- An Administrateur has none by design (D-016), so « — »
                      here is a rule, not missing data. -->
                 <td class="table__meta">{{ departmentName(user.departmentId) }}</td>
