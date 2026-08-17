@@ -111,10 +111,10 @@ export const setAvatar = async (viewer: IUser, file: UploadedFile | undefined): 
   // old handle is read before the new one overwrites it.
   const previousPublicId = viewer.avatarPublicId;
 
-  // The handle only. Cloudinary also hands back a `secure_url`, and storing it
-  // was the ratified design until a live check fetched that value with no
-  // credentials and got 200 — see the note on the model. Delivery signs a
-  // short-lived URL from the handle, so the URL was never needed.
+  // The handle only. Cloudinary also hands back a `secure_url`; storing it was
+  // the ratified design (D-091) until a live check fetched that value with no
+  // credentials and got 200, and D-092 removed it. Delivery signs a short-lived
+  // URL from the handle, so the stored URL was never needed in the first place.
   const user = await User.findByIdAndUpdate(
     viewer._id,
     { avatarPublicId: uploaded.public_id },
