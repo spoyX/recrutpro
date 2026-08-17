@@ -1,0 +1,61 @@
+<div
+  class="drop"
+  [class.drop--over]="dragging()"
+  [class.drop--filled]="file()"
+  [class.drop--disabled]="disabled()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+>
+  <!--
+    The real field, kept focusable and screen-reader visible. It is covered by
+    the label below rather than removed: a drop zone with no input is a control
+    no keyboard can reach, and dragging has no keyboard equivalent.
+    D-007/D-040: `accept` is picker convenience. NOTHING here inspects the
+    file's contents — the server's magic-byte test is the gate.
+  -->
+  <input
+    class="drop__input"
+    type="file"
+    [id]="inputId()"
+    [accept]="accept()"
+    [disabled]="disabled()"
+    (change)="onPick($any($event.target).files)"
+  />
+
+  @if (file(); as chosen) {
+    <div class="drop__chosen">
+      <mat-icon class="drop__glyph" aria-hidden="true">description</mat-icon>
+      <div class="drop__text">
+        <p class="drop__name" title="{{ chosen.name }}">{{ chosen.name }}</p>
+        <p class="drop__meta">{{ humanSize() }}</p>
+      </div>
+      <button
+        matIconButton
+        type="button"
+        class="drop__clear"
+        [disabled]="disabled()"
+        aria-label="Retirer le fichier sélectionné"
+        (click)="clear()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else {
+    <label class="drop__label" [attr.for]="inputId()">
+      <mat-icon class="drop__glyph" aria-hidden="true">upload_file</mat-icon>
+      <span class="drop__prompt">
+        <strong>Glissez un fichier ici</strong>
+        <span class="drop__or">ou cliquez pour parcourir</span>
+      </span>
+    </label>
+  }
+</div>
+
+@if (hint()) {
+  <p class="drop__hint">{{ hint() }}</p>
+}
+
+@if (sizeError(); as message) {
+  <p class="drop__error" role="alert">{{ message }}</p>
+}

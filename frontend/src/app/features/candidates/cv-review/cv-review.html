@@ -9,12 +9,16 @@
     <!-- FR-25's decision rests on the CV, so it is one click away. D-040: this
          is the API's own proxy route, never a storage URL. -->
     @if (resumeUrl(); as url) {
-      <p class="review__resume">
+      <div class="review__resume">
+        <!-- 4.4: FR-25's whole decision rests on this document, so it is
+             readable HERE rather than in a tab the reviewer has to come back
+             from. The download stays for anything the frame cannot render. -->
+        <app-resume-preview [url]="url" />
         <a matButton [href]="url" target="_blank" rel="noopener">
-          <mat-icon>description</mat-icon>
-          Relire le CV
+          <mat-icon>download</mat-icon>
+          Télécharger le CV
         </a>
-      </p>
+      </div>
     } @else {
       <p class="review__noresume">
         <mat-icon aria-hidden="true">info</mat-icon>

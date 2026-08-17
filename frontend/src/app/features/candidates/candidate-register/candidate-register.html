@@ -158,19 +158,17 @@
 
       <div class="form__field">
         <label class="form__label label-sm" for="reg-resume">Fichier</label>
-        <input
-          id="reg-resume"
-          class="form__control"
-          type="file"
+        <!-- 4.4: a drop target that is still a real, focusable file input.
+             It checks the SIZE and never the type — the server's magic-byte
+             test is the gate (D-007), and its refusal is what gets shown. -->
+        <app-file-dropzone
+          inputId="reg-resume"
           [accept]="accept"
+          [maxBytes]="maxBytes"
           [disabled]="uploading()"
-          (change)="chooseFile($any($event.target).files)"
+          hint="PDF ou DOCX, 5 Mo maximum. Le format est vérifié par le serveur à partir du contenu réel du fichier, pas de son extension."
+          (chosen)="chooseDropped($event)"
         />
-        <!-- Guidance, not a gate: the server checks the real bytes (D-007). -->
-        <p class="form__hint">
-          PDF ou DOCX, 5 Mo maximum. Le format est vérifié par le serveur à partir du
-          contenu réel du fichier, pas de son extension.
-        </p>
       </div>
 
       @if (uploading()) {

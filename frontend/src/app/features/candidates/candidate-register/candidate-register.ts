@@ -13,6 +13,7 @@ import {
 } from '../candidate.service';
 import { JobPositionService, JobPositionOption } from '../../job-positions/job-position.service';
 import { AppShell } from '../../../shared/app-shell/app-shell';
+import { FileDropzone } from '../../../shared/file-dropzone/file-dropzone';
 
 /**
  * FR-19 to FR-22 — register a candidate and attach their CV.
@@ -39,7 +40,7 @@ type Phase = 'identity' | 'resume' | 'done';
 
 @Component({
   selector: 'app-candidate-register',
-  imports: [MatButtonModule, MatIconModule, MatProgressBarModule, AppShell],
+  imports: [FileDropzone, MatButtonModule, MatIconModule, MatProgressBarModule, AppShell],
   templateUrl: './candidate-register.html',
   styleUrl: './candidate-register.scss',
 })
@@ -223,8 +224,15 @@ export class CandidateRegister {
 
   // --------------------------------------------------------------- FR-21
 
-  chooseFile(files: FileList | null): void {
-    this.file.set(files?.[0] ?? null);
+  /**
+   * 4.4 — what `app-file-dropzone` emits, whether picked or dropped.
+   *
+   * The old `chooseFile(FileList)` is gone: the dropzone owns the input and
+   * hands over a single File, so a FileList never reaches this component.
+   */
+  chooseDropped(file: File | null): void {
+    this.file.set(file);
+    // A new choice invalidates the server's verdict on the previous one.
     this.uploadError.set(null);
   }
 

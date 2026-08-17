@@ -1,0 +1,46 @@
+@if (url(); as url) {
+  <div class="preview">
+    <button matButton type="button" class="preview__toggle" (click)="toggle()">
+      <mat-icon>{{ open() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      {{ open() ? "Masquer l'aperçu" : 'Aperçu du CV' }}
+    </button>
+
+    @if (open()) {
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Chargement de l'aperçu" />
+      }
+
+      @if (errorMessage(); as message) {
+        <p class="preview__error" role="alert">
+          <mat-icon aria-hidden="true">error_outline</mat-icon>
+          <span>{{ message }}</span>
+        </p>
+      }
+
+      @if (frameUrl(); as safeUrl) {
+        <!-- A blob: URL, not the API route — that route answers with
+             `Content-Disposition: attachment` and an iframe pointed at it
+             downloads the file instead of showing it (verified, not assumed).
+             `sandbox` without allow-scripts: a PDF needs no script, and this
+             frame renders a document supplied by a third party. -->
+        <iframe
+          class="preview__frame"
+          [src]="safeUrl"
+          sandbox
+          title="Aperçu du CV"
+          loading="lazy"
+        ></iframe>
+      } @else if (!loading() && !errorMessage() && mimeType()) {
+        <!-- A DOCX reached us. No browser renders one, so this says so rather
+             than showing a frame that will never paint. -->
+        <p class="preview__unsupported">
+          <mat-icon aria-hidden="true">description</mat-icon>
+          <span>
+            Ce CV est un document Word : il ne peut pas être affiché dans le
+            navigateur. Téléchargez-le pour le consulter.
+          </span>
+        </p>
+      }
+    }
+  </div>
+}

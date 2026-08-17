@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ApiError } from '../../../core/auth.service';
 import { CandidateService, RESUME_ACCEPT, RESUME_MAX_BYTES } from '../candidate.service';
+import { FileDropzone } from '../../../shared/file-dropzone/file-dropzone';
 
 /**
  * FR-22 — replace a candidate's CV, or attach a first one after the fact.
@@ -46,7 +47,7 @@ import { CandidateService, RESUME_ACCEPT, RESUME_MAX_BYTES } from '../candidate.
  */
 @Component({
   selector: 'app-replace-resume',
-  imports: [MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [FileDropzone, MatButtonModule, MatIconModule, MatProgressBarModule],
   templateUrl: './replace-resume.html',
   styleUrl: './replace-resume.scss',
 })
@@ -71,8 +72,14 @@ export class ReplaceResume {
 
   readonly canSubmit = computed(() => this.file() !== null && !this.uploading());
 
-  chooseFile(files: FileList | null): void {
-    this.file.set(files?.[0] ?? null);
+  /**
+   * 4.4 — what `app-file-dropzone` emits, whether picked or dropped.
+   *
+   * The old `chooseFile(FileList)` is gone: the dropzone owns the input and
+   * hands over a single File, so a FileList never reaches this component.
+   */
+  chooseDropped(file: File | null): void {
+    this.file.set(file);
     // A new choice invalidates the server's verdict on the previous one.
     this.errorMessage.set(null);
     this.percent.set(null);

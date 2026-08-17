@@ -12,6 +12,10 @@
          and this is the API's own proxy route, never a storage URL (D-040). -->
     @if (interview().candidate?.hasResume) {
       <p class="evaluation__resume">
+        <!-- 4.4: the CV is the reference while scoring, so it opens in place.
+             Gated on `hasResume` by the @if above — the row carries a
+             `resumeUrl` even when there is no CV behind it. -->
+        <app-resume-preview [url]="interview().candidate!.resumeUrl" />
         <a matButton [href]="interview().candidate!.resumeUrl" target="_blank" rel="noopener">
           <mat-icon>description</mat-icon>
           Relire le CV

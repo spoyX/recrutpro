@@ -1,0 +1,51 @@
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  min-width: 0;
+}
+
+.preview__toggle {
+  align-self: flex-start;
+}
+
+.preview__frame {
+  width: 100%;
+  // Tall enough to read a page of A4 without scrolling the frame constantly,
+  // short enough that the surrounding page is still navigable.
+  height: 60vh;
+  min-height: 320px;
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+.preview__unsupported,
+.preview__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+// A stated fact, not a warning: nothing has gone wrong, this format simply
+// cannot be rendered. Neutral tone, per D-080's split.
+.preview__unsupported {
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.preview__error {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}

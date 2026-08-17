@@ -14,6 +14,7 @@ import { ReplaceResume } from '../replace-resume/replace-resume';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
+import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
 
 /**
  * The Candidate Details page — a candidate's whole file on one screen.
@@ -30,7 +31,7 @@ import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
  */
 @Component({
   selector: 'app-candidate-details',
-  imports: [
+  imports: [ResumePreview, 
     DatePipe,
     RouterLink,
     MatButtonModule,

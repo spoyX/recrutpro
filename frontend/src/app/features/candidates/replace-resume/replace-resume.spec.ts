@@ -42,7 +42,7 @@ describe('ReplaceResume (FR-22)', () => {
   /** Drives the component's own handler — a file input's value is read-only. */
   const choose = (name: string, type = 'application/pdf'): File => {
     const file = new File([new Uint8Array([1, 2, 3])], name, { type });
-    fixture.componentInstance.chooseFile({ 0: file, length: 1, item: () => file } as never);
+    fixture.componentInstance.chooseDropped(file);
     fixture.detectChanges();
     return file;
   };

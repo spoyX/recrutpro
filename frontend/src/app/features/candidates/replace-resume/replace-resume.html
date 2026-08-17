@@ -19,23 +19,22 @@
     </p>
 
     <div class="modal__field">
-      <label class="modal__label label-sm" for="replace-resume-file">
-        Fichier — PDF ou DOCX, 5 Mo maximum
-      </label>
-      <input
-        id="replace-resume-file"
-        class="modal__input"
-        type="file"
-        [accept]="accept"
-        [disabled]="uploading()"
-        (change)="chooseFile($any($event.target).files)"
-      />
+      <label class="modal__label label-sm" for="replace-resume-file">Fichier</label>
       <!--
-        D-007/D-040: `accept` is a picker convenience, NOT a check. The real
-        gate is the server's magic-byte signature test, which no browser API
-        performs — so nothing here inspects the file and the server's refusal
-        is what the reader sees.
+        4.4: the drop zone. D-007/D-040 unchanged — `accept` is a picker
+        convenience, NOT a check, and nothing here inspects the file's
+        contents. The server's magic-byte test is the gate and its refusal is
+        what the reader sees. Only the SIZE is checked locally, because a
+        length can be measured honestly and a type cannot.
       -->
+      <app-file-dropzone
+        inputId="replace-resume-file"
+        [accept]="accept"
+        [maxBytes]="maxBytes"
+        [disabled]="uploading()"
+        hint="PDF ou DOCX, 5 Mo maximum. Le format est vérifié par le serveur à partir du contenu réel du fichier."
+        (chosen)="chooseDropped($event)"
+      />
     </div>
 
     @if (hasExisting()) {

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiError } from '../../../core/auth.service';
 import { CandidateService, CvReviewStage, CV_REVIEW_STAGES } from '../candidate.service';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
+import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
 
 /**
  * FR-25 / FR-26 — the Recruteur's CV preselection.
@@ -34,7 +35,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
  */
 @Component({
   selector: 'app-cv-review',
-  imports: [MatButtonModule, MatIconModule, StageChip],
+  imports: [ResumePreview, MatButtonModule, MatIconModule, StageChip],
   templateUrl: './cv-review.html',
   styleUrl: './cv-review.scss',
 })

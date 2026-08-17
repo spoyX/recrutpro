@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiError } from '../../../core/auth.service';
+import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
 import {
   InterviewService,
   InterviewListItem,
@@ -36,7 +37,7 @@ import {
  */
 @Component({
   selector: 'app-evaluation-form',
-  imports: [DatePipe, MatButtonModule, MatIconModule],
+  imports: [ResumePreview, DatePipe, MatButtonModule, MatIconModule],
   templateUrl: './evaluation-form.html',
   styleUrl: './evaluation-form.scss',
 })

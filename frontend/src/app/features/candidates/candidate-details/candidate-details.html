@@ -288,6 +288,9 @@
                 <p class="resume__meta">Joint à ce dossier</p>
               </div>
             </div>
+            <!-- 4.4: read it in place; the download stays for keeping a copy
+                 and for the formats no browser can render. -->
+            <app-resume-preview [url]="candidate.resume.url" />
             <a matButton="filled" [href]="candidate.resume.url" target="_blank" rel="noopener">
               <mat-icon>download</mat-icon>
               Télécharger le CV
