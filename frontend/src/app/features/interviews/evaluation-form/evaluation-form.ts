@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiError } from '../../../core/auth.service';
 import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 import {
   InterviewService,
   InterviewListItem,
@@ -37,7 +38,7 @@ import {
  */
 @Component({
   selector: 'app-evaluation-form',
-  imports: [ResumePreview, DatePipe, MatButtonModule, MatIconModule],
+  imports: [ModalFocus, ResumePreview, DatePipe, MatButtonModule, MatIconModule],
   templateUrl: './evaluation-form.html',
   styleUrl: './evaluation-form.scss',
 })

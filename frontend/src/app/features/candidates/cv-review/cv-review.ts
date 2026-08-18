@@ -6,6 +6,7 @@ import { ApiError } from '../../../core/auth.service';
 import { CandidateService, CvReviewStage, CV_REVIEW_STAGES } from '../candidate.service';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-25 / FR-26 — the Recruteur's CV preselection.
@@ -35,7 +36,7 @@ import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
  */
 @Component({
   selector: 'app-cv-review',
-  imports: [ResumePreview, MatButtonModule, MatIconModule, StageChip],
+  imports: [ModalFocus, ResumePreview, MatButtonModule, MatIconModule, StageChip],
   templateUrl: './cv-review.html',
   styleUrl: './cv-review.scss',
 })

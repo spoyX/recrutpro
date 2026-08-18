@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiError } from '../../../core/auth.service';
 import { AdminService, Department } from '../admin.service';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-13 — create or rename a department.
@@ -19,7 +20,7 @@ import { AdminService, Department } from '../admin.service';
  */
 @Component({
   selector: 'app-department-form',
-  imports: [MatButtonModule],
+  imports: [ModalFocus, MatButtonModule],
   templateUrl: './department-form.html',
 })
 export class DepartmentForm implements OnInit {

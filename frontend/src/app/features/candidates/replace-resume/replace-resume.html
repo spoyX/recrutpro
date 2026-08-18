@@ -1,4 +1,4 @@
-<div class="modal" role="dialog" aria-modal="true" aria-labelledby="replace-resume-title">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="replace-resume-title" (escaped)="!uploading() && dismissed.emit()">
   <div class="modal__panel">
     <h2 id="replace-resume-title" class="modal__title">
       @if (hasExisting()) {

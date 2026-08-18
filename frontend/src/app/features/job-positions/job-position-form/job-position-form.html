@@ -1,4 +1,4 @@
-<div class="modal" role="dialog" aria-modal="true" aria-labelledby="position-form-title">
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="position-form-title" (escaped)="dismissed.emit()">
   <div class="modal__panel">
     <h2 id="position-form-title" class="modal__title">
       @if (isEdit()) {

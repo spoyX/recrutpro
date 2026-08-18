@@ -17,6 +17,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { EvaluationForm } from '../evaluation-form/evaluation-form';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 import { InterviewCalendar } from '../interview-calendar/interview-calendar';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /** One day's interviews, so the list reads as a schedule rather than a table. */
 export interface InterviewDay {
@@ -56,7 +57,7 @@ export interface InterviewDay {
  */
 @Component({
   selector: 'app-interviews-list',
-  imports: [
+  imports: [ModalFocus, 
     DatePipe,
     RouterLink,
     MatButtonModule,

@@ -6,6 +6,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ApiError } from '../../../core/auth.service';
 import { CandidateService, RESUME_ACCEPT, RESUME_MAX_BYTES } from '../candidate.service';
 import { FileDropzone } from '../../../shared/file-dropzone/file-dropzone';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-22 — replace a candidate's CV, or attach a first one after the fact.
@@ -47,7 +48,7 @@ import { FileDropzone } from '../../../shared/file-dropzone/file-dropzone';
  */
 @Component({
   selector: 'app-replace-resume',
-  imports: [FileDropzone, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [ModalFocus, FileDropzone, MatButtonModule, MatIconModule, MatProgressBarModule],
   templateUrl: './replace-resume.html',
   styleUrl: './replace-resume.scss',
 })

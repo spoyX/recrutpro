@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiError } from '../../../core/auth.service';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 import {
   JobPositionService,
   JobPosition,
@@ -40,7 +41,7 @@ import {
  */
 @Component({
   selector: 'app-job-position-form',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [ModalFocus, MatButtonModule, MatIconModule],
   templateUrl: './job-position-form.html',
 })
 export class JobPositionForm implements OnInit {

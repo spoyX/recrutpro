@@ -317,7 +317,7 @@
 
   <!-- FR-8 — inline, like the FR-34 cancellation prompt: one host, one use. -->
   @if (deactivating(); as user) {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-title">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-title" (escaped)="deactivating.set(null)">
       <div class="modal__panel">
         <h2 id="deactivate-title" class="modal__title">Désactiver ce compte</h2>
         <p class="modal__body">

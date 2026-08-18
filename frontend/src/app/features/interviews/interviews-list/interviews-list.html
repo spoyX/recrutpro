@@ -127,7 +127,7 @@
     same D-048 gate. There is no second path to either.
   -->
   @if (selected(); as interview) {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="iv-detail-title">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="iv-detail-title" (escaped)="closeSelected()">
       <div class="modal__panel">
         <h2 id="iv-detail-title" class="modal__title">
           {{ interview.candidate?.fullName ?? 'Candidat inconnu' }}
@@ -325,7 +325,7 @@
 
   <!-- FR-34 — the motive is mandatory, and the server enforces it too. -->
   @if (cancelling(); as target) {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title" (escaped)="dismissCancel()">
       <div class="modal__panel">
         <h2 id="cancel-title" class="modal__title">Annuler cet entretien</h2>
         <p class="modal__body">

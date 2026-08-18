@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ApiError } from '../../../core/auth.service';
 import { JobPositionService, JobPosition } from '../../job-positions/job-position.service';
 import { InterviewService, InterviewerOption } from '../interview.service';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-30 / FR-31 / FR-32 — schedule an interview for one candidate.
@@ -27,7 +28,7 @@ import { InterviewService, InterviewerOption } from '../interview.service';
  */
 @Component({
   selector: 'app-schedule-interview',
-  imports: [MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [ModalFocus, MatButtonModule, MatIconModule, MatProgressBarModule],
   templateUrl: './schedule-interview.html',
 })
 export class ScheduleInterview {

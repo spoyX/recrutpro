@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiError } from '../../../core/auth.service';
 import { JobPositionService, JobPosition } from '../job-position.service';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-16 — close a position.
@@ -20,9 +21,9 @@ import { JobPositionService, JobPosition } from '../job-position.service';
  */
 @Component({
   selector: 'app-close-position',
-  imports: [MatButtonModule],
+  imports: [ModalFocus, MatButtonModule],
   template: `
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="close-position-title">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="close-position-title" (escaped)="dismissed.emit()">
       <div class="modal__panel">
         <h2 id="close-position-title" class="modal__title">Clôturer ce poste</h2>
         <p class="modal__body">

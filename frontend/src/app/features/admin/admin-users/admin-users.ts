@@ -11,6 +11,7 @@ import { ResetPassword } from '../reset-password/reset-password';
 import { DepartmentForm } from '../department-form/department-form';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-6 to FR-13 — the administration screen: accounts and departments.
@@ -33,7 +34,7 @@ import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
  */
 @Component({
   selector: 'app-admin-users',
-  imports: [
+  imports: [ModalFocus, 
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,

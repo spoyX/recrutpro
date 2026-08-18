@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiError } from '../../../core/auth.service';
 import { AdminService } from '../admin.service';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-10 — issue a temporary password.
@@ -29,7 +30,7 @@ import { AdminService } from '../admin.service';
  */
 @Component({
   selector: 'app-reset-password',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [ModalFocus, MatButtonModule, MatIconModule],
   templateUrl: './reset-password.html',
   styleUrl: './reset-password.scss',
 })

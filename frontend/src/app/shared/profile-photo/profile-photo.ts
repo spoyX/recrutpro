@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ApiError, AuthService } from '../../core/auth.service';
 import { UserAvatar } from '../user-avatar/user-avatar';
+import { ModalFocus } from '../../shared/modal-focus/modal-focus';
 
 /**
  * D-091 — manage your own profile photo.
@@ -27,7 +28,7 @@ import { UserAvatar } from '../user-avatar/user-avatar';
  */
 @Component({
   selector: 'app-profile-photo',
-  imports: [MatButtonModule, MatIconModule, MatProgressBarModule, UserAvatar],
+  imports: [ModalFocus, MatButtonModule, MatIconModule, MatProgressBarModule, UserAvatar],
   templateUrl: './profile-photo.html',
   styleUrl: './profile-photo.scss',
 })

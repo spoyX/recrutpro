@@ -107,3 +107,52 @@ h2 {
   white-space: nowrap;
   border: 0;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5 finding B — Angular Material's keyboard focus indicator.
+//
+// DESIGN.md: "Focus states should mirror the element's roundedness with a 2px
+// ring at 2px offset in the focus-ring blue (#3B82F6)." Every hand-styled
+// control in this app obeys that. Material's did not.
+//
+// Measured before this block existed, with a REAL Tab key (`:focus-visible`
+// confirmed active): a Material button's only focus feedback was its state
+// layer — `rgb(29,78,216)` at opacity 0.12, which composites to rgb(228,234,250)
+// and measures **1.21:1** against the button's white ground. WCAG 1.4.11 wants
+// **3:1** for a focus indicator. The project's own ring measures 3.68:1.
+//
+// Material already ships the indicator element and drives it from CSS
+// variables — `.mat-focus-indicator::before` defaults to `display: none` with a
+// 3px TRANSPARENT border. So this is not a new token and not a new component:
+// it points the existing mechanism at DESIGN.md's existing value.
+//
+// Scoped to `:focus-visible`, NOT `:focus`. Material's own rule sets the
+// pseudo-element's `content` on `:focus`, which would also ring a control that
+// was clicked with a mouse — louder than the hand-styled controls, which all
+// use `:focus-visible`. Consistency is the whole point of the fix.
+// Measured, not assumed: `.mat-focus-indicator` is a CHILD span inside the
+// button, never the focused element itself — so a `.mat-focus-indicator:focus-visible`
+// selector matches nothing. The first version of this block did exactly that
+// and changed nothing; the live check caught it. It keys off the focusable
+// ANCESTOR instead.
+//
+// `content` has to be set here too. Material only sets it on `.mat-focus-indicator:focus`,
+// which never fires for a span that cannot take focus.
+.mat-mdc-button-base:focus-visible .mat-focus-indicator::before,
+button:focus-visible > .mat-focus-indicator::before,
+a:focus-visible > .mat-focus-indicator::before {
+  content: '';
+  display: block;
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--recrutpro-focus);
+  border-radius: var(--radius-default);
+  // DESIGN.md's 2px OFFSET: Material fills the host box exactly, so without
+  // this the ring sits on the edge rather than outside it.
+  inset: -2px;
+}
+
+// "Mirror the element's roundedness" — a round icon button needs a round ring.
+.mat-mdc-icon-button:focus-visible .mat-focus-indicator::before {
+  border-radius: var(--radius-full);
+}

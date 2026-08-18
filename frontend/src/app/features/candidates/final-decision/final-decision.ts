@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiError } from '../../../core/auth.service';
 import { CandidateService, FinalDecisionStage, FINAL_DECISION_STAGES } from '../candidate.service';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
+import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
 /**
  * FR-29 / FR-39 — the final Accepté / Rejeté decision.
@@ -27,7 +28,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
  */
 @Component({
   selector: 'app-final-decision',
-  imports: [MatButtonModule, MatIconModule, StageChip],
+  imports: [ModalFocus, MatButtonModule, MatIconModule, StageChip],
   templateUrl: './final-decision.html',
   styleUrl: './final-decision.scss',
 })
