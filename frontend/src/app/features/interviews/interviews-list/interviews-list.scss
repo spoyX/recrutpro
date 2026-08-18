@@ -227,3 +227,38 @@
     margin-left: 0;
   }
 }
+
+// D-094 — the view switch sits with the filters it shares.
+.viewswitch {
+  margin-left: auto;
+}
+
+// The panel a calendar click opens. A definition list, because every row is a
+// stated fact about one interview.
+.detail {
+  margin: 0 0 var(--sp-md);
+}
+
+.detail__row {
+  display: flex;
+  gap: var(--sp-md);
+  padding: var(--sp-xs) 0;
+  border-bottom: var(--border-level-1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  dt {
+    flex: 0 0 150px;
+    color: var(--text-slate);
+    font: var(--mat-sys-body-small);
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-on-surface);
+  }
+}

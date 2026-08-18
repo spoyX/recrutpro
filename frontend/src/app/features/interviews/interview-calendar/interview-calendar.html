@@ -1,0 +1,43 @@
+<section class="cal card" aria-label="Calendrier des entretiens">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement du calendrier" />
+  }
+
+  @if (errorMessage(); as message) {
+    <p class="cal__error" role="alert">
+      <mat-icon aria-hidden="true">error_outline</mat-icon>
+      <span>{{ message }}</span>
+    </p>
+  }
+
+  <!--
+    MAX_INTERVIEW_LIMIT is 100 server-side. The component pages through the
+    visible window; if it still cannot fetch everything it says so here rather
+    than drawing a partial month that looks complete.
+  -->
+  @if (truncatedAt(); as shown) {
+    <p class="cal__truncated" role="status">
+      <mat-icon aria-hidden="true">filter_alt</mat-icon>
+      <span>
+        Cette période contient {{ windowTotal() }} entretiens ; seuls les
+        {{ shown }} premiers sont affichés. Réduisez la période ou affinez les
+        filtres pour tous les voir.
+      </span>
+    </p>
+  }
+
+  <full-calendar [options]="options()" />
+
+  <!--
+    Said in the interface, not only in a decision file: a reader who tries to
+    drag a block needs to know why it does not move (D-066 struck the route).
+  -->
+  <p class="cal__note">
+    <mat-icon aria-hidden="true">info</mat-icon>
+    <span>
+      Les entretiens ne se déplacent pas au glisser-déposer : replanifier, c'est
+      annuler avec un motif puis planifier à nouveau (FR-34). Cliquez sur un
+      entretien pour ouvrir ces actions.
+    </span>
+  </p>
+</section>

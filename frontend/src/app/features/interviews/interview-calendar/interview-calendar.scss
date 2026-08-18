@@ -1,0 +1,136 @@
+.cal {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-default);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+  min-width: 0;
+}
+
+.cal__error,
+.cal__truncated,
+.cal__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  margin: 0 0 var(--sp-md);
+  padding: var(--sp-sm);
+  border-radius: var(--radius-default);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+.cal__error {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+// D-080's ATTENTION role: wants notice, neither good nor bad. A truncated
+// month is not an error — it is a fact the reader must not miss.
+.cal__truncated {
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+  color: var(--mat-sys-on-tertiary-fixed-variant);
+}
+
+.cal__note {
+  margin: var(--sp-md) 0 0;
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// ---------------------------------------------------------------------------
+// FullCalendar theming, driven entirely from DESIGN.md tokens (D-096): the
+// library ships its own palette and none of it is adopted, the same rule the
+// Stitch mockups got in D-089.
+// ---------------------------------------------------------------------------
+.cal ::ng-deep {
+  .fc {
+    --fc-border-color: var(--mat-sys-outline-variant);
+    --fc-page-bg-color: var(--mat-sys-surface-container-lowest);
+    --fc-neutral-bg-color: var(--mat-sys-surface-container-low);
+    --fc-today-bg-color: var(--mat-sys-surface-container);
+    --fc-now-indicator-color: var(--mat-sys-error);
+    font: var(--mat-sys-body-medium);
+    color: var(--mat-sys-on-surface);
+  }
+
+  .fc .fc-toolbar-title {
+    font: var(--mat-sys-title-medium);
+    color: var(--mat-sys-on-surface);
+  }
+
+  .fc .fc-button {
+    background-color: var(--mat-sys-surface-container-lowest);
+    border: 1px solid var(--input-border);
+    color: var(--mat-sys-on-surface);
+    font: var(--mat-sys-label-large);
+    text-transform: none;
+    box-shadow: none;
+  }
+
+  .fc .fc-button:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  .fc .fc-button-primary:not(:disabled).fc-button-active,
+  .fc .fc-button-primary:not(:disabled):active {
+    background-color: var(--mat-sys-secondary-fixed);
+    border-color: var(--input-border);
+    color: var(--mat-sys-on-secondary-fixed-variant);
+  }
+
+  .fc .fc-button:focus-visible {
+    outline: 2px solid var(--recrutpro-focus);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  .fc-col-header-cell-cushion,
+  .fc-daygrid-day-number {
+    color: var(--text-slate);
+    text-decoration: none;
+  }
+
+  // An event is a button-like target even though it does not move: clicking
+  // opens the actions, so it must read as interactive.
+  .fc-event {
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 1px 3px;
+    font: var(--mat-sys-body-small);
+  }
+
+  .fc-event:focus-visible {
+    outline: 2px solid var(--recrutpro-focus);
+    outline-offset: 1px;
+  }
+
+  // The three interview states, using the same roles the rest of the app uses
+  // for the same meanings rather than inventing a calendar palette.
+  .iv--planned {
+    background-color: var(--mat-sys-primary);
+    border-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+
+  .iv--done {
+    background-color: var(--recrutpro-success-container);
+    border-color: var(--recrutpro-success-container);
+    color: var(--recrutpro-on-success-container);
+  }
+
+  // FR-34: a cancelled interview keeps its place in the record. Struck through
+  // and muted so it is legible as history rather than as a live commitment.
+  .iv--cancelled {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-outline-variant);
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: line-through;
+  }
+}

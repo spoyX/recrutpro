@@ -91,14 +91,107 @@
           Réinitialiser
         </button>
       }
+
+      <!-- D-094: FR-33 offers « vue liste OU calendrier ». Both are kept and
+           SHARE these filters, so switching view never changes the data —
+           only how it is drawn. -->
+      <div class="segmented viewswitch" role="group" aria-label="Affichage">
+        @for (option of viewOptions; track option.value) {
+          <button
+            type="button"
+            class="segmented__option"
+            [class.segmented__option--on]="view() === option.value"
+            [attr.aria-pressed]="view() === option.value"
+            (click)="setView(option.value)"
+          >
+            <mat-icon>{{ option.icon }}</mat-icon>
+            {{ option.label }}
+          </button>
+        }
+      </div>
     </div>
   </section>
 
-  @if (loading()) {
+  @if (view() === 'calendar') {
+    <app-interview-calendar
+      [filters]="filters()"
+      [includeFinished]="includeFinished()"
+      (opened)="openFromCalendar($event)"
+    />
+  }
+
+  <!--
+    Opened by clicking a block in the calendar. It offers exactly the actions a
+    LIST ROW offers and calls the same handlers — `startCancel` still routes
+    through FR-34's mandatory-motive dialog, and `startEvaluate` through the
+    same D-048 gate. There is no second path to either.
+  -->
+  @if (selected(); as interview) {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="iv-detail-title">
+      <div class="modal__panel">
+        <h2 id="iv-detail-title" class="modal__title">
+          {{ interview.candidate?.fullName ?? 'Candidat inconnu' }}
+        </h2>
+
+        <dl class="detail">
+          <div class="detail__row">
+            <dt>Quand</dt>
+            <dd>{{ interview.scheduledAt | date: 'EEEE d MMMM y, HH:mm' }}</dd>
+          </div>
+          <div class="detail__row">
+            <dt>Poste</dt>
+            <dd>{{ interview.jobPosition?.title ?? 'Poste inconnu' }}</dd>
+          </div>
+          <div class="detail__row">
+            <dt>Responsable</dt>
+            <dd>{{ interview.interviewer?.name ?? 'Responsable inconnu' }}</dd>
+          </div>
+          <div class="detail__row">
+            <dt>Statut</dt>
+            <dd><app-stage-chip [stage]="interview.status" /></dd>
+          </div>
+          @if (interview.cancellationReason) {
+            <div class="detail__row">
+              <dt>Motif d'annulation</dt>
+              <dd>{{ interview.cancellationReason }}</dd>
+            </div>
+          }
+        </dl>
+
+        <div class="modal__actions">
+          @if (interview.candidate?.hasResume) {
+            <a matButton [href]="interview.candidate!.resumeUrl" target="_blank" rel="noopener">
+              <mat-icon>description</mat-icon>
+              CV
+            </a>
+          }
+          @if (canCancel(interview)) {
+            <button matButton type="button" (click)="closeSelected(); startCancel(interview)">
+              <mat-icon>event_busy</mat-icon>
+              Annuler
+            </button>
+          }
+          @if (canEvaluate(interview)) {
+            <button
+              matButton="filled"
+              type="button"
+              (click)="closeSelected(); startEvaluate(interview)"
+            >
+              <mat-icon>rate_review</mat-icon>
+              Évaluer
+            </button>
+          }
+          <button matButton type="button" (click)="closeSelected()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (view() === 'list' && loading()) {
     <mat-progress-bar mode="indeterminate" aria-label="Chargement des entretiens" />
   }
 
-  @if (errorMessage(); as message) {
+  @if (view() === 'list' && errorMessage(); as message) {
     <p class="page__error" role="alert">
       <mat-icon aria-hidden="true">error_outline</mat-icon>
       <span>{{ message }}</span>
@@ -106,7 +199,7 @@
     </p>
   }
 
-  @if (!errorMessage()) {
+  @if (view() === 'list' && errorMessage() === null) {
     @if (days().length) {
       <!-- Grouped by day, so the list reads as a schedule (FR-33). -->
       @for (day of days(); track day.date) {

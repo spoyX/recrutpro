@@ -47,8 +47,16 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
     });
   };
 
-  const create = (): void => {
+  /**
+   * D-094 — the CALENDAR is now the default view, and it fetches its own
+   * visible window. Every test in this file is about the LIST, so the view is
+   * pinned BEFORE the first change detection: that way the calendar never
+   * mounts, never fires a request, and `listRequest`'s "exactly one" assertion
+   * keeps meaning what it meant. Calendar behaviour has its own spec.
+   */
+  const create = (view: 'list' | 'calendar' = 'list'): void => {
     fixture = TestBed.createComponent(InterviewsList);
+    fixture.componentInstance.view.set(view);
     fixture.detectChanges();
   };
 

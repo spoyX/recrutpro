@@ -16,6 +16,7 @@ import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { EvaluationForm } from '../evaluation-form/evaluation-form';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
+import { InterviewCalendar } from '../interview-calendar/interview-calendar';
 
 /** One day's interviews, so the list reads as a schedule rather than a table. */
 export interface InterviewDay {
@@ -65,6 +66,7 @@ export interface InterviewDay {
     UserAvatar,
     StageChip,
     EvaluationForm,
+    InterviewCalendar,
   ],
   templateUrl: './interviews-list.html',
   styleUrl: './interviews-list.scss',
@@ -84,7 +86,21 @@ export class InterviewsList {
 
   readonly filters = signal<InterviewListQuery>({});
   readonly includeFinished = signal(false);
+
+  /**
+   * D-094 — FR-33 offers « vue liste OU calendrier », so both are kept and the
+   * calendar is the default. They SHARE the filter state above: switching view
+   * changes the drawing, never the data or the scope.
+   */
+  protected readonly viewOptions = [
+    { value: 'calendar' as const, label: 'Calendrier', icon: 'calendar_month' },
+    { value: 'list' as const, label: 'Liste', icon: 'view_list' },
+  ];
+  readonly view = signal<'calendar' | 'list'>('calendar');
   readonly sortDir = signal<'asc' | 'desc'>('asc');
+
+  /** The interview opened from the calendar, or null. */
+  readonly selected = signal<InterviewListItem | null>(null);
 
   /** The row awaiting a cancellation motive, or null. */
   readonly cancelling = signal<InterviewListItem | null>(null);
@@ -152,6 +168,30 @@ export class InterviewsList {
 
   constructor() {
     this.load();
+  }
+
+  setView(view: 'calendar' | 'list'): void {
+    this.view.set(view);
+    // The list paginates and the calendar fetches its own window, so whichever
+    // becomes visible re-reads. Returning to the list resets to page 1 rather
+    // than restoring an offset that may no longer exist.
+    if (view === 'list') {
+      this.offset.set(0);
+      this.load();
+    }
+  }
+
+  /**
+   * A calendar click opens the SAME actions a list row offers — the cancel
+   * dialog and the evaluation form are reused, not reimplemented, so FR-34's
+   * mandatory motive cannot be bypassed by arriving from the other view.
+   */
+  openFromCalendar(row: InterviewListItem): void {
+    this.selected.set(row);
+  }
+
+  closeSelected(): void {
+    this.selected.set(null);
   }
 
   load(): void {
