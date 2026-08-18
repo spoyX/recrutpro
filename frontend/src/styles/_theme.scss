@@ -44,7 +44,15 @@ html {
   --mat-sys-on-background: #121c2a;
 
   // ----------------------------------------------------------------- outlines
-  --mat-sys-outline: #747686;
+  // Corrected 2026-08-18 (D-099, Phase 5 finding C) from #747686.
+  // The old value measured 4.49:1 on white — and 4.05:1 on a hovered table
+  // row (`surface-container-low`), which is exactly when someone is reading
+  // the muted text. DESIGN.md requires AA on every combination. This is the
+  // MINIMAL darkening that clears 4.5:1 against the worst background any of
+  // its seven uses actually sits on: 5.04 white / 4.80 surface / 4.54 hover.
+  // Still unmistakably the muted tone — `on-surface-variant` is 9.35:1 and
+  // `on-surface` is 17.14:1.
+  --mat-sys-outline: #6c6e7e;
   --mat-sys-outline-variant: #c4c5d7;
 
   // ------------------------------------------------------------------ primary
