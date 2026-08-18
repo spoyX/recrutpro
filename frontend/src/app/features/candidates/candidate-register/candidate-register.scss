@@ -1,31 +1,9 @@
 // `.page__title` and `.page__error` are global (src/styles.scss). Layout
 // chrome lives in shared/app-shell.
 
-.head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-}
-
 .head__phase {
   color: var(--mat-sys-on-surface-variant);
   margin: 0;
-}
-
-.card {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  border-radius: var(--radius-default);
-  box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
-}
-
-.card__title {
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0 0 var(--sp-md);
 }
 
 // A single readable column. DESIGN.md's 12-column grid is for dashboards; a
@@ -142,5 +120,73 @@
 @media (max-width: 900px) {
   .form {
     max-width: none;
+  }
+}
+
+// ---------------------------------------------------------------- Phase 6
+
+// The two-step wizard, drawn. Colour is the second channel: the numbers, the
+// tick and the labels all state the position on their own, and the visually
+// hidden sentence beside it says it in words for a screen reader.
+.stepper {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  margin: 0;
+  padding: 0;
+}
+
+.stepper__step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  font-weight: 600;
+
+  // The connector between the two steps.
+  & + &::before {
+    content: '';
+    width: 32px;
+    height: 2px;
+    border-radius: var(--radius-full);
+    background-color: var(--mat-sys-outline-variant);
+    margin-right: var(--sp-sm);
+  }
+}
+
+.stepper__mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--mat-sys-outline-variant);
+  background-color: var(--mat-sys-surface-container-lowest);
+  font-variant-numeric: tabular-nums;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.stepper__step--on {
+  color: var(--mat-sys-on-surface);
+
+  .stepper__mark {
+    border-color: var(--mat-sys-primary);
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+.stepper__step--done {
+  .stepper__mark {
+    border-color: var(--recrutpro-success);
+    background-color: var(--recrutpro-success);
+    color: var(--recrutpro-on-success);
   }
 }

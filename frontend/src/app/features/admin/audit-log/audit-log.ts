@@ -8,6 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { map } from 'rxjs';
 import { ApiError } from '../../../core/auth.service';
 import { AppShell } from '../../../shared/app-shell/app-shell';
+import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 import { environment } from '../../../../environments/environment';
 
 /** Mirrors `views/auditLog.view.ts`. D-033: who / what / when, and no payload. */
@@ -72,7 +73,14 @@ const TARGET_TYPES = [
  */
 @Component({
   selector: 'app-audit-log',
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatProgressBarModule, AppShell],
+  imports: [
+    DatePipe,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    AppShell,
+    UserAvatar,
+  ],
   templateUrl: './audit-log.html',
   styleUrl: './audit-log.scss',
 })
@@ -94,6 +102,26 @@ export class AuditLog {
   readonly targetType = signal('');
 
   readonly isFiltered = computed(() => !!this.action() || !!this.targetType());
+
+  /**
+   * The badge tint for an action.
+   *
+   * COLOUR IS THE SECOND CHANNEL, NEVER THE ONLY ONE — the badge always shows
+   * the action name verbatim (`UtilisateurDesactive`, not "deactivated"), so
+   * the tint only speeds up scanning a long page. Grouped by what the verb
+   * DOES, read from its ending, because the sixteen action names are built by
+   * the backend from the same handful of French participles.
+   *
+   * An unrecognised ending falls through to the neutral slate pill rather than
+   * being guessed at: a new action must not be silently mis-tinted.
+   */
+  tone(action: string): string {
+    if (/(Desactive|Annule|Cloture)$/.test(action)) return 'pill--amber';
+    if (/(Modifie|Modifiee)$/.test(action)) return 'pill--sky';
+    if (/(Cree|Planifie|Soumise|Reactive)$/.test(action)) return 'pill--green';
+    if (/Reinitialise$/.test(action)) return 'pill--indigo';
+    return '';
+  }
 
   /** True when the cap is hiding matches, which the header must not conceal. */
   readonly truncated = computed(() => this.total() > this.rows().length);

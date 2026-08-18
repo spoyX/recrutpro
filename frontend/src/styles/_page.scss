@@ -1,0 +1,862 @@
+// The page chrome every feature screen shares.
+//
+// WHY THIS FILE EXISTS: `.card` was defined in TEN component stylesheets and
+// was byte-identical in eight of them; `.head` and `.empty` in nine each,
+// `.filters*` in six, `.table` in five. That is not a design system, it is a
+// design system copied by hand — and it had already drifted (three cards
+// carried `min-width: 0`, seven did not, which is the exact bug D-100 chased).
+//
+// The vocabulary here is lifted from the two screens the human approved as the
+// visual reference — /login and /admin/users — so adopting it is a
+// CONSOLIDATION, not a new visual language. Every value still comes from
+// DESIGN.md's tokens; nothing here invents a colour, a radius or a spacing step.
+//
+// Global rather than a shared component: Angular scopes component styles with
+// an attribute selector, so `.card[_ngcontent-x]` (0,2,0) always beats the
+// global `.card` (0,1,0). A page that genuinely needs to differ still can, by
+// declaring the rule locally — the cascade does the arbitration.
+
+// ---------------------------------------------------------------------------
+// Page header — title, subtitle, primary action.
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-md);
+}
+
+.head__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  min-width: 0;
+}
+
+.head__subtitle {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  max-width: 68ch;
+}
+
+.head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.head__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+// The primary create action. 44px so it reads as the page's main affordance
+// next to the 40px filter controls.
+.btn--create {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-default);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+// ---------------------------------------------------------------------------
+// Level 1 card.
+
+.card {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: var(--border-level-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-1);
+  padding: var(--sp-lg);
+  // Not cosmetic. `.page` is a column flex container, so its items stretch to
+  // the widest item — a wide table would otherwise drag the whole page out
+  // with it. These two cap the card at the page width and let it shrink there,
+  // which is what lets `.table-scroll` below scroll instead of the document.
+  min-width: 0;
+  max-width: 100%;
+}
+
+.card__title {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.card__subtitle {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+.section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-md);
+}
+
+.section__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.section__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+// An advisory note inside a card — explains a rule, never reports an error.
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: var(--sp-md) 0 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-default);
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+// A note that CLOSES a table card. `.table-card` has no padding, so the note
+// supplies its own and squares off against the card's edges.
+.note--footer {
+  margin: 0;
+  padding: var(--sp-md) var(--sp-lg);
+  border-radius: 0;
+  border-top: var(--border-level-1);
+  background-color: var(--surface-table-head);
+}
+
+// ---------------------------------------------------------------------------
+// Filter bar.
+
+.filters-card {
+  padding: var(--sp-md) var(--sp-lg);
+  margin-bottom: var(--sp-lg);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-lg);
+  width: 100%;
+}
+
+// A filter row INSIDE a card rather than in its own filter card — same
+// controls, it only needs its own breathing room below.
+.filters--inset {
+  margin-bottom: var(--sp-lg);
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+// DESIGN.md: "Small labels use an uppercase treatment with increased tracking
+// to differentiate functional UI text from content-heavy body text."
+.filters__label {
+  color: var(--text-slate);
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+  text-transform: uppercase;
+}
+
+// DESIGN.md Components: "Input Fields — white background, 1px #D1D5DB border,
+// 8px padding. On focus the border shifts to the focus blue" with "a soft blue
+// outer glow".
+.filters__control {
+  background-color: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-default);
+  padding: 8px 12px;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+  min-width: 200px;
+  height: 40px;
+
+  &:focus {
+    border-color: var(--recrutpro-focus);
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+    outline: none;
+  }
+}
+
+.filters__end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.filters__count {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.filters__reset {
+  height: 40px;
+}
+
+.filters__icon-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-default);
+  border: 1px solid var(--input-border);
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--text-slate);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+// Segmented pill toggle — a small, mutually-exclusive choice that does not
+// deserve a dropdown.
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-default);
+  border: 1px solid var(--input-border);
+  background-color: var(--mat-sys-surface-container-low);
+  height: 40px;
+}
+
+.segmented__option {
+  border: none;
+  background: none;
+  padding: 0 16px;
+  border-radius: calc(var(--radius-default) - 2px);
+  font: var(--mat-sys-body-medium);
+  color: var(--text-slate);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--recrutpro-focus);
+    outline-offset: 1px;
+  }
+}
+
+.segmented__option--on {
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font-weight: 600;
+  box-shadow: var(--elevation-1);
+}
+
+// A checkable filter chip — an on/off refinement that is not one of a set, so
+// neither a segmented control nor a dropdown fits it. Same 40px height as the
+// controls beside it, and it states its own state in words.
+.checkchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-default);
+  border: 1px solid var(--input-border);
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--text-slate);
+  font: var(--mat-sys-body-small);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+// Checked. The tint is the SECOND channel — the checkbox glyph beside the
+// label already says on or off.
+.checkchip--on {
+  border-color: var(--mat-sys-primary);
+  background-color: var(--tint-sky-bg);
+  color: var(--tint-sky-fg);
+}
+
+// ---------------------------------------------------------------------------
+// Data table.
+
+.table-card {
+  // The card holds a scroll container; its own padding would fight the
+  // full-bleed table edges.
+  padding: 0;
+  overflow: hidden;
+}
+
+// DESIGN.md: "Horizontal scrolling is permitted for complex data tables."
+// Scoped to this wrapper so the PAGE never scrolls sideways.
+.table-scroll {
+  // D-100. `overflow-x: auto` clips the wide table VISUALLY and scrolls it
+  // internally, but its LAYOUT overflow still propagated into the document's
+  // scrollable region. `contain: paint` makes this a containment boundary so it
+  // no longer does. `overflow-x: clip` on html/body does NOT fix it — verified
+  // by injection. Safe only while no descendant is sticky or absolutely
+  // positioned, the two things paint containment would re-parent.
+  contain: paint;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    text-align: left;
+    padding: 14px 20px;
+    border-bottom: var(--border-level-1);
+    // Single-line cells. Without this a long email wraps and DESIGN.md's row
+    // height becomes whatever the content wants — the table sits in a scroll
+    // wrapper precisely so it can be wide instead.
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  th {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: var(--recrutpro-tracking-label-sm);
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface);
+    background-color: var(--surface-table-head);
+  }
+
+  // DESIGN.md: "Row height should be set to 56px."
+  tbody tr {
+    height: var(--layout-row-height);
+
+    // DESIGN.md: "alternating row highlights or subtle dividers" — dividers,
+    // plus a hover cue since rows are navigable.
+    &:hover {
+      background-color: var(--mat-sys-surface-container-low);
+    }
+
+    &:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+// A row carrying an avatar needs the extra vertical room. DESIGN.md states
+// 56px; the human's brief allows 56–64 and /admin/users, the approved
+// reference, uses 64 for exactly these rows.
+.table--roomy tbody tr {
+  height: 64px;
+}
+
+.table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  background: none;
+  border: none;
+  padding: 0;
+  // D-100. Measured at 16px tall, under WCAG 2.2 AA's 24x24 CSS px for a
+  // pointer target, and NOT covered by the inline exception: a header-cell
+  // control is standalone, not a link inside a sentence. `min-height` rather
+  // than padding so the label stays on the header baseline.
+  min-height: 24px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.table__link {
+  color: var(--mat-sys-secondary);
+  text-decoration: none;
+  font: var(--mat-sys-body-medium);
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.table__meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.table__date {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.table__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+// The person cell: avatar plus name, used wherever a row is about a human.
+.row__person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+// A row about a THING rather than a person: same 32px circle so the row
+// rhythm matches the people tables, but a glyph, so nothing implies a face.
+.row__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.th--actions {
+  text-align: right;
+}
+
+.row__name {
+  font: var(--mat-sys-body-small);
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+.row__sub {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.row--inactive {
+  background-color: var(--mat-sys-surface-container-low);
+}
+
+// A compact in-row action. 32px tall with a 24px minimum enforced globally.
+// The two-class selector is the point. `.action-btn` alone is (0,1,0) and ties
+// with Material's own `.mdc-button`, which then wins on source order — so the
+// `height: 32px` below was inert and these buttons rendered at Material's
+// default 40px. With 14px of cell padding either side that made the row 70px,
+// past DESIGN.md's 56-64. Measured in the browser: the 48px
+// `.mat-mdc-button-touch-target` is `position: absolute` and was NOT the cause,
+// which is why setting the height token alone did not fix it either.
+.mat-mdc-button-base.action-btn,
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--sp-sm);
+  border-radius: var(--radius-default);
+  color: var(--text-slate);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.action-btn__label {
+  margin-left: var(--sp-xs);
+  font-size: 13px;
+}
+
+// ---------------------------------------------------------------------------
+// Table footer and pagination.
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  padding: var(--sp-md) var(--sp-lg);
+  border-top: var(--border-level-1);
+  background-color: var(--surface-table-head);
+}
+
+.table-footer__info {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination__btn {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--sp-sm);
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.pagination__btn--active {
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-color: var(--mat-sys-primary);
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-primary);
+  }
+}
+
+// The older two-button pager, kept for lists whose endpoint pages by
+// cursor rather than by number.
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-lg);
+  border-top: var(--border-level-1);
+  background-color: var(--surface-table-head);
+}
+
+.pager__status {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+// ---------------------------------------------------------------------------
+// Status pills.
+//
+// DESIGN.md's rule for status colour is form-over-colour: the tint is a second
+// channel, never the only one — every pill states its meaning in words too.
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  // Its own line-height. Without this an 11px badge inherits the cell's 24px
+  // and renders 32px tall — measured — which is a chip, not a badge.
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: var(--recrutpro-tracking-label-sm);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-color: var(--tint-slate-bg);
+  color: var(--tint-slate-fg);
+
+  & + & {
+    margin-left: var(--sp-xs);
+  }
+}
+
+.pill--indigo {
+  background-color: var(--tint-indigo-bg);
+  color: var(--tint-indigo-fg);
+}
+
+.pill--sky {
+  background-color: var(--tint-sky-bg);
+  color: var(--tint-sky-fg);
+}
+
+.pill--amber {
+  background-color: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
+}
+
+.pill--red {
+  background-color: var(--tint-red-bg);
+  color: var(--tint-red-fg);
+}
+
+.pill--green {
+  background-color: var(--tint-green-bg);
+  color: var(--tint-green-fg);
+}
+
+// Plain-text status, no tint — for a binary that reads better as words.
+.pill--on,
+.pill--off {
+  background-color: transparent;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.pill--on {
+  color: var(--mat-sys-on-surface);
+}
+
+.pill--off {
+  color: var(--mat-sys-outline);
+}
+
+// The on/off switch shown beside a status pill. Decorative — `aria-hidden`
+// in the template, because the pill beside it already carries the state.
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background-color: #cbd5e1;
+  padding: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.toggle-switch--on {
+  background-color: var(--mat-sys-primary);
+
+  .toggle-switch__thumb {
+    transform: translateX(16px);
+  }
+}
+
+.toggle-switch__thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--mat-sys-surface-container-lowest);
+  transition: transform 0.2s ease;
+}
+
+// ---------------------------------------------------------------------------
+// List rows (the non-tabular list) and the empty state.
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rows__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-sm);
+  border-bottom: var(--border-level-1);
+  border-radius: var(--radius-default);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.rows__primary {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface);
+}
+
+.rows__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+}
+
+// An empty state is an invitation to act, not a shrug — templates pair this
+// with a sentence saying what to do next and, where one exists, the action.
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-sm);
+  margin: 0;
+  padding: var(--sp-2xl) var(--sp-lg);
+  text-align: center;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: var(--mat-sys-outline-variant);
+  }
+}
+
+.empty__title {
+  font: var(--mat-sys-title-large);
+  font-size: 16px;
+  color: var(--mat-sys-on-surface);
+  margin: 0;
+}
+
+.empty__hint {
+  margin: 0;
+  max-width: 46ch;
+}
+
+// ---------------------------------------------------------------------------
+// DESIGN.md: single column with 16px margins below the breakpoint.
+
+@media (max-width: 900px) {
+  .filters__control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filters__field {
+    flex: 1 1 100%;
+  }
+
+  .filters__end {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filters__reset {
+    margin-left: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The brand lockup on the two screens that live OUTSIDE the app shell —
+// /login and /change-password. Forced password change is reached before any
+// other page is permitted, so without this it looks like a different product.
+// Lifted verbatim from login.scss, which was its only home.
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.brand__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand__logo {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.brand__name {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--mat-sys-primary);
+  letter-spacing: -0.01em;
+}
+
+.brand__tagline {
+  font-size: 15px;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 6px 0 0 0;
+}

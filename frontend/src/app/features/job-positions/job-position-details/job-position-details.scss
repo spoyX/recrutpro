@@ -1,24 +1,6 @@
 // DESIGN.md: Level 1 cards on the Level 0 canvas, 24px gutters, 8px radius,
 // 56px rows. Layout chrome lives in shared/app-shell.
 
-
-
-.head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-md);
-}
-
-// The FR-15/FR-16 actions sit beside the status badge, same shape as the
-// candidate file's action row.
-.head__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  flex-wrap: wrap;
-}
-
 .head__department {
   font: var(--mat-sys-body-large);
   color: var(--text-slate);
@@ -40,23 +22,6 @@
   min-width: 0;
 }
 
-.card {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  border-radius: var(--radius-default);
-  box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
-}
-
-.card__title {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0 0 var(--sp-md);
-}
-
 .card__count {
   font: var(--mat-sys-label-small);
   letter-spacing: var(--recrutpro-tracking-label-sm);
@@ -65,26 +30,6 @@
   background-color: var(--mat-sys-surface-container-high);
   color: var(--mat-sys-on-surface-variant);
   font-variant-numeric: tabular-nums;
-}
-
-// DESIGN.md: subtle dividers, 56px rows.
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.rows__row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-  min-height: var(--layout-row-height);
-  padding: var(--sp-sm) 0;
-  border-bottom: var(--border-level-1);
-
-  &:last-child {
-    border-bottom: none;
-  }
 }
 
 .rows__link {
@@ -146,34 +91,11 @@
   }
 }
 
-.note {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  margin: var(--sp-md) 0 0;
-  padding-top: var(--sp-md);
-  border-top: var(--border-level-1);
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-}
-
 .prose {
   font: var(--mat-sys-body-medium);
   color: var(--mat-sys-on-surface);
   margin: 0;
   white-space: pre-wrap;
-}
-
-.empty {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
 }
 
 @media (max-width: 900px) {

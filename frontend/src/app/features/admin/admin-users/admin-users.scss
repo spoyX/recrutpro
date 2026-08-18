@@ -1,195 +1,23 @@
 // Same shapes as the other list screens — card, filter row, 56px table rows.
-// The only new element is the status pill, and it is deliberately NOT a chip:
-// see the note on `.pill` below.
-
-.head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-}
-
-.card {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  border-radius: var(--radius-default);
-  box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
-  min-width: 0;
-  max-width: 100%;
-}
-
-.card__title {
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0;
-}
-
-.section__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-md);
-}
-
-.section__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-}
-
-.section__count {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.note {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  margin: var(--sp-md) 0 0;
-  padding: var(--sp-sm);
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-surface-container-high);
-  color: var(--mat-sys-on-surface-variant);
-  font: var(--mat-sys-body-small);
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    flex: none;
-  }
-}
 
 // ---------------------------------------------------------------- filters
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--sp-md);
-  margin-bottom: var(--sp-md);
-}
-
-.filters__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-xs);
-  min-width: 0;
-}
-
-.filters__label {
-  color: var(--text-slate);
-  margin: 0;
-}
-
-.filters__control {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-default);
-  padding: var(--sp-sm);
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface);
-  min-width: 200px;
-
-  &:focus {
-    border-color: var(--recrutpro-focus);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
-    outline: none;
-  }
-}
-
-.filters__reset {
-  margin-left: auto;
+.filters-card {
+  padding: var(--sp-md) var(--sp-lg);
+  margin-bottom: var(--sp-lg);
 }
 
 // ------------------------------------------------------------------ table
 
-.table-scroll {
-  // Phase 5 finding F. `overflow-x: auto` clips the wide table VISUALLY and
-  // scrolls it internally — every column stays reachable, which is why this was
-  // never a content-reachability bug. But the table's LAYOUT overflow still
-  // propagated into the document's scrollable region, so the whole page gained
-  // a horizontal scrollbar: on /candidates the document measured a constant
-  // 1496px and panned 82px even in a 1414px window.
-  //
-  // `contain: paint` is what stops that: it makes this element a containment
-  // boundary, so a descendant's overflow no longer contributes to any
-  // ancestor's scrollable area. `overflow-x: clip` on html/body did NOT fix it
-  // (verified by injection) because the overflow was being generated below it.
-  //
-  // Isolated by elimination, not guessed: hiding this wrapper collapsed the
-  // document to exactly the viewport width, and `table { min-width: 0 }` did
-  // not. Safe here — no sticky or absolutely-positioned descendants, the two
-  // things paint containment would otherwise re-parent.
-  contain: paint;
-  overflow-x: auto;
-}
-
 .table {
-  width: 100%;
-  border-collapse: collapse;
+  // Six columns, the widest of them an email — below this the columns start
+  // squeezing each other instead of scrolling.
   min-width: 1040px;
-
-  th,
-  td {
-    text-align: left;
-    padding: var(--sp-sm) var(--sp-md);
-    border-bottom: var(--border-level-1);
-    white-space: nowrap;
-  }
-
-  th {
-    font: var(--mat-sys-label-small);
-    letter-spacing: var(--recrutpro-tracking-label-sm);
-    text-transform: uppercase;
-    color: var(--text-slate);
-    background-color: var(--mat-sys-surface-container-low);
-  }
-
-  tbody tr {
-    height: var(--layout-row-height);
-  }
-
-  tbody tr:hover {
-    background-color: var(--mat-sys-surface-container-low);
-  }
-
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
 }
 
-.table__meta {
-  font: var(--mat-sys-body-small);
-  color: var(--text-slate);
-}
-
-.table__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-xs);
-  height: var(--layout-row-height);
-}
-
-// A deactivated row stays fully READABLE — this is an administration screen and
-// the deactivated accounts are exactly what an administrator comes here to find.
-// Muted, never hidden, and never below the contrast floor.
-.row--inactive {
-  background-color: var(--mat-sys-surface-container-low);
-}
-
-.row__person {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
+.table__email {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface);
 }
 
 .row__self,
@@ -198,157 +26,39 @@
   margin-left: var(--sp-xs);
 }
 
-// ------------------------------------------------------------------ pills
-//
-// NOT `app-stage-chip`. That component owns two closed vocabularies — the seven
-// pipeline stages and the three job-position statuses (D-080) — and account
-// state is a third, unrelated one. Feeding it strings it has no tone for would
-// silently fall through to `neutral`, and adding them would put « Actif » one
-// typo away from a candidate stage. These use the same DESIGN.md recipe (low
-// saturation tint, same-hue text) without borrowing the vocabulary.
-.pill {
-  display: inline-block;
-  padding: 2px var(--sp-sm);
-  border-radius: var(--radius-sm);
-  font: var(--mat-sys-label-small);
-  letter-spacing: var(--recrutpro-tracking-label-sm);
-  text-transform: uppercase;
-  white-space: nowrap;
+// ------------------------------------------------------------------ pills & status
 
-  & + & {
-    margin-left: var(--sp-xs);
-  }
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.pill--on {
-  background-color: var(--recrutpro-success-container);
-  color: var(--recrutpro-on-success-container);
-}
-
-.pill--off {
-  background-color: var(--mat-sys-surface-container-high);
-  color: var(--mat-sys-on-surface-variant);
-}
-
-// The ATTENTION role (D-080): wants notice, neither good nor bad.
 .pill--warn {
   background-color: var(--mat-sys-tertiary-fixed-dim);
   color: var(--mat-sys-on-tertiary-fixed-variant);
+  padding: 3px 8px;
 }
 
-// ------------------------------------------------------------------- rows
-
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.rows__row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-sm);
-  border-bottom: var(--border-level-1);
-  border-radius: var(--radius-default);
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.rows__primary {
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface);
-}
-
-.rows__actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-xs);
-}
-
-.empty {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
-}
-
-.user__hint {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: var(--sp-xs) 0 0;
-}
-
-@media (max-width: 900px) {
-  .filters__control {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .filters__field {
-    flex: 1 1 100%;
-  }
-
-  .filters__reset {
-    margin-left: 0;
-  }
-}
-
-// 5.2 — the segmented status control. Three options, current one visible.
-.segmented {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--radius-default);
-  border: 1px solid var(--input-border);
-  background-color: var(--mat-sys-surface-container-low);
-}
-
-.segmented__option {
-  border: none;
-  background: none;
-  padding: var(--sp-xs) var(--sp-md);
-  border-radius: calc(var(--radius-default) - 2px);
-  font: var(--mat-sys-body-medium);
-  color: var(--text-slate);
-  cursor: pointer;
-
-  &:hover {
-    color: var(--mat-sys-on-surface);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--recrutpro-focus);
-    outline-offset: 1px;
-  }
-}
-
-.segmented__option--on {
-  background-color: var(--mat-sys-surface-container-lowest);
-  color: var(--mat-sys-on-surface);
-  font-weight: 600;
-  box-shadow: var(--elevation-1);
-}
-
-// 5.1 — the role badge, OUTLINED rather than filled.
-//
-// The review proposed "a tone per role". Measured against the live palette,
-// that is not achievable with DESIGN.md's existing tokens and it is not mine
-// to add one (rule 8):
-//   - `primary-fixed` rgb(220,225,255) and `secondary-fixed` rgb(216,226,255)
-//     are FOUR channel-units apart — indistinguishable, the D-080 problem;
-//   - `tertiary-fixed-dim` is already the « Mot de passe à changer » status
-//     pill, so a role wearing it would be identical to a status ON THE SAME ROW;
-//   - `surface-container-high` is already « Désactivé », same collision.
-//
-// So the badge distinguishes itself by FORM, not hue: an outline against the
-// filled status pills. That is also the truer signal — a role and an account
-// state are different kinds of fact, and they now look like different kinds of
-// thing rather than two shades of one. A per-role colour remains available as
-// a DESIGN.md decision; it is flagged, not taken here.
+// The role badge. Colour is the SECOND channel — the badge always spells the
+// role out, so the tint distinguishes at a glance without carrying the meaning
+// alone. Which hue means which role stays an open DESIGN.md question; these
+// three are consistent within this screen, not a ratified role→colour mapping.
 .pill--role {
-  background-color: transparent;
-  border: 1px solid var(--input-border);
-  color: var(--text-slate);
+  border-radius: 6px;
+}
+
+.pill--role-administrateur {
+  background-color: var(--tint-indigo-bg);
+  color: var(--tint-indigo-fg);
+}
+
+.pill--role-recruteur {
+  background-color: var(--tint-sky-bg);
+  color: var(--tint-sky-fg);
+}
+
+.pill--role-responsablehierarchique {
+  background-color: var(--tint-amber-bg);
+  color: var(--tint-amber-fg);
 }

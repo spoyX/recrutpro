@@ -213,7 +213,13 @@
               }
             </ul>
           } @else {
-            <p class="empty">Aucun entretien planifié pour ce candidat.</p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">event_available</mat-icon>
+              <p class="empty__title">Aucun entretien planifié pour ce candidat.</p>
+              <p class="empty__hint">
+                Un entretien peut être planifié une fois le CV présélectionné.
+              </p>
+            </div>
           }
         </section>
 
@@ -296,7 +302,14 @@
               Télécharger le CV
             </a>
           } @else {
-            <p class="empty">Aucun CV téléversé.</p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">description</mat-icon>
+              <p class="empty__title">Aucun CV téléversé.</p>
+              <p class="empty__hint">
+                La présélection s’appuie sur le CV : ajoutez-le pour faire avancer ce
+                dossier.
+              </p>
+            </div>
           }
 
           <!-- FR-22. The same action either way — the endpoint replaces or

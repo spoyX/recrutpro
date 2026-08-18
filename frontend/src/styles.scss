@@ -9,6 +9,8 @@
 @use 'styles/tokens';
 // Shared by the FR-34 cancellation prompt and the FR-30 scheduling dialog.
 @use 'styles/modal';
+// The card / filter-bar / table vocabulary shared by every feature screen.
+@use 'styles/page';
 
 // Border-box everywhere. Without it a declared width means CONTENT width, so
 // `flex: 0 0 280px` plus 16px padding renders a 313px sidebar and DESIGN.md's
@@ -156,3 +158,23 @@ a:focus-visible > .mat-focus-indicator::before {
 .mat-mdc-icon-button:focus-visible .mat-focus-indicator::before {
   border-radius: var(--radius-full);
 }
+
+// ---------------------------------------------------------------------------
+// WCAG 2.2 AA (2.5.8) — Touch target size (24x24 CSS px minimum).
+//
+// Ensures every interactive control (links, buttons, form inputs, icon buttons)
+// satisfies the 24px width and height floor without altering visual proportions.
+a,
+button,
+input,
+select,
+textarea,
+.mat-mdc-button-base,
+.table__link,
+.table__sort,
+.sidebar__link,
+.topbar__photo {
+  min-height: 24px;
+  min-width: 24px;
+}
+

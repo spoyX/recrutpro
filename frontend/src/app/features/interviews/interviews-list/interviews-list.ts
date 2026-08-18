@@ -1,10 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
 import { AuthService, ApiError } from '../../../core/auth.service';
 import {
   InterviewService,
@@ -16,6 +18,7 @@ import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { EvaluationForm } from '../evaluation-form/evaluation-form';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
+import { pageWindow } from '../../../shared/page-window';
 import { InterviewCalendar } from '../interview-calendar/interview-calendar';
 import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
@@ -75,6 +78,8 @@ export interface InterviewDay {
 export class InterviewsList {
   private readonly interviews = inject(InterviewService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly loadTrigger$ = new Subject<void>();
   protected readonly auth = inject(AuthService);
 
   protected readonly pageSize = INTERVIEW_PAGE_SIZE;
@@ -114,6 +119,9 @@ export class InterviewsList {
   readonly hasPrevious = computed(() => this.offset() > 0);
   readonly hasNext = computed(() => this.rangeEnd() < this.total());
   readonly isFiltered = computed(() => Object.values(this.filters()).some((v) => !!v));
+
+  /** Numbered pages, same arithmetic as /candidates (shared/page-window.ts). */
+  readonly pages = computed(() => pageWindow(this.total(), this.offset(), this.pageSize));
 
   /**
    * Filter options are derived from the ROWS ON SCREEN, not from a user or
@@ -168,6 +176,56 @@ export class InterviewsList {
   });
 
   constructor() {
+    this.loadTrigger$
+      .pipe(
+        switchMap(() => {
+          this.loading.set(true);
+          this.errorMessage.set(null);
+          return this.interviews
+            .listInterviews({
+              ...this.filters(),
+              includeFinished: this.includeFinished() || undefined,
+              limit: this.pageSize,
+              offset: this.offset(),
+              sortBy: 'scheduledAt',
+              sortDir: this.sortDir(),
+            })
+            .pipe(
+              catchError((response: HttpErrorResponse) => {
+                this.loading.set(false);
+                this.rows.set([]);
+                this.total.set(0);
+
+                if (response.status === 401) {
+                  void this.router.navigate(['/login']);
+                  return EMPTY;
+                }
+
+                const body = response.error as ApiError | null;
+                this.errorMessage.set(
+                  body?.error?.message ??
+                    (response.status === 0
+                      ? 'Le serveur est injoignable. Vérifiez votre connexion, puis réessayez.'
+                      : 'Le planning des entretiens est momentanément indisponible. Réessayez.'),
+                );
+                return EMPTY;
+              }),
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((page) => {
+        if (page.items.length === 0 && page.total > 0 && this.offset() >= page.total) {
+          this.offset.set(Math.max(0, Math.floor((page.total - 1) / this.pageSize) * this.pageSize));
+          this.load();
+          return;
+        }
+
+        this.rows.set(page.items);
+        this.total.set(page.total);
+        this.loading.set(false);
+      });
+
     this.load();
   }
 
@@ -196,57 +254,7 @@ export class InterviewsList {
   }
 
   load(): void {
-    this.loading.set(true);
-    this.errorMessage.set(null);
-
-    this.interviews
-      .listInterviews({
-        ...this.filters(),
-        includeFinished: this.includeFinished() || undefined,
-        limit: this.pageSize,
-        offset: this.offset(),
-        sortBy: 'scheduledAt',
-        sortDir: this.sortDir(),
-      })
-      .subscribe({
-        next: (page) => {
-          // Cancelling (FR-34) and evaluating (FR-38) both REMOVE the row from
-          // the default view, so a reload can land on an offset that no longer
-          // exists — page 2 of a list that just shrank to 25 rows comes back
-          // empty while the total says 25, and the page renders « aucun
-          // entretien ne correspond à ces filtres », which is false. Step back
-          // to the last page that does exist and ask again. Bounded: the retry
-          // offset is strictly smaller, so it cannot loop.
-          if (page.items.length === 0 && page.total > 0 && this.offset() >= page.total) {
-            this.offset.set(Math.max(0, Math.floor((page.total - 1) / this.pageSize) * this.pageSize));
-            this.load();
-            return;
-          }
-
-          this.rows.set(page.items);
-          this.total.set(page.total);
-          this.loading.set(false);
-        },
-        error: (response: HttpErrorResponse) => {
-          this.loading.set(false);
-          this.rows.set([]);
-          this.total.set(0);
-
-          // FR-2 expiry or FR-8 deactivation — the D-064 rule.
-          if (response.status === 401) {
-            void this.router.navigate(['/login']);
-            return;
-          }
-
-          const body = response.error as ApiError | null;
-          this.errorMessage.set(
-            body?.error?.message ??
-              (response.status === 0
-                ? 'Le serveur est injoignable. Vérifiez votre connexion, puis réessayez.'
-                : 'Le planning des entretiens est momentanément indisponible. Réessayez.'),
-          );
-        },
-      });
+    this.loadTrigger$.next();
   }
 
   setFilter(key: keyof InterviewListQuery, value: string): void {
@@ -271,6 +279,12 @@ export class InterviewsList {
     this.filters.set({});
     this.includeFinished.set(false);
     this.offset.set(0);
+    this.load();
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.pages().count || page === this.pages().current) return;
+    this.offset.set((page - 1) * this.pageSize);
     this.load();
   }
 

@@ -1,10 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
 import { ApiError, AuthService } from '../../../core/auth.service';
 import {
   JobPositionService,
@@ -59,6 +61,8 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
 export class JobPositionsList {
   private readonly positions = inject(JobPositionService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly loadTrigger$ = new Subject<void>();
   protected readonly auth = inject(AuthService);
 
   protected readonly statuses = JOB_POSITION_STATUSES;
@@ -87,6 +91,39 @@ export class JobPositionsList {
   readonly closingPosition = signal<JobPosition | null>(null);
 
   constructor() {
+    this.loadTrigger$
+      .pipe(
+        switchMap(() => {
+          this.loading.set(true);
+          this.errorMessage.set(null);
+          return this.positions.listPositions(this.filters()).pipe(
+            catchError((response: HttpErrorResponse) => {
+              this.loading.set(false);
+              this.rows.set([]);
+
+              if (response.status === 401) {
+                void this.router.navigate(['/login']);
+                return EMPTY;
+              }
+
+              const body = response.error as ApiError | null;
+              this.errorMessage.set(
+                body?.error?.message ??
+                  (response.status === 0
+                    ? 'Le serveur est injoignable. Vérifiez votre connexion, puis réessayez.'
+                    : 'La liste des postes est momentanément indisponible. Réessayez.'),
+              );
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((positions) => {
+        this.rows.set(positions);
+        this.loading.set(false);
+      });
+
     this.load();
     // The department filter degrades to "Tous les départements" on failure;
     // losing a filter's options must not empty the list it filters.
@@ -102,37 +139,7 @@ export class JobPositionsList {
   }
 
   load(): void {
-    this.loading.set(true);
-    this.errorMessage.set(null);
-
-    this.positions.listPositions(this.filters()).subscribe({
-      next: (positions) => {
-        this.rows.set(positions);
-        this.loading.set(false);
-      },
-      error: (response: HttpErrorResponse) => {
-        this.loading.set(false);
-        this.rows.set([]);
-
-        // FR-2 expiry or FR-8 deactivation — signing in again is the only
-        // useful action, so go there rather than showing a dead error.
-        if (response.status === 401) {
-          void this.router.navigate(['/login']);
-          return;
-        }
-
-        // The server's own message first. A Responsable hiérarchique reaching
-        // this route by URL gets D-038's 403, and « la liste est indisponible »
-        // would describe a rule as an outage (NFR-09).
-        const body = response.error as ApiError | null;
-        this.errorMessage.set(
-          body?.error?.message ??
-            (response.status === 0
-              ? 'Le serveur est injoignable. Vérifiez votre connexion, puis réessayez.'
-              : 'La liste des postes est momentanément indisponible. Réessayez.'),
-        );
-      },
-    });
+    this.loadTrigger$.next();
   }
 
   setFilter(key: keyof JobPositionFilters, value: string): void {

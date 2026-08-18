@@ -1,7 +1,55 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Nouveau candidat</h1>
-    <p class="head__phase label-sm">
+    <div class="head__titles">
+      <h1 class="page__title">Nouveau candidat</h1>
+      <p class="head__subtitle">
+        Les informations d'abord, le CV ensuite — le candidat existe dès la
+        première étape.
+      </p>
+    </div>
+
+    <!--
+      The phase label made into a real stepper. Same three phases and the same
+      wording; it just shows where the other steps are instead of naming only
+      the current one. `aria-current="step"` carries that to a screen reader,
+      which the sentence alone did not.
+    -->
+    <ol class="stepper" aria-label="Progression">
+      <li
+        class="stepper__step"
+        [class.stepper__step--on]="phase() === 'identity'"
+        [class.stepper__step--done]="phase() !== 'identity'"
+        [attr.aria-current]="phase() === 'identity' ? 'step' : null"
+      >
+        <span class="stepper__mark" aria-hidden="true">
+          @if (phase() !== 'identity') {
+            <mat-icon>check</mat-icon>
+          } @else {
+            1
+          }
+        </span>
+        <span class="stepper__label">Informations</span>
+      </li>
+      <li
+        class="stepper__step"
+        [class.stepper__step--on]="phase() === 'resume'"
+        [class.stepper__step--done]="phase() === 'done'"
+        [attr.aria-current]="phase() === 'resume' ? 'step' : null"
+      >
+        <span class="stepper__mark" aria-hidden="true">
+          @if (phase() === 'done') {
+            <mat-icon>check</mat-icon>
+          } @else {
+            2
+          }
+        </span>
+        <span class="stepper__label">CV</span>
+      </li>
+    </ol>
+
+    <!-- Kept for anything reading the phase as text, and as the plain-language
+         statement of what the stepper draws. -->
+    <p class="head__phase label-sm visually-hidden">
       @switch (phase()) {
         @case ('identity') { Étape 1 sur 2 — informations }
         @case ('resume') { Étape 2 sur 2 — CV }

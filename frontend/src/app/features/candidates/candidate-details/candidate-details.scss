@@ -2,26 +2,6 @@
 // 1px #E5E7EB borders. Layout chrome (sidebar, topbar, page width, margins)
 // lives in shared/app-shell — this file styles only the page's own content.
 
-
-
-.head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-}
-
-// The FR-30 button sits beside the stage chip, not above the title: the chip
-// states what the candidate IS and the button is the one move available from
-// there, so they read as a pair.
-.head__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  flex-wrap: wrap;
-}
-
 .head__position {
   font: var(--mat-sys-body-large);
   color: var(--text-slate);
@@ -51,20 +31,6 @@
   flex-direction: column;
   gap: var(--sp-gutter);
   min-width: 0;
-}
-
-.card {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  border-radius: var(--radius-default);
-  box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
-}
-
-.card__title {
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0 0 var(--sp-md);
 }
 
 // ------------------------------------------------------------- interviews
@@ -261,12 +227,6 @@
   margin: var(--sp-sm) 0 0;
 }
 
-.empty {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
-}
-
 // DESIGN.md: single column below the mobile breakpoint.
 @media (max-width: 900px) {
   .columns {
@@ -292,7 +252,6 @@
   gap: var(--sp-md);
   min-width: 0;
 }
-
 
 .head__text {
   min-width: 0;

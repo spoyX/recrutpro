@@ -6,55 +6,12 @@
 // 280px sidebar finally had somewhere to navigate to. This file now styles
 // only the dashboard's own content.
 
-
-
 // A fluid tile row rather than a hard 12-column grid: the three roles have
 // one, one and two tiles, and auto-fit keeps every case sensible.
 .grid--tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--sp-gutter);
-}
-
-.card {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  border-radius: var(--radius-default);
-  box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
-}
-
-.card__title {
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0 0 var(--sp-md);
-}
-
-// DESIGN.md: "Lists & Tables … subtle dividers. Row height 56px."
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.rows__row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-md);
-  min-height: var(--layout-row-height);
-  padding: var(--sp-sm) 0;
-  border-bottom: var(--border-level-1);
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.rows__primary {
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface);
-  flex: 1 1 40%;
-  min-width: 0;
 }
 
 // The candidate name is the row's affordance into the details page. Underlined
@@ -88,12 +45,6 @@
   font: var(--mat-sys-label-large);
 }
 
-.empty {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
-}
-
 // DESIGN.md: single-column below the mobile breakpoint. Page margins are the
 // shell's job now; only the row layout is this file's concern.
 @media (max-width: 700px) {
@@ -113,7 +64,10 @@
 // 2.4 — a card header that carries a link alongside its title.
 .card__head {
   display: flex;
-  align-items: baseline;
+  // `flex-start`, not `baseline`: the title side is now a two-line stack
+  // (title + subtitle) and baseline alignment would hang the « Voir tout »
+  // link off the first line of it.
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-md);
   margin-bottom: var(--sp-md);
@@ -126,10 +80,19 @@
   // height without moving the text.
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   min-height: 24px;
+  flex: none;
   font: var(--mat-sys-body-small);
+  font-weight: 600;
   color: var(--mat-sys-secondary);
   text-decoration: none;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 
   &:hover {
     text-decoration: underline;
@@ -164,4 +127,14 @@
   font: var(--mat-sys-title-medium);
   color: var(--mat-sys-on-surface);
   font-variant-numeric: tabular-nums;
+}
+
+// The dashboard's rows are the same idea as a table row without the table:
+// give them a comparable height and a hover cue, since most are navigable.
+.rows__row {
+  min-height: 56px;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
 }

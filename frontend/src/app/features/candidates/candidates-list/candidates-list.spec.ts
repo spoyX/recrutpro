@@ -100,7 +100,7 @@ describe('CandidatesList (FR-24)', () => {
       load([row('a'), row('b')], 57);
 
       expect(fixture.componentInstance.total()).toBe(57);
-      expect(text()).toContain('1–2 sur 57');
+      expect(text()).toContain('Affichage de 1 à 2 sur 57');
     });
 
     it('falls back to the page length when the header is missing', () => {
@@ -287,7 +287,7 @@ describe('CandidatesList (FR-24)', () => {
   describe('D-041 — pagination', () => {
     it('advances by the page size and reports the range', () => {
       load(fullPage('a'), 60);
-      expect(text()).toContain('1–25 sur 60');
+      expect(text()).toContain('Affichage de 1 à 25 sur 60');
 
       fixture.componentInstance.nextPage();
       const req = listRequest();
@@ -295,7 +295,7 @@ describe('CandidatesList (FR-24)', () => {
       req.flush(fullPage('b'), { headers: { 'X-Total-Count': '60' } });
       fixture.detectChanges();
 
-      expect(text()).toContain('26–50 sur 60');
+      expect(text()).toContain('Affichage de 26 à 50 sur 60');
     });
 
     it('the LAST page reports the rows it actually holds, not a full page', () => {
@@ -310,7 +310,7 @@ describe('CandidatesList (FR-24)', () => {
       );
       fixture.detectChanges();
 
-      expect(text()).toContain('51–60 sur 60');
+      expect(text()).toContain('Affichage de 51 à 60 sur 60');
       expect(fixture.componentInstance.hasNext()).toBeFalse();
     });
 

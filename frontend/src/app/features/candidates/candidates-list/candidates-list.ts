@@ -1,10 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
 import { ApiError } from '../../../core/auth.service';
 import {
   CandidateService,
@@ -16,6 +18,8 @@ import {
 import { JobPositionService, JobPositionOption } from '../../job-positions/job-position.service';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
+import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
+import { pageWindow } from '../../../shared/page-window';
 
 type SortField = 'fullName' | 'currentStage' | 'registeredAt';
 
@@ -43,6 +47,7 @@ type SortField = 'fullName' | 'currentStage' | 'registeredAt';
     MatProgressBarModule,
     AppShell,
     StageChip,
+    UserAvatar,
   ],
   templateUrl: './candidates-list.html',
   styleUrl: './candidates-list.scss',
@@ -51,6 +56,8 @@ export class CandidatesList {
   private readonly candidates = inject(CandidateService);
   private readonly positions = inject(JobPositionService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly loadTrigger$ = new Subject<void>();
 
   protected readonly stages = CANDIDATE_STAGES;
   protected readonly pageSize = CANDIDATE_PAGE_SIZE;
@@ -87,6 +94,49 @@ export class CandidatesList {
   readonly isFiltered = computed(() => Object.values(this.filters()).some((v) => !!v));
 
   constructor() {
+    this.loadTrigger$
+      .pipe(
+        switchMap(() => {
+          this.loading.set(true);
+          this.errorMessage.set(null);
+          return this.candidates
+            .listCandidates({
+              ...this.filters(),
+              limit: this.pageSize,
+              offset: this.offset(),
+              sortBy: this.sortBy(),
+              sortDir: this.sortDir(),
+            })
+            .pipe(
+              catchError((response: HttpErrorResponse) => {
+                this.loading.set(false);
+                this.rows.set([]);
+                this.total.set(0);
+
+                if (response.status === 401) {
+                  void this.router.navigate(['/login']);
+                  return EMPTY;
+                }
+
+                const body = response.error as ApiError | null;
+                this.errorMessage.set(
+                  body?.error?.message ??
+                    (response.status === 0
+                      ? 'Le serveur est injoignable. Vérifiez votre connexion, puis réessayez.'
+                      : 'La liste des candidats est momentanément indisponible. Réessayez.'),
+                );
+                return EMPTY;
+              }),
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((page) => {
+        this.rows.set(page.items);
+        this.total.set(page.total);
+        this.loading.set(false);
+      });
+
     this.load();
     this.positions.listOptions().subscribe({
       next: (options) => this.positionOptions.set(options),
@@ -97,44 +147,7 @@ export class CandidatesList {
   }
 
   load(): void {
-    this.loading.set(true);
-    this.errorMessage.set(null);
-
-    this.candidates
-      .listCandidates({
-        ...this.filters(),
-        limit: this.pageSize,
-        offset: this.offset(),
-        sortBy: this.sortBy(),
-        sortDir: this.sortDir(),
-      })
-      .subscribe({
-        next: (page) => {
-          this.rows.set(page.items);
-          this.total.set(page.total);
-          this.loading.set(false);
-        },
-        error: (response: HttpErrorResponse) => {
-          this.loading.set(false);
-          this.rows.set([]);
-          this.total.set(0);
-
-          // FR-2 expiry or FR-8 deactivation — signing in again is the only
-          // useful action, so go there rather than showing a dead error.
-          if (response.status === 401) {
-            void this.router.navigate(['/login']);
-            return;
-          }
-
-          const body = response.error as ApiError | null;
-          this.errorMessage.set(
-            body?.error?.message ??
-              (response.status === 0
-                ? 'Le serveur est injoignable. Vérifiez votre connexion, puis réessayez.'
-                : 'La liste des candidats est momentanément indisponible. Réessayez.'),
-          );
-        },
-      });
+    this.loadTrigger$.next();
   }
 
   /** Any filter change resets to page 1 — page 3 of a new filter is meaningless. */
@@ -171,6 +184,19 @@ export class CandidatesList {
   nextPage(): void {
     if (!this.hasNext()) return;
     this.offset.update((o) => o + this.pageSize);
+    this.load();
+  }
+
+  // ------------------------------------------------------------ pagination
+  //
+  // Numbered pages derived from `total`/`offset`/`pageSize`, which the endpoint
+  // already returns. See shared/page-window.ts — no page number is invented.
+
+  readonly pages = computed(() => pageWindow(this.total(), this.offset(), this.pageSize));
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.pages().count || page === this.pages().current) return;
+    this.offset.set((page - 1) * this.pageSize);
     this.load();
   }
 

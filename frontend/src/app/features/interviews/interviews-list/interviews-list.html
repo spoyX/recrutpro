@@ -1,100 +1,17 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Entretiens</h1>
-    @if (!loading() && !errorMessage()) {
-      <p class="head__count">
-        @if (total() === 0) {
-          Aucun entretien
-        } @else {
-          {{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}
-        }
+    <div class="head__titles">
+      <h1 class="page__title">Entretiens</h1>
+      <p class="head__subtitle">
+        Le planning des entretiens, en calendrier ou en liste — les deux partagent les
+        mêmes filtres.
       </p>
-    }
-  </header>
-
-  <!-- FR-33: filtrable par date, responsable hiérarchique et poste. -->
-  <section class="filters card" aria-label="Filtres">
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-from">Du</label>
-      <input
-        id="filter-from"
-        class="filters__control"
-        type="date"
-        [value]="filters().fromDate ?? ''"
-        (change)="setFilter('fromDate', $any($event.target).value)"
-      />
     </div>
-
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-to">au</label>
-      <input
-        id="filter-to"
-        class="filters__control"
-        type="date"
-        [value]="filters().toDate ?? ''"
-        (change)="setFilter('toDate', $any($event.target).value)"
-      />
-    </div>
-
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-interviewer">Responsable</label>
-      <select
-        id="filter-interviewer"
-        class="filters__control"
-        [value]="filters().interviewerId ?? ''"
-        (change)="setFilter('interviewerId', $any($event.target).value)"
-      >
-        <option value="">Tous les responsables</option>
-        @for (option of interviewerOptions(); track option.id) {
-          <option [value]="option.id">{{ option.name }}</option>
-        }
-      </select>
-    </div>
-
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-position">Poste</label>
-      <select
-        id="filter-position"
-        class="filters__control"
-        [value]="filters().jobPositionId ?? ''"
-        (change)="setFilter('jobPositionId', $any($event.target).value)"
-      >
-        <option value="">Tous les postes</option>
-        @for (option of positionOptions(); track option.id) {
-          <option [value]="option.id">{{ option.name }}</option>
-        }
-      </select>
-    </div>
-
-    <div class="filters__actions">
-      <!-- D-049: the parameter is includeFinished; it reveals BOTH cancelled
-           and already-evaluated interviews, which is why it is not called
-           includeCancelled any more. -->
-      <button
-        matButton
-        type="button"
-        [class.filters__toggle--on]="includeFinished()"
-        (click)="toggleFinished()"
-      >
-        <mat-icon>{{ includeFinished() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-        Afficher les entretiens terminés et annulés
-      </button>
-
-      <button matButton type="button" (click)="toggleSort()">
-        <mat-icon>{{ sortDir() === 'asc' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
-        {{ sortDir() === 'asc' ? 'Du plus proche' : 'Du plus lointain' }}
-      </button>
-
-      @if (isFiltered() || includeFinished()) {
-        <button matButton type="button" (click)="resetFilters()">
-          <mat-icon>filter_alt_off</mat-icon>
-          Réinitialiser
-        </button>
-      }
-
+    <div class="head__actions">
       <!-- D-094: FR-33 offers « vue liste OU calendrier ». Both are kept and
-           SHARE these filters, so switching view never changes the data —
-           only how it is drawn. -->
+           SHARE the filters below, so switching view never changes the data —
+           only how it is drawn. It sits in the header rather than among the
+           filters because it changes the DISPLAY, not the result set. -->
       <div class="segmented viewswitch" role="group" aria-label="Affichage">
         @for (option of viewOptions; track option.value) {
           <button
@@ -106,6 +23,112 @@
           >
             <mat-icon>{{ option.icon }}</mat-icon>
             {{ option.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- FR-33: filtrable par date, responsable hiérarchique et poste. -->
+  <section class="filters card filters-card" aria-label="Filtres">
+    <div class="filters">
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-from">Du</label>
+        <input
+          id="filter-from"
+          class="filters__control filters__control--date"
+          type="date"
+          [value]="filters().fromDate ?? ''"
+          (change)="setFilter('fromDate', $any($event.target).value)"
+        />
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-to">au</label>
+        <input
+          id="filter-to"
+          class="filters__control filters__control--date"
+          type="date"
+          [value]="filters().toDate ?? ''"
+          (change)="setFilter('toDate', $any($event.target).value)"
+        />
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-interviewer">Responsable</label>
+        <select
+          id="filter-interviewer"
+          class="filters__control"
+          [value]="filters().interviewerId ?? ''"
+          (change)="setFilter('interviewerId', $any($event.target).value)"
+        >
+          <option value="">Tous les responsables</option>
+          @for (option of interviewerOptions(); track option.id) {
+            <option [value]="option.id">{{ option.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-position">Poste</label>
+        <select
+          id="filter-position"
+          class="filters__control"
+          [value]="filters().jobPositionId ?? ''"
+          (change)="setFilter('jobPositionId', $any($event.target).value)"
+        >
+          <option value="">Tous les postes</option>
+          @for (option of positionOptions(); track option.id) {
+            <option [value]="option.id">{{ option.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filters__end">
+        @if (view() === 'list' && !loading() && !errorMessage()) {
+          <span class="filters__count">
+            @if (total() === 0) {
+              Aucun entretien
+            } @else {
+              {{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}
+            }
+          </span>
+        }
+
+        <!-- D-049: the parameter is includeFinished; it reveals BOTH cancelled
+             and already-evaluated interviews, which is why it is not called
+             includeCancelled any more. -->
+        <button
+          type="button"
+          class="checkchip"
+          [class.checkchip--on]="includeFinished()"
+          [attr.aria-pressed]="includeFinished()"
+          (click)="toggleFinished()"
+        >
+          <mat-icon aria-hidden="true">{{
+            includeFinished() ? 'check_box' : 'check_box_outline_blank'
+          }}</mat-icon>
+          Terminés et annulés
+        </button>
+
+        <button
+          type="button"
+          class="checkchip"
+          [attr.aria-label]="
+            sortDir() === 'asc' ? 'Trier du plus lointain' : 'Trier du plus proche'
+          "
+          (click)="toggleSort()"
+        >
+          <mat-icon aria-hidden="true">{{
+            sortDir() === 'asc' ? 'arrow_downward' : 'arrow_upward'
+          }}</mat-icon>
+          {{ sortDir() === 'asc' ? 'Du plus proche' : 'Du plus lointain' }}
+        </button>
+
+        @if (isFiltered() || includeFinished()) {
+          <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Réinitialiser
           </button>
         }
       </div>
@@ -204,7 +227,12 @@
       <!-- Grouped by day, so the list reads as a schedule (FR-33). -->
       @for (day of days(); track day.date) {
         <section class="card day" [attr.aria-label]="day.date">
-          <h2 class="day__heading">{{ day.heading | date: 'EEEE d MMMM y' }}</h2>
+          <div class="section__head">
+            <h2 class="day__heading">{{ day.heading | date: 'EEEE d MMMM y' }}</h2>
+            <p class="section__count">
+              {{ day.rows.length }} entretien{{ day.rows.length > 1 ? 's' : '' }}
+            </p>
+          </div>
 
           <ul class="rows">
             @for (interview of day.rows; track interview.id) {
@@ -248,19 +276,25 @@
                   @if (interview.candidate?.hasResume) {
                     <a
                       matButton
+                      class="action-btn"
                       [href]="interview.candidate!.resumeUrl"
                       target="_blank"
                       rel="noopener"
                     >
                       <mat-icon>description</mat-icon>
-                      CV
+                      <span class="action-btn__label">CV</span>
                     </a>
                   }
 
                   @if (canCancel(interview)) {
-                    <button matButton type="button" (click)="startCancel(interview)">
+                    <button
+                      matButton
+                      type="button"
+                      class="action-btn"
+                      (click)="startCancel(interview)"
+                    >
                       <mat-icon>event_busy</mat-icon>
-                      Annuler
+                      <span class="action-btn__label">Annuler</span>
                     </button>
                   }
 
@@ -288,27 +322,67 @@
         </section>
       }
 
-      <nav class="pager" aria-label="Pagination">
-        <button matButton type="button" [disabled]="!hasPrevious()" (click)="previousPage()">
-          <mat-icon>chevron_left</mat-icon>
-          Précédent
-        </button>
-        <span class="pager__status">{{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}</span>
-        <button matButton type="button" [disabled]="!hasNext()" (click)="nextPage()">
-          Suivant
-          <mat-icon>chevron_right</mat-icon>
-        </button>
+      <nav class="card table-footer" aria-label="Pagination">
+        <span class="table-footer__info">
+          Affichage de {{ rangeStart() }} à {{ rangeEnd() }} sur {{ total() }} entretiens
+        </span>
+        <div class="pagination">
+          <button
+            type="button"
+            class="pagination__btn"
+            [disabled]="!hasPrevious()"
+            aria-label="Page précédente"
+            (click)="previousPage()"
+          >
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          @for (page of pages().numbers; track page) {
+            <button
+              type="button"
+              class="pagination__btn"
+              [class.pagination__btn--active]="page === pages().current"
+              [attr.aria-current]="page === pages().current ? 'page' : null"
+              [attr.aria-label]="'Page ' + page"
+              (click)="goToPage(page)"
+            >
+              {{ page }}
+            </button>
+          }
+          <button
+            type="button"
+            class="pagination__btn"
+            [disabled]="!hasNext()"
+            aria-label="Page suivante"
+            (click)="nextPage()"
+          >
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
       </nav>
     } @else if (!loading()) {
       <section class="card">
-        <p class="empty">
+        <div class="empty">
           @if (isFiltered() || includeFinished()) {
-            Aucun entretien ne correspond à ces filtres.
+            <mat-icon aria-hidden="true">search_off</mat-icon>
+            <p class="empty__title">Aucun entretien ne correspond à ces filtres.</p>
+            <p class="empty__hint">Élargissez la plage de dates ou réinitialisez les filtres.</p>
+            <button matButton type="button" (click)="resetFilters()">
+              <mat-icon>filter_alt_off</mat-icon>
+              Réinitialiser les filtres
+            </button>
           } @else {
-            Aucun entretien planifié. Les entretiens terminés et annulés sont masqués par
-            défaut.
+            <mat-icon aria-hidden="true">event_available</mat-icon>
+            <p class="empty__title">Aucun entretien planifié.</p>
+            <p class="empty__hint">
+              Les entretiens terminés et annulés sont masqués par défaut — affichez-les pour
+              voir l'historique.
+            </p>
+            <button matButton type="button" (click)="toggleFinished()">
+              <mat-icon>history</mat-icon>
+              Afficher les terminés et annulés
+            </button>
           }
-        </p>
+        </div>
       </section>
     }
   }

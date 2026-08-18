@@ -12,7 +12,12 @@
   }
 
   @if (data(); as dashboard) {
-    <h1 class="page__title">Tableau de bord</h1>
+    <header class="head">
+      <div class="head__titles">
+        <h1 class="page__title">Tableau de bord</h1>
+        <p class="head__subtitle">{{ subtitle() }}</p>
+      </div>
+    </header>
 
     <!--
       The role decides the SHAPE, never access — that is settled server-side
@@ -39,15 +44,26 @@
         </section>
 
         <section class="card" aria-labelledby="pipeline-title">
-          <h2 id="pipeline-title" class="card__title">Répartition des candidats par étape</h2>
+          <div class="card__head">
+            <div class="head__titles">
+              <h2 id="pipeline-title" class="card__title">Répartition des candidats par étape</h2>
+              <p class="card__subtitle">Tous postes confondus, étapes terminales incluses.</p>
+            </div>
+          </div>
           <app-pipeline-breakdown [breakdown]="dashboard.candidatesByStage" />
         </section>
 
         <section class="card" aria-labelledby="recent-title">
           <div class="card__head">
-            <h2 id="recent-title" class="card__title">Derniers candidats ajoutés</h2>
+            <div class="head__titles">
+              <h2 id="recent-title" class="card__title">Derniers candidats ajoutés</h2>
+              <p class="card__subtitle">Les cinq inscriptions les plus récentes.</p>
+            </div>
             <!-- 2.4: the full list exists; the card is a preview of it. -->
-            <a class="card__more" routerLink="/candidates">Voir tout</a>
+            <a class="card__more" routerLink="/candidates">
+              Voir tout
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </a>
           </div>
           @if (dashboard.recentCandidates.length) {
             <ul class="rows">
@@ -75,7 +91,20 @@
               }
             </ul>
           } @else {
-            <p class="empty">Aucun candidat enregistré pour le moment.</p>
+            <!-- An empty screen is an invitation to act: it says what belongs
+                 here, and offers the action that would put something in it. -->
+            <div class="empty">
+              <mat-icon aria-hidden="true">group_add</mat-icon>
+              <p class="empty__title">Aucun candidat enregistré pour le moment.</p>
+              <p class="empty__hint">
+                Les candidatures que vous enregistrez apparaîtront ici, de la plus
+                récente à la plus ancienne.
+              </p>
+              <a matButton="filled" routerLink="/candidates/new">
+                <mat-icon>person_add</mat-icon>
+                Enregistrer un candidat
+              </a>
+            </div>
           }
         </section>
       }
@@ -116,7 +145,12 @@
         </section>
 
         <section class="card" aria-labelledby="dept-pipeline-title">
-          <h2 id="dept-pipeline-title" class="card__title">Pipeline de votre département</h2>
+          <div class="card__head">
+            <div class="head__titles">
+              <h2 id="dept-pipeline-title" class="card__title">Pipeline de votre département</h2>
+              <p class="card__subtitle">Vos candidats, répartis par étape.</p>
+            </div>
+          </div>
           <app-pipeline-breakdown [breakdown]="dashboard.candidatesByStage" />
         </section>
 
@@ -130,7 +164,10 @@
         -->
         <section class="card" aria-labelledby="decisions-title">
           <div class="card__head">
-            <h2 id="decisions-title" class="card__title">Candidats en attente de décision</h2>
+            <div class="head__titles">
+              <h2 id="decisions-title" class="card__title">Candidats en attente de décision</h2>
+              <p class="card__subtitle">Évaluation reçue — la décision vous revient.</p>
+            </div>
           </div>
           @if (dashboard.candidatesAwaitingDecision.length) {
             <ul class="rows">
@@ -155,12 +192,27 @@
               }
             </ul>
           } @else {
-            <p class="empty">Aucune décision en attente.</p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">task_alt</mat-icon>
+              <p class="empty__title">Aucune décision en attente.</p>
+              <p class="empty__hint">
+                Un candidat apparaît ici dès que son évaluation est déposée.
+              </p>
+            </div>
           }
         </section>
 
         <section class="card" aria-labelledby="upcoming-title">
-          <h2 id="upcoming-title" class="card__title">Entretiens à venir</h2>
+          <div class="card__head">
+            <div class="head__titles">
+              <h2 id="upcoming-title" class="card__title">Entretiens à venir</h2>
+              <p class="card__subtitle">Vos prochains rendez-vous, du plus proche au plus lointain.</p>
+            </div>
+            <a class="card__more" routerLink="/interviews">
+              Voir tout
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </a>
+          </div>
           @if (dashboard.upcomingInterviews.length) {
             <ul class="rows">
               @for (interview of dashboard.upcomingInterviews; track interview.id) {
@@ -188,7 +240,13 @@
               }
             </ul>
           } @else {
-            <p class="empty">Aucun entretien à venir.</p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">event_available</mat-icon>
+              <p class="empty__title">Aucun entretien à venir.</p>
+              <p class="empty__hint">
+                Les entretiens planifiés avec vous apparaîtront ici.
+              </p>
+            </div>
           }
         </section>
       }
@@ -205,11 +263,26 @@
         </section>
 
         <section class="card" aria-labelledby="audit-title">
-          <h2 id="audit-title" class="card__title">Dernières entrées du journal d'audit</h2>
+          <div class="card__head">
+            <div class="head__titles">
+              <h2 id="audit-title" class="card__title">Dernières entrées du journal d'audit</h2>
+              <p class="card__subtitle">Qui a fait quoi, et quand.</p>
+            </div>
+            <a class="card__more" routerLink="/admin/audit-log">
+              Voir tout
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </a>
+          </div>
           @if (dashboard.recentAuditEntries.length) {
             <ul class="rows">
               @for (entry of dashboard.recentAuditEntries; track entry.id) {
                 <li class="rows__row">
+                  <!-- NO avatar here, deliberately. `DashboardAuditRow.user` is
+                       `{ id, name }` — the dashboard payload carries no avatar
+                       path, so `app-user-avatar` could only draw initials for
+                       people whose photo /admin/users shows two clicks away.
+                       Half an avatar is worse than none; widening the payload
+                       is a Section 9 change and not what a UI pass is for. -->
                   <span class="rows__primary">{{ humanise(entry.action) }}</span>
                   <span class="rows__secondary">{{ entry.targetType }}</span>
                   <span class="rows__secondary">
@@ -220,7 +293,13 @@
               }
             </ul>
           } @else {
-            <p class="empty">Aucune action enregistrée.</p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">history</mat-icon>
+              <p class="empty__title">Aucune action enregistrée.</p>
+              <p class="empty__hint">
+                Chaque création, modification et désactivation sera consignée ici.
+              </p>
+            </div>
           }
         </section>
       }

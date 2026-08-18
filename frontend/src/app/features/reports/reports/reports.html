@@ -1,6 +1,11 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Rapports</h1>
+    <div class="head__titles">
+      <h1 class="page__title">Rapports</h1>
+      <p class="head__subtitle">
+        L'état du pipeline poste par poste, et le temps qu'un recrutement prend réellement.
+      </p>
+    </div>
     <!--
       D-047: the server narrows this role to its own department. Stated, so a
       responsable reading three postings does not conclude the company has
@@ -8,7 +13,10 @@
       details, where a rule is shown as a rule rather than as missing data.
     -->
     @if (isScoped()) {
-      <p class="head__scope">
+      <!-- A stated RULE, not a warning: the narrower view is correct
+           behaviour, so it wears `.note`'s neutral surface rather than an
+           attention tone. -->
+      <p class="note head__scope">
         <mat-icon aria-hidden="true">filter_alt</mat-icon>
         <span>Ces rapports ne couvrent que votre département.</span>
       </p>
@@ -18,7 +26,12 @@
   <!-- ================================================= user story 22 -->
   <section class="card" aria-labelledby="pipeline-title">
     <div class="section__head">
-      <h2 id="pipeline-title" class="card__title">Pipeline par poste</h2>
+      <div class="head__titles">
+        <h2 id="pipeline-title" class="card__title">Pipeline par poste</h2>
+        <p class="card__subtitle">
+          Combien de candidats se trouvent à chaque étape, pour chaque poste.
+        </p>
+      </div>
       @if (!pipelineLoading() && !pipelineError() && rows().length) {
         <p class="section__count">
           {{ rows().length }} poste{{ rows().length > 1 ? 's' : '' }} —
@@ -27,7 +40,7 @@
       }
     </div>
 
-    <div class="filters">
+    <div class="filters filters--inset">
       <div class="filters__field">
         <label class="filters__label label-sm" for="report-position">Poste</label>
         <!--
@@ -110,40 +123,55 @@
           @if (row.total) {
             <app-pipeline-breakdown [breakdown]="row.stages" />
           } @else {
-            <p class="empty">
-              Aucun candidat n'a postulé à ce poste. C'est un résultat, pas une
-              absence de donnée.
-            </p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">inbox</mat-icon>
+              <p class="empty__title">Aucun candidat n'a postulé à ce poste.</p>
+              <p class="empty__hint">C'est un résultat, pas une absence de donnée.</p>
+            </div>
           }
         </div>
       }
     } @else if (!pipelineLoading() && !pipelineError()) {
-      <p class="empty">
+      <div class="empty">
         @if (selectedPosition()) {
-          Ce poste n'apparaît pas dans les rapports que vous pouvez consulter.
+          <mat-icon aria-hidden="true">visibility_off</mat-icon>
+          <p class="empty__title">
+            Ce poste n'apparaît pas dans les rapports que vous pouvez consulter.
+          </p>
+          <p class="empty__hint">Choisissez « Tous les postes » pour revenir à votre périmètre.</p>
+          <button matButton type="button" (click)="selectPosition('')">
+            <mat-icon>filter_alt_off</mat-icon>
+            Tous les postes
+          </button>
         } @else {
-          Aucun poste à rapporter pour le moment.
+          <mat-icon aria-hidden="true">bar_chart</mat-icon>
+          <p class="empty__title">Aucun poste à rapporter pour le moment.</p>
+          <p class="empty__hint">
+            Un poste apparaît ici dès qu'il existe, même sans candidature.
+          </p>
         }
-      </p>
+      </div>
     }
   </section>
 
   <!-- ================================================= user story 23 -->
   <section class="card" aria-labelledby="hire-title">
     <div class="section__head">
-      <h2 id="hire-title" class="card__title">Délai de recrutement</h2>
-      <p class="section__count">
+      <div class="head__titles">
+        <h2 id="hire-title" class="card__title">Délai de recrutement</h2>
         <!-- The definition, on screen: the number is only interpretable with it. -->
-        Entre l'enregistrement du candidat et la décision d'acceptation
-      </p>
+        <p class="card__subtitle">
+          Entre l'enregistrement du candidat et la décision d'acceptation.
+        </p>
+      </div>
     </div>
 
-    <div class="filters">
+    <div class="filters filters--inset">
       <div class="filters__field">
         <label class="filters__label label-sm" for="hire-from">Décisions du</label>
         <input
           id="hire-from"
-          class="filters__control"
+          class="filters__control filters__control--date"
           type="date"
           [value]="fromDate()"
           (change)="setFrom($any($event.target).value)"
@@ -153,17 +181,19 @@
         <label class="filters__label label-sm" for="hire-to">au</label>
         <input
           id="hire-to"
-          class="filters__control"
+          class="filters__control filters__control--date"
           type="date"
           [value]="toDate()"
           (change)="setTo($any($event.target).value)"
         />
       </div>
       @if (isPeriodFiltered()) {
-        <button matButton type="button" class="filters__reset" (click)="resetPeriod()">
-          <mat-icon>filter_alt_off</mat-icon>
-          Toute la période
-        </button>
+        <div class="filters__end">
+          <button matButton type="button" class="filters__reset" (click)="resetPeriod()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Toute la période
+          </button>
+        </div>
       }
     </div>
 
@@ -202,15 +232,24 @@
             than zero precisely because zero days would be a false claim of
             instant hiring, and rendering null as 0 here would reintroduce it.
           -->
-          <p class="empty">
-            Aucun recrutement conclu
+          <div class="empty">
+            <mat-icon aria-hidden="true">timer_off</mat-icon>
+            <p class="empty__title">
+              Aucun recrutement conclu
+              @if (isPeriodFiltered()) {
+                sur cette période.
+              } @else {
+                pour le moment.
+              }
+            </p>
+            <p class="empty__hint">Le délai moyen ne peut pas être calculé.</p>
             @if (isPeriodFiltered()) {
-              sur cette période.
-            } @else {
-              pour le moment.
+              <button matButton type="button" (click)="resetPeriod()">
+                <mat-icon>filter_alt_off</mat-icon>
+                Toute la période
+              </button>
             }
-            Le délai moyen ne peut pas être calculé.
-          </p>
+          </div>
         } @else {
           <div class="grid grid--tiles">
             <app-stat-tile

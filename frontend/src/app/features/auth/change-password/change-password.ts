@@ -42,6 +42,15 @@ export class ChangePassword {
   readonly newPassword = signal('');
   readonly confirmation = signal('');
 
+  /**
+   * One reveal control for all three fields rather than three eye buttons.
+   *
+   * The three are typed together and checked against each other — a per-field
+   * toggle would make someone reveal two of them separately to compare a typo,
+   * which is the whole reason to reveal anything on this screen.
+   */
+  readonly revealed = signal(false);
+
   readonly busy = signal(false);
   readonly errorMessage = signal<string | null>(null);
 

@@ -13,7 +13,7 @@
 
   @if (position(); as position) {
     <header class="head">
-      <div>
+      <div class="head__titles">
         <h1 class="page__title">{{ position.title }}</h1>
         <p class="head__department">
           {{ departmentName() ?? 'Département inconnu' }}
@@ -95,7 +95,13 @@
               </a>
             }
           } @else {
-            <p class="empty">Aucun candidat n'est rattaché à ce poste.</p>
+            <div class="empty">
+              <mat-icon aria-hidden="true">group_add</mat-icon>
+              <p class="empty__title">Aucun candidat n'est rattaché à ce poste.</p>
+              <p class="empty__hint">
+                Les candidatures enregistrées sur ce poste apparaîtront ici.
+              </p>
+            </div>
           }
         </section>
       </div>

@@ -246,7 +246,7 @@ describe('Login (FR-1, FR-3)', () => {
       const text = fixture.nativeElement.textContent as string;
 
       expect(text).toContain('Bienvenue');
-      expect(text).toContain('Portail RH');
+      expect(text).toContain('Solution de recrutement professionnelle');
       // It used to appear twice — logo block and card heading both said it.
       expect(text.split('RecrutPro').length - 1).toBe(1);
     });

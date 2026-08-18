@@ -1,25 +1,14 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Journal d'audit</h1>
-    @if (!loading() && !errorMessage()) {
-      <p class="head__count">
-        @if (total() === 0) {
-          Aucune entrée
-        } @else if (truncated()) {
-          <!--
-            The endpoint caps at X-Page-Limit and accepts no offset (UC-04 is a
-            recent-history view, not an export). Saying « 50 entrées » would let
-            a capped page look like the whole history.
-          -->
-          Les {{ rows().length }} plus récentes sur {{ total() }}
-        } @else {
-          {{ total() }} entrée{{ total() > 1 ? 's' : '' }}
-        }
+    <div class="head__titles">
+      <h1 class="page__title">Journal d'audit</h1>
+      <p class="head__subtitle">
+        Qui a fait quoi, sur quel objet et quand — en lecture seule.
       </p>
-    }
+    </div>
   </header>
 
-  <section class="card" aria-label="Filtres">
+  <section class="card filters-card" aria-label="Filtres">
     <div class="filters">
       <div class="filters__field">
         <label class="filters__label label-sm" for="filter-action">Action</label>
@@ -51,12 +40,30 @@
         </select>
       </div>
 
-      @if (isFiltered()) {
-        <button matButton type="button" class="filters__reset" (click)="resetFilters()">
-          <mat-icon>filter_alt_off</mat-icon>
-          Réinitialiser
-        </button>
-      }
+      <div class="filters__end">
+        @if (!loading() && !errorMessage()) {
+          <span class="filters__count">
+            @if (total() === 0) {
+              Aucune entrée
+            } @else if (truncated()) {
+              <!--
+                The endpoint caps at X-Page-Limit and accepts no offset (UC-04 is a
+                recent-history view, not an export). Saying « 50 entrées » would let
+                a capped page look like the whole history.
+              -->
+              Les {{ rows().length }} plus récentes sur {{ total() }}
+            } @else {
+              {{ total() }} entrée{{ total() > 1 ? 's' : '' }}
+            }
+          </span>
+        }
+        @if (isFiltered()) {
+          <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Réinitialiser
+          </button>
+        }
+      </div>
     </div>
   </section>
 
@@ -77,7 +84,7 @@
       <h2 id="audit-title" class="visually-hidden">Entrées du journal</h2>
 
       <div class="table-scroll">
-        <table class="table">
+        <table class="table table--roomy">
           <thead>
             <tr>
               <th scope="col">Date et heure</th>
@@ -92,11 +99,21 @@
               <tr>
                 <td class="table__date">{{ entry.timestamp | date: 'dd/MM/yyyy à HH:mm:ss' }}</td>
                 <td>
-                  <!-- Null-tolerant by contract: an entry whose actor was
-                       removed still has to render, and « qui » is the point. -->
-                  {{ entry.user?.name ?? 'Auteur inconnu' }}
+                  <span class="row__person">
+                    <!-- Initials, not a photo: `AuditEntry.user` is `{ id, name }`
+                         and carries no avatar path. Widening that payload is a
+                         Section 9 change, not something a UI pass decides. -->
+                    <app-user-avatar [name]="entry.user?.name ?? '?'" />
+                    <!-- Null-tolerant by contract: an entry whose actor was
+                         removed still has to render, and « qui » is the point. -->
+                    <span class="row__name">{{ entry.user?.name ?? 'Auteur inconnu' }}</span>
+                  </span>
                 </td>
-                <td>{{ entry.action }}</td>
+                <td>
+                  <!-- The action name verbatim. The tint groups it by what the
+                       verb does; the words carry the meaning on their own. -->
+                  <span class="pill" [class]="'pill ' + tone(entry.action)">{{ entry.action }}</span>
+                </td>
                 <td class="table__meta">{{ entry.targetType }}</td>
                 <!-- The raw id, on purpose: it is what the entry stores, and
                      resolving it would need one lookup per row across five
@@ -114,7 +131,7 @@
         loud, because a reader who expects a diff will otherwise conclude the
         page is broken rather than that the record is deliberately minimal.
       -->
-      <p class="note">
+      <p class="note note--footer">
         <mat-icon aria-hidden="true">info</mat-icon>
         <span>
           Une entrée enregistre l'auteur, l'action, l'objet et la date — jamais le
@@ -128,13 +145,24 @@
     </section>
   } @else if (!loading() && !errorMessage()) {
     <section class="card">
-      <p class="empty">
+      <div class="empty">
         @if (isFiltered()) {
-          Aucune entrée ne correspond à ces filtres.
+          <mat-icon aria-hidden="true">search_off</mat-icon>
+          <p class="empty__title">Aucune entrée ne correspond à ces filtres.</p>
+          <p class="empty__hint">Élargissez la recherche ou réinitialisez-les.</p>
+          <button matButton type="button" (click)="resetFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Réinitialiser les filtres
+          </button>
         } @else {
-          Le journal d'audit est vide.
+          <mat-icon aria-hidden="true">history</mat-icon>
+          <p class="empty__title">Le journal d'audit est vide.</p>
+          <p class="empty__hint">
+            Chaque création, modification et désactivation y sera consignée
+            automatiquement.
+          </p>
         }
-      </p>
+      </div>
     </section>
   }
 </app-shell>

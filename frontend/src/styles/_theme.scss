@@ -119,6 +119,35 @@ html {
   --recrutpro-success-container: #a0f2dd;
   --recrutpro-on-success-container: #005045;
 
+  // -------------------------------------------------------------- badge tints
+  // Low-saturation backgrounds for status/role badges, each paired with a text
+  // tone dark enough to clear AA ON THAT TINT — measured, not eyeballed:
+  // indigo 8.06:1, slate 8.40:1, red 7.94:1, green 6.78:1, sky 6.59:1,
+  // amber 6.37:1. All well past 4.5:1, because a badge is small text.
+  //
+  // Tokens rather than raw hex in nine component stylesheets: DESIGN.md's own
+  // rule is that a page consumes tokens, "so there is nothing else to reach
+  // for". These are the tints the human specified for this pass.
+  //
+  // COLOUR IS THE SECOND CHANNEL, NEVER THE ONLY ONE — every badge using these
+  // also states its meaning in words. That is the same form-over-colour rule
+  // the role badges were ratified under.
+  --tint-indigo-bg: #e0e7ff;
+  --tint-indigo-fg: #3730a3;
+  --tint-sky-bg: #e0f2fe;
+  --tint-sky-fg: #075985;
+  --tint-amber-bg: #fef3c7;
+  --tint-amber-fg: #92400e;
+  --tint-red-bg: #fce8e6;
+  --tint-red-fg: #93000a;
+  --tint-slate-bg: #e2e8f0;
+  --tint-slate-fg: #334155;
+  --tint-green-bg: #d1fae5;
+  --tint-green-fg: #065f46;
+
+  // The table header ground. 16.38:1 against `on-surface`.
+  --surface-table-head: #f8fafc;
+
   // ------------------------------------------------------------- typography
   // DESIGN.md's ramp, mapped onto the M3 typescale slots Material actually
   // renders. Shorthand order: weight size/line-height family.

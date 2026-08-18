@@ -97,6 +97,13 @@ export class AdminUsers {
     return this.auth.currentUser()?.id === user.id;
   }
 
+  formatRole(role: string): string {
+    if (role === 'ResponsableHierarchique') return 'RESPONSABLE';
+    if (role === 'Administrateur') return 'ADMINISTRATEUR';
+    if (role === 'Recruteur') return 'RECRUTEUR';
+    return role;
+  }
+
   departmentName(id: string | null): string {
     if (!id) {
       return '—';

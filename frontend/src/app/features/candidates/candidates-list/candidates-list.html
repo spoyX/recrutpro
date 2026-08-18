@@ -1,19 +1,15 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Candidats</h1>
+    <div class="head__titles">
+      <h1 class="page__title">Candidats</h1>
+      <p class="head__subtitle">
+        Recherchez, filtrez et suivez chaque candidature jusqu'à la décision finale.
+      </p>
+    </div>
     <div class="head__actions">
-      @if (!loading() && !errorMessage()) {
-        <p class="head__count">
-          @if (total() === 0) {
-            Aucun candidat
-          } @else {
-            {{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}
-          }
-        </p>
-      }
       <!-- FR-19: the pipeline's entry point. This route is Recruteur-only
            server-side, and this whole page already is (D-069). -->
-      <a matButton="filled" routerLink="/candidates/new">
+      <a matButton="filled" class="btn--create" routerLink="/candidates/new">
         <mat-icon>person_add</mat-icon>
         Nouveau candidat
       </a>
@@ -21,65 +17,78 @@
   </header>
 
   <!-- FR-24: filtrable par poste, étape et plage de dates d'enregistrement. -->
-  <section class="filters card" aria-label="Filtres">
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-position">Poste</label>
-      <select
-        id="filter-position"
-        class="filters__control"
-        [value]="filters().jobPositionId ?? ''"
-        (change)="setFilter('jobPositionId', $any($event.target).value)"
-      >
-        <option value="">Tous les postes</option>
-        @for (option of positionOptions(); track option.id) {
-          <option [value]="option.id">{{ option.title }}</option>
+  <section class="filters card filters-card" aria-label="Filtres">
+    <div class="filters">
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-position">Poste</label>
+        <select
+          id="filter-position"
+          class="filters__control"
+          [value]="filters().jobPositionId ?? ''"
+          (change)="setFilter('jobPositionId', $any($event.target).value)"
+        >
+          <option value="">Tous les postes</option>
+          @for (option of positionOptions(); track option.id) {
+            <option [value]="option.id">{{ option.title }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-stage">Étape</label>
+        <select
+          id="filter-stage"
+          class="filters__control"
+          [value]="filters().currentStage ?? ''"
+          (change)="setFilter('currentStage', $any($event.target).value)"
+        >
+          <option value="">Toutes les étapes</option>
+          @for (stage of stages; track stage) {
+            <option [value]="stage">{{ stage }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-from">Enregistré du</label>
+        <input
+          id="filter-from"
+          class="filters__control filters__control--date"
+          type="date"
+          [value]="filters().fromDate ?? ''"
+          (change)="setFilter('fromDate', $any($event.target).value)"
+        />
+      </div>
+
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-to">au</label>
+        <input
+          id="filter-to"
+          class="filters__control filters__control--date"
+          type="date"
+          [value]="filters().toDate ?? ''"
+          (change)="setFilter('toDate', $any($event.target).value)"
+        />
+      </div>
+
+      <div class="filters__end">
+        @if (!loading() && !errorMessage()) {
+          <span class="filters__count">
+            @if (total() === 0) {
+              Aucun candidat
+            } @else {
+              {{ total() }} candidat{{ total() > 1 ? 's' : '' }} trouvé{{ total() > 1 ? 's' : '' }}
+            }
+          </span>
         }
-      </select>
-    </div>
-
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-stage">Étape</label>
-      <select
-        id="filter-stage"
-        class="filters__control"
-        [value]="filters().currentStage ?? ''"
-        (change)="setFilter('currentStage', $any($event.target).value)"
-      >
-        <option value="">Toutes les étapes</option>
-        @for (stage of stages; track stage) {
-          <option [value]="stage">{{ stage }}</option>
+        @if (isFiltered()) {
+          <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Réinitialiser
+          </button>
         }
-      </select>
+      </div>
     </div>
-
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-from">Enregistré du</label>
-      <input
-        id="filter-from"
-        class="filters__control"
-        type="date"
-        [value]="filters().fromDate ?? ''"
-        (change)="setFilter('fromDate', $any($event.target).value)"
-      />
-    </div>
-
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-to">au</label>
-      <input
-        id="filter-to"
-        class="filters__control"
-        type="date"
-        [value]="filters().toDate ?? ''"
-        (change)="setFilter('toDate', $any($event.target).value)"
-      />
-    </div>
-
-    @if (isFiltered()) {
-      <button matButton type="button" class="filters__reset" (click)="resetFilters()">
-        <mat-icon>filter_alt_off</mat-icon>
-        Réinitialiser
-      </button>
-    }
   </section>
 
   @if (loading()) {
@@ -102,7 +111,7 @@
         <!-- DESIGN.md: "Horizontal scrolling is permitted for complex data
              tables" — the wrapper scrolls, the page never does. -->
         <div class="table-scroll">
-          <table class="table">
+          <table class="table table--roomy">
             <thead>
               <tr>
                 <th scope="col" [attr.aria-sort]="ariaSort('fullName')">
@@ -145,9 +154,15 @@
               @for (candidate of rows(); track candidate.id) {
                 <tr>
                   <td>
-                    <a class="table__link" [routerLink]="['/candidates', candidate.id]">
-                      {{ candidate.fullName }}
-                    </a>
+                    <span class="row__person">
+                      <!-- D-091: a CANDIDATE has no account and so no photo.
+                           Initials are the finished design here, not a
+                           placeholder waiting on an upload. -->
+                      <app-user-avatar [name]="candidate.fullName" />
+                      <a class="table__link" [routerLink]="['/candidates', candidate.id]">
+                        {{ candidate.fullName }}
+                      </a>
+                    </span>
                   </td>
                   <!-- Email and phone get their OWN columns rather than being
                        stacked in one cell: stacking made the row 65px against
@@ -160,7 +175,7 @@
                         {{ position.title }}
                       </a>
                     } @else {
-                      Poste inconnu
+                      <span class="table__meta">Poste inconnu</span>
                     }
                   </td>
                   <td><app-stage-chip [stage]="candidate.currentStage" /></td>
@@ -186,33 +201,69 @@
           </table>
         </div>
 
-        <nav class="pager" aria-label="Pagination">
-          <button
-            matButton
-            type="button"
-            [disabled]="!hasPrevious()"
-            (click)="previousPage()"
-          >
-            <mat-icon>chevron_left</mat-icon>
-            Précédent
-          </button>
-          <span class="pager__status">{{ rangeStart() }}–{{ rangeEnd() }} sur {{ total() }}</span>
-          <button matButton type="button" [disabled]="!hasNext()" (click)="nextPage()">
-            Suivant
-            <mat-icon>chevron_right</mat-icon>
-          </button>
+        <nav class="table-footer" aria-label="Pagination">
+          <span class="table-footer__info">
+            Affichage de {{ rangeStart() }} à {{ rangeEnd() }} sur {{ total() }} candidats
+          </span>
+          <div class="pagination">
+            <button
+              type="button"
+              class="pagination__btn"
+              [disabled]="!hasPrevious()"
+              aria-label="Page précédente"
+              (click)="previousPage()"
+            >
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <!-- Every number here is a page the endpoint actually has:
+                 `pageCount` is the server's own `total` over the page size. -->
+            @for (page of pages().numbers; track page) {
+              <button
+                type="button"
+                class="pagination__btn"
+                [class.pagination__btn--active]="page === pages().current"
+                [attr.aria-current]="page === pages().current ? 'page' : null"
+                [attr.aria-label]="'Page ' + page"
+                (click)="goToPage(page)"
+              >
+                {{ page }}
+              </button>
+            }
+            <button
+              type="button"
+              class="pagination__btn"
+              [disabled]="!hasNext()"
+              aria-label="Page suivante"
+              (click)="nextPage()"
+            >
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
         </nav>
       } @else if (!loading()) {
         <!-- "No candidates yet" and "no candidates match your filter" are
              different facts and get different wording. -->
-        <p class="empty">
+        <div class="empty">
           @if (isFiltered()) {
-            Aucun candidat ne correspond à ces filtres. Élargissez la recherche ou
-            réinitialisez-les.
+            <mat-icon aria-hidden="true">search_off</mat-icon>
+            <p class="empty__title">Aucun candidat ne correspond à ces filtres.</p>
+            <p class="empty__hint">Élargissez la recherche ou réinitialisez-les.</p>
+            <button matButton type="button" (click)="resetFilters()">
+              <mat-icon>filter_alt_off</mat-icon>
+              Réinitialiser les filtres
+            </button>
           } @else {
-            Aucun candidat n'est enregistré pour le moment.
+            <mat-icon aria-hidden="true">group_add</mat-icon>
+            <p class="empty__title">Aucun candidat n'est enregistré pour le moment.</p>
+            <p class="empty__hint">
+              Enregistrez une première candidature pour ouvrir le pipeline.
+            </p>
+            <a matButton="filled" routerLink="/candidates/new">
+              <mat-icon>person_add</mat-icon>
+              Nouveau candidat
+            </a>
           }
-        </p>
+        </div>
       }
     </section>
   }

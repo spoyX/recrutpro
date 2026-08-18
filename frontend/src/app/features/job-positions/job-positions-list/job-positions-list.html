@@ -1,20 +1,16 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Postes</h1>
+    <div class="head__titles">
+      <h1 class="page__title">Postes</h1>
+      <p class="head__subtitle">
+        Les postes ouverts au recrutement, leur département et leur statut.
+      </p>
+    </div>
     <div class="head__actions">
-      @if (!loading() && !errorMessage()) {
-        <p class="head__count">
-          @if (rows().length === 0) {
-            Aucun poste
-          } @else {
-            {{ rows().length }} poste{{ rows().length > 1 ? 's' : '' }}
-          }
-        </p>
-      }
       <!-- FR-14. Offered to a Recruteur only; D-068 keeps the Administrateur
            read-only, and the server refuses the POST either way. -->
       @if (canWrite()) {
-        <button matButton="filled" type="button" (click)="creating.set(true)">
+        <button matButton="filled" type="button" class="btn--create" (click)="creating.set(true)">
           <mat-icon>post_add</mat-icon>
           Nouveau poste
         </button>
@@ -23,43 +19,72 @@
   </header>
 
   <!-- FR-17: filtrable par statut et département. -->
-  <section class="filters card" aria-label="Filtres">
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-status">Statut</label>
-      <select
-        id="filter-status"
-        class="filters__control"
-        [value]="filters().status ?? ''"
-        (change)="setFilter('status', $any($event.target).value)"
-      >
-        <option value="">Tous les statuts</option>
-        @for (status of statuses; track status) {
-          <option [value]="status">{{ status }}</option>
-        }
-      </select>
-    </div>
+  <section class="filters card filters-card" aria-label="Filtres">
+    <div class="filters">
+      <div class="filters__field">
+        <span class="filters__label label-sm" id="filter-status-label">Statut</span>
+        <!-- Four statuses at most, and the choice is the page's main lever —
+             a segmented control shows every option at once where a dropdown
+             would hide three of them behind a click. -->
+        <div class="segmented" role="group" aria-labelledby="filter-status-label">
+          <button
+            type="button"
+            class="segmented__option"
+            [class.segmented__option--on]="!filters().status"
+            [attr.aria-pressed]="!filters().status"
+            (click)="setFilter('status', '')"
+          >
+            Tous
+          </button>
+          @for (status of statuses; track status) {
+            <button
+              type="button"
+              class="segmented__option"
+              [class.segmented__option--on]="filters().status === status"
+              [attr.aria-pressed]="filters().status === status"
+              (click)="setFilter('status', status)"
+            >
+              {{ status }}
+            </button>
+          }
+        </div>
+      </div>
 
-    <div class="filters__field">
-      <label class="filters__label label-sm" for="filter-department">Département</label>
-      <select
-        id="filter-department"
-        class="filters__control"
-        [value]="filters().departmentId ?? ''"
-        (change)="setFilter('departmentId', $any($event.target).value)"
-      >
-        <option value="">Tous les départements</option>
-        @for (department of departments(); track department.id) {
-          <option [value]="department.id">{{ department.name }}</option>
-        }
-      </select>
-    </div>
+      <div class="filters__field">
+        <label class="filters__label label-sm" for="filter-department">Département</label>
+        <select
+          id="filter-department"
+          class="filters__control"
+          [value]="filters().departmentId ?? ''"
+          (change)="setFilter('departmentId', $any($event.target).value)"
+        >
+          <option value="">Tous les départements</option>
+          @for (department of departments(); track department.id) {
+            <option [value]="department.id">{{ department.name }}</option>
+          }
+        </select>
+      </div>
 
-    @if (isFiltered()) {
-      <button matButton type="button" class="filters__reset" (click)="resetFilters()">
-        <mat-icon>filter_alt_off</mat-icon>
-        Réinitialiser
-      </button>
-    }
+      <div class="filters__end">
+        @if (!loading() && !errorMessage()) {
+          <span class="filters__count">
+            @if (rows().length === 0) {
+              Aucun poste
+            } @else {
+              {{ rows().length }} poste{{ rows().length > 1 ? 's' : '' }} trouvé{{
+                rows().length > 1 ? 's' : ''
+              }}
+            }
+          </span>
+        }
+        @if (isFiltered()) {
+          <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Réinitialiser
+          </button>
+        }
+      </div>
+    </div>
   </section>
 
   @if (loading()) {
@@ -80,7 +105,7 @@
 
       @if (rows().length) {
         <div class="table-scroll">
-          <table class="table">
+          <table class="table table--roomy">
             <thead>
               <tr>
                 <th scope="col">Intitulé</th>
@@ -89,7 +114,7 @@
                 <th scope="col">Créé le</th>
                 <!-- FR-18/D-038: no delete column exists, and none may be added. -->
                 @if (canWrite()) {
-                  <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  <th scope="col" class="th--actions">Actions</th>
                 }
               </tr>
             </thead>
@@ -97,9 +122,17 @@
               @for (position of rows(); track position.id) {
                 <tr>
                   <td>
-                    <a class="table__link" [routerLink]="['/job-positions', position.id]">
-                      {{ position.title }}
-                    </a>
+                    <span class="row__person">
+                      <!-- A poste is not a person: a glyph, not an avatar. The
+                           circle keeps the row's rhythm identical to the
+                           candidate table's without implying a face. -->
+                      <span class="row__glyph" aria-hidden="true">
+                        <mat-icon>work_outline</mat-icon>
+                      </span>
+                      <a class="table__link" [routerLink]="['/job-positions', position.id]">
+                        {{ position.title }}
+                      </a>
+                    </span>
                   </td>
                   <td class="table__meta">{{ departmentName(position.departmentId) }}</td>
                   <td><app-stage-chip [stage]="position.status" /></td>
@@ -107,13 +140,23 @@
                   @if (canWrite()) {
                     <td class="table__actions">
                       @if (isManageable(position)) {
-                        <button matButton type="button" (click)="editing.set(position)">
+                        <button
+                          matButton
+                          type="button"
+                          class="action-btn"
+                          (click)="editing.set(position)"
+                        >
                           <mat-icon>edit</mat-icon>
-                          Modifier
+                          <span class="action-btn__label">Modifier</span>
                         </button>
-                        <button matButton type="button" (click)="closingPosition.set(position)">
+                        <button
+                          matButton
+                          type="button"
+                          class="action-btn"
+                          (click)="closingPosition.set(position)"
+                        >
                           <mat-icon>lock</mat-icon>
-                          Clôturer
+                          <span class="action-btn__label">Clôturer</span>
                         </button>
                       } @else {
                         <!-- D-037: a closed position is neither editable nor
@@ -129,14 +172,29 @@
           </table>
         </div>
       } @else if (!loading()) {
-        <p class="empty">
+        <div class="empty">
           @if (isFiltered()) {
-            Aucun poste ne correspond à ces filtres. Élargissez la recherche ou
-            réinitialisez-les.
+            <mat-icon aria-hidden="true">search_off</mat-icon>
+            <p class="empty__title">Aucun poste ne correspond à ces filtres.</p>
+            <p class="empty__hint">Élargissez la recherche ou réinitialisez-les.</p>
+            <button matButton type="button" (click)="resetFilters()">
+              <mat-icon>filter_alt_off</mat-icon>
+              Réinitialiser les filtres
+            </button>
           } @else {
-            Aucun poste n'est enregistré pour le moment.
+            <mat-icon aria-hidden="true">work_off</mat-icon>
+            <p class="empty__title">Aucun poste n'est enregistré pour le moment.</p>
+            <p class="empty__hint">
+              Un poste ouvert est ce à quoi une candidature se rattache — commencez par là.
+            </p>
+            @if (canWrite()) {
+              <button matButton="filled" type="button" (click)="creating.set(true)">
+                <mat-icon>post_add</mat-icon>
+                Nouveau poste
+              </button>
+            }
           }
-        </p>
+        </div>
       }
     </section>
   }

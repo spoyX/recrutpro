@@ -1,109 +1,158 @@
-// DESIGN.md: Level 0 canvas, a Level 1 card, 24px container padding, 8px
-// radius on standard elements, generous whitespace as a functional separator.
+// DESIGN.md: Level 0 canvas, Level 1 card, 8px radius, generous whitespace.
+
+:host {
+  display: block;
+  width: 100%;
+}
 
 .login {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-md);
+  padding: var(--sp-xl) var(--sp-md);
   background-color: var(--mat-sys-background);
 }
 
 .login__card {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   box-sizing: border-box;
-
-  // DESIGN.md Elevation Level 1: white surface, subtle shadow, and a 1px
-  // border on ALL Level 1 containers to hold definition against the canvas.
   background-color: var(--mat-sys-surface-container-lowest);
   border: var(--border-level-1);
-  border-radius: var(--radius-lg); // a modal-scale surface
+  border-radius: var(--radius-lg);
   box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
+  padding: 36px 36px 28px 36px;
 }
 
 .login__header {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--sp-sm);
-  margin-bottom: var(--sp-xl);
-}
-
-.login__logo {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-
-  mat-icon {
-    // Material's default icon sizing is 24px; keep it centred in the tile.
-    display: block;
-  }
+  align-items: flex-start;
+  text-align: left;
+  gap: 6px;
+  margin-bottom: 24px;
 }
 
 .login__title {
   font: var(--mat-sys-headline-medium);
+  font-size: 28px;
+  font-weight: 700;
   letter-spacing: var(--recrutpro-tracking-headline-lg);
   color: var(--mat-sys-on-surface);
   margin: 0;
 }
 
 .login__subtitle {
-  font: var(--mat-sys-body-sm, var(--mat-sys-body-small));
+  font: var(--mat-sys-body-medium);
+  font-size: 15px;
   color: var(--mat-sys-on-surface-variant);
   margin: 0;
+}
+
+.login__error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-default);
+  background-color: #FCE8E6;
+  border: 1px solid #F5C2C0;
+  color: #93000A;
+  font: var(--mat-sys-body-medium);
+  font-weight: 500;
+
+  mat-icon {
+    flex: none;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: #BA1A1A;
+  }
 }
 
 .login__form {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-md);
+  gap: 16px;
 }
 
-// Both messages share a layout; only the colour role differs.
-.login__error,
-.login__notice {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-sm);
-  margin: 0;
-  padding: var(--sp-sm) var(--sp-md);
+.login__submit {
+  width: 100%;
+  height: 48px;
   border-radius: var(--radius-default);
-  font: var(--mat-sys-body-small);
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
 
-  mat-icon {
-    flex: none;
+  .login__submit-icon {
     font-size: 20px;
     width: 20px;
     height: 20px;
   }
 }
 
-// DESIGN.md: "Chips/Badges use low-saturation background tints with
-// high-saturation text of the same hue." The same treatment reads well for
-// inline messaging, and keeps error styling off a pure-red block.
-.login__error {
-  background-color: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
+.login__forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
-.login__notice {
-  background-color: var(--mat-sys-secondary-fixed);
-  color: var(--mat-sys-on-secondary-fixed);
+.login__forgot-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
-.login__submit {
-  // DESIGN.md: high-priority actions remain solid; full width reads as the
-  // single obvious next step on a one-action screen.
-  width: 100%;
-  height: 48px;
-  border-radius: var(--radius-default);
-  font: var(--mat-sys-label-large);
+.login__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 28px;
+  gap: 12px;
 }
+
+.login__footer-help {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
+
+.login__footer-action {
+  font-weight: 600;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.login__footer-legal {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 13px;
+  color: var(--mat-sys-outline);
+
+  span {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+

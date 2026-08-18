@@ -1,29 +1,23 @@
 <app-shell>
   <header class="head">
-    <h1 class="page__title">Administration</h1>
+    <div class="head__titles">
+      <h1 class="page__title">Gestion des utilisateurs</h1>
+      <p class="head__subtitle">Administrez les comptes, les rôles et les accès de votre équipe.</p>
+    </div>
+    <div class="head__actions">
+      <button matButton="filled" type="button" class="btn--create" (click)="creating.set(true)">
+        <mat-icon>person_add</mat-icon>
+        Nouvel utilisateur
+      </button>
+    </div>
   </header>
 
   <!-- ============================================ FR-6 to FR-12: accounts -->
-  <section class="card" aria-labelledby="users-title">
-    <div class="section__head">
-      <h2 id="users-title" class="card__title">Comptes</h2>
-      <div class="section__actions">
-        @if (!usersLoading() && !usersError()) {
-          <p class="section__count">
-            {{ users().length }} compte{{ users().length > 1 ? 's' : '' }}
-          </p>
-        }
-        <button matButton="filled" type="button" (click)="creating.set(true)">
-          <mat-icon>person_add</mat-icon>
-          Nouveau compte
-        </button>
-      </div>
-    </div>
-
-    <!-- FR-12: filtrable par rôle et par statut. -->
+  <section class="card filters-card" aria-labelledby="users-title">
+    <h2 id="users-title" class="visually-hidden">Gestion des comptes</h2>
     <div class="filters">
       <div class="filters__field">
-        <label class="filters__label label-sm" for="filter-role">Rôle</label>
+        <label class="filters__label label-sm" for="filter-role">FILTRER PAR RÔLE</label>
         <select
           id="filter-role"
           class="filters__control"
@@ -37,10 +31,8 @@
         </select>
       </div>
 
-      <!-- 5.2: a segmented control. Three options, and the current one is
-           visible without opening anything. -->
       <div class="filters__field">
-        <span class="filters__label label-sm" id="filter-active-label">Statut</span>
+        <span class="filters__label label-sm" id="filter-active-label">STATUT DU COMPTE</span>
         <div class="segmented" role="group" aria-labelledby="filter-active-label">
           @for (option of statusOptions; track option.value) {
             <button
@@ -56,14 +48,27 @@
         </div>
       </div>
 
-      @if (isFiltered()) {
-        <button matButton type="button" class="filters__reset" (click)="resetFilters()">
-          <mat-icon>filter_alt_off</mat-icon>
-          Réinitialiser
-        </button>
-      }
+      <div class="filters__end">
+        @if (!usersLoading() && !usersError()) {
+          <span class="filters__count">
+            {{ users().length }} utilisateur{{ users().length > 1 ? 's' : '' }} trouvé{{ users().length > 1 ? 's' : '' }}
+          </span>
+        }
+        @if (isFiltered()) {
+          <button matButton type="button" class="filters__reset" (click)="resetFilters()">
+            <mat-icon>filter_alt_off</mat-icon>
+            Réinitialiser
+          </button>
+        } @else {
+          <button type="button" class="filters__icon-btn" aria-label="Filtrer" (click)="resetFilters()">
+            <mat-icon>tune</mat-icon>
+          </button>
+        }
+      </div>
     </div>
+  </section>
 
+  <section class="card table-card">
     @if (usersLoading()) {
       <mat-progress-bar mode="indeterminate" aria-label="Chargement des comptes" />
     }
@@ -85,26 +90,24 @@
 
     @if (!usersError() && users().length) {
       <div class="table-scroll">
-        <table class="table">
+        <table class="table table--roomy">
           <thead>
             <tr>
-              <th scope="col">Nom</th>
+              <th scope="col">Nom & Prénom</th>
               <th scope="col">Email</th>
               <th scope="col">Rôle</th>
               <th scope="col">Département</th>
               <th scope="col">Statut</th>
-              <th scope="col"><span class="visually-hidden">Actions</span></th>
+              <th scope="col" class="th--actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (user of users(); track user.id) {
               <tr [class.row--inactive]="!user.isActive">
-                <!-- D-091: an account directory is the one screen that is
-                     ABOUT the people, so the photo belongs here. -->
                 <td>
                   <span class="row__person">
                     <app-user-avatar [name]="user.name" [src]="user.avatarUrl" />
-                    <span>
+                    <span class="row__name">
                       {{ user.name }}
                       @if (isSelf(user)) {
                         <span class="row__self label-sm">vous</span>
@@ -112,74 +115,70 @@
                     </span>
                   </span>
                 </td>
-                <td class="table__meta">{{ user.email }}</td>
-                <!-- 5.1: a badge, reusing `.pill` from D-085 so a role is
-                     scannable down the column rather than read line by line.
-                     OUTLINED, not tinted — see the note in the stylesheet: the
-                     palette cannot supply three distinguishable role tones, and
-                     two of the candidates collide with a STATUS pill on the
-                     same row. -->
-                <td><span class="pill pill--role">{{ user.role }}</span></td>
-                <!-- An Administrateur has none by design (D-016), so « — »
-                     here is a rule, not missing data. -->
+                <td class="table__email">{{ user.email }}</td>
+                <td>
+                  <span class="pill pill--role" [class]="'pill--role-' + user.role.toLowerCase()">
+                    {{ formatRole(user.role) }}
+                  </span>
+                </td>
                 <td class="table__meta">{{ departmentName(user.departmentId) }}</td>
                 <td>
-                  <!-- D-084's field, and the reason this column can exist. -->
-                  @if (user.isActive) {
-                    <span class="pill pill--on">Actif</span>
-                  } @else {
-                    <span class="pill pill--off">Désactivé</span>
-                  }
-                  <!-- FR-10: an account sitting on a temporary credential. -->
-                  @if (user.mustChangePassword) {
-                    <span class="pill pill--warn">Mot de passe à changer</span>
-                  }
+                  <div class="status-cell">
+                    <span class="toggle-switch" [class.toggle-switch--on]="user.isActive" aria-hidden="true">
+                      <span class="toggle-switch__thumb"></span>
+                    </span>
+                    <span class="pill" [class.pill--on]="user.isActive" [class.pill--off]="!user.isActive">
+                      {{ user.isActive ? 'Actif' : 'Désactivé' }}
+                    </span>
+                    @if (user.mustChangePassword) {
+                      <span class="pill pill--warn">Mot de passe à changer</span>
+                    }
+                  </div>
                 </td>
                 <td class="table__actions">
                   <button
                     matButton
                     type="button"
+                    class="action-btn"
                     [disabled]="rowBusy() === user.id"
                     (click)="editing.set(user)"
                   >
                     <mat-icon>edit</mat-icon>
-                    Modifier
+                    <span class="action-btn__label">Modifier</span>
                   </button>
                   <button
                     matButton
                     type="button"
+                    class="action-btn"
                     [disabled]="rowBusy() === user.id"
                     (click)="resetting.set(user)"
                   >
                     <mat-icon>key</mat-icon>
-                    Mot de passe
+                    <span class="action-btn__label">Mot de passe</span>
                   </button>
-                  <!--
-                    FR-8/FR-9. D-029: an administrator cannot deactivate their
-                    OWN account — nobody else could undo it — so the action is
-                    absent rather than offered into a 400.
-                  -->
                   @if (isSelf(user)) {
                     <span class="row__note label-sm">Votre compte</span>
                   } @else if (user.isActive) {
                     <button
                       matButton
                       type="button"
+                      class="action-btn action-btn--danger"
                       [disabled]="rowBusy() === user.id"
                       (click)="deactivating.set(user)"
                     >
                       <mat-icon>block</mat-icon>
-                      Désactiver
+                      <span class="action-btn__label">Désactiver</span>
                     </button>
                   } @else {
                     <button
                       matButton
                       type="button"
+                      class="action-btn action-btn--success"
                       [disabled]="rowBusy() === user.id"
                       (click)="reactivate(user)"
                     >
                       <mat-icon>check_circle</mat-icon>
-                      Réactiver
+                      <span class="action-btn__label">Réactiver</span>
                     </button>
                   }
                 </td>
@@ -187,6 +186,22 @@
             }
           </tbody>
         </table>
+      </div>
+
+      <!--
+        NO PAGER, deliberately. `GET /users` returns the whole list in one array
+        — no `offset`, no `X-Total-Count` — so every account on the system is
+        already on this page. The version this replaces rendered « 1 2 3 »
+        buttons with no handler and no second page behind them: three controls
+        that looked clickable, did nothing, and implied accounts that were not
+        being shown. A footer may state a count; it may not imply a page that
+        does not exist.
+      -->
+      <div class="table-footer">
+        <span class="table-footer__info">
+          {{ users().length }} compte{{ users().length > 1 ? 's' : '' }} —
+          la liste complète, sans pagination
+        </span>
       </div>
     } @else if (!usersLoading() && !usersError()) {
       <p class="empty">
@@ -261,9 +276,6 @@
         }
       </ul>
 
-      <!-- FR-13: a deactivated department disappears from the PICKERS, not from
-           the records that already point at it. Said, so its continued presence
-           in this list does not read as a bug. -->
       <p class="note">
         <mat-icon aria-hidden="true">info</mat-icon>
         <span>
@@ -315,7 +327,7 @@
     />
   }
 
-  <!-- FR-8 — inline, like the FR-34 cancellation prompt: one host, one use. -->
+  <!-- FR-8 -->
   @if (deactivating(); as user) {
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-title" (escaped)="deactivating.set(null)">
       <div class="modal__panel">
@@ -348,3 +360,4 @@
     </div>
   }
 </app-shell>
+

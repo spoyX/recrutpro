@@ -6,182 +6,24 @@
 // inventing a visual language at the point of use, so the bars come from the
 // shared PipelineBreakdown (D-057) and the figures from the shared StatTile.
 
-.head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-}
-
-// A stated RULE, not a warning: the responsable's narrower view is correct
-// behaviour, so it wears the neutral surface rather than the attention tone.
-.head__scope,
-.note {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-sm);
-  margin: 0;
-  padding: var(--sp-sm);
-  border-radius: var(--radius-default);
-  background-color: var(--mat-sys-surface-container-high);
-  color: var(--mat-sys-on-surface-variant);
-  font: var(--mat-sys-body-small);
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    flex: none;
-  }
-}
-
-.note {
-  margin-top: var(--sp-md);
-}
-
-.card {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: var(--border-level-1);
-  border-radius: var(--radius-default);
-  box-shadow: var(--elevation-1);
-  padding: var(--sp-lg);
-  // The pipeline table scrolls inside its own wrapper; without these the card
-  // stretches to the table's width and drags the page into horizontal scroll.
-  min-width: 0;
-  max-width: 100%;
-}
-
-.card__title {
-  font: var(--mat-sys-title-large);
-  color: var(--mat-sys-on-surface);
-  margin: 0;
-}
-
-.section__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-md);
-}
-
-.section__count {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
 // ---------------------------------------------------------------- filters
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--sp-md);
-  margin-bottom: var(--sp-md);
-}
-
-.filters__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-xs);
-  min-width: 0;
-}
-
-.filters__label {
-  color: var(--text-slate);
+// `.note` supplies the look; this only cancels the top margin `.note` carries
+// for its usual home inside a card body.
+.head__scope {
   margin: 0;
-}
-
-.filters__control {
-  background-color: var(--mat-sys-surface-container-lowest);
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-default);
-  padding: var(--sp-sm);
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface);
-  min-width: 200px;
-
-  &:focus {
-    border-color: var(--recrutpro-focus);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
-    outline: none;
-  }
-}
-
-.filters__reset {
-  margin-left: auto;
 }
 
 // ------------------------------------------------------------------ table
 
-.table-scroll {
-  // Phase 5 finding F. `overflow-x: auto` clips the wide table VISUALLY and
-  // scrolls it internally — every column stays reachable, which is why this was
-  // never a content-reachability bug. But the table's LAYOUT overflow still
-  // propagated into the document's scrollable region, so the whole page gained
-  // a horizontal scrollbar: on /candidates the document measured a constant
-  // 1496px and panned 82px even in a 1414px window.
-  //
-  // `contain: paint` is what stops that: it makes this element a containment
-  // boundary, so a descendant's overflow no longer contributes to any
-  // ancestor's scrollable area. `overflow-x: clip` on html/body did NOT fix it
-  // (verified by injection) because the overflow was being generated below it.
-  //
-  // Isolated by elimination, not guessed: hiding this wrapper collapsed the
-  // document to exactly the viewport width, and `table { min-width: 0 }` did
-  // not. Safe here — no sticky or absolutely-positioned descendants, the two
-  // things paint containment would otherwise re-parent.
-  contain: paint;
-  overflow-x: auto;
-}
-
 .table {
-  width: 100%;
-  border-collapse: collapse;
   // Nine columns of stage names need room; the wrapper scrolls, not the page.
   min-width: 940px;
 
-  th,
-  td {
-    text-align: left;
-    padding: var(--sp-sm) var(--sp-md);
-    border-bottom: var(--border-level-1);
-    white-space: nowrap;
-  }
-
   th {
-    font: var(--mat-sys-label-small);
-    letter-spacing: var(--recrutpro-tracking-label-sm);
-    text-transform: uppercase;
-    color: var(--text-slate);
-    background-color: var(--mat-sys-surface-container-low);
+    // Stage names are the longest headers on any table here; bottom-aligning
+    // them keeps the row of numbers under them on one baseline.
     vertical-align: bottom;
-  }
-
-  tbody tr {
-    height: var(--layout-row-height);
-  }
-
-  tbody tr:hover {
-    background-color: var(--mat-sys-surface-container-low);
-  }
-
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
-}
-
-.table__link {
-  color: var(--mat-sys-secondary);
-  text-decoration: none;
-  font: var(--mat-sys-body-medium);
-
-  &:hover {
-    text-decoration: underline;
   }
 }
 
@@ -220,12 +62,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--sp-gutter);
-}
-
-.empty {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  margin: 0;
 }
 
 @media (max-width: 900px) {

@@ -1,9 +1,11 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Subject, switchMap, catchError, EMPTY } from 'rxjs';
 import { ApiError, AuthService } from '../../../core/auth.service';
 import { ReportService, PipelineRow, TimeToHire } from '../report.service';
 import { AppShell } from '../../../shared/app-shell/app-shell';
@@ -55,6 +57,9 @@ import { PipelineBreakdown } from '../../../shared/pipeline-breakdown/pipeline-b
 export class Reports {
   private readonly reports = inject(ReportService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly pipelineTrigger$ = new Subject<void>();
+  private readonly timeToHireTrigger$ = new Subject<void>();
   protected readonly auth = inject(AuthService);
 
   // ------------------------------------------------------- user story 22
@@ -117,42 +122,60 @@ export class Reports {
   });
 
   constructor() {
+    this.pipelineTrigger$
+      .pipe(
+        switchMap(() => {
+          this.pipelineLoading.set(true);
+          this.pipelineError.set(null);
+          return this.reports.pipeline(this.selectedPosition() || undefined).pipe(
+            catchError((response: HttpErrorResponse) => {
+              this.pipelineLoading.set(false);
+              this.rows.set([]);
+              this.pipelineError.set(this.messageFor(response, 'Le rapport de pipeline'));
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((rows) => {
+        this.rows.set(rows);
+        this.pipelineLoading.set(false);
+      });
+
+    this.timeToHireTrigger$
+      .pipe(
+        switchMap(() => {
+          this.hireLoading.set(true);
+          this.hireError.set(null);
+          return this.reports
+            .timeToHire(this.fromDate() || undefined, this.toDate() || undefined)
+            .pipe(
+              catchError((response: HttpErrorResponse) => {
+                this.hireLoading.set(false);
+                this.hire.set(null);
+                this.hireError.set(this.messageFor(response, 'Le délai de recrutement'));
+                return EMPTY;
+              }),
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((report) => {
+        this.hire.set(report);
+        this.hireLoading.set(false);
+      });
+
     this.loadPipeline();
     this.loadTimeToHire();
   }
 
   loadPipeline(): void {
-    this.pipelineLoading.set(true);
-    this.pipelineError.set(null);
-
-    this.reports.pipeline(this.selectedPosition() || undefined).subscribe({
-      next: (rows) => {
-        this.rows.set(rows);
-        this.pipelineLoading.set(false);
-      },
-      error: (response: HttpErrorResponse) => {
-        this.pipelineLoading.set(false);
-        this.rows.set([]);
-        this.pipelineError.set(this.messageFor(response, 'Le rapport de pipeline'));
-      },
-    });
+    this.pipelineTrigger$.next();
   }
 
   loadTimeToHire(): void {
-    this.hireLoading.set(true);
-    this.hireError.set(null);
-
-    this.reports.timeToHire(this.fromDate() || undefined, this.toDate() || undefined).subscribe({
-      next: (report) => {
-        this.hire.set(report);
-        this.hireLoading.set(false);
-      },
-      error: (response: HttpErrorResponse) => {
-        this.hireLoading.set(false);
-        this.hire.set(null);
-        this.hireError.set(this.messageFor(response, 'Le délai de recrutement'));
-      },
-    });
+    this.timeToHireTrigger$.next();
   }
 
   selectPosition(value: string): void {

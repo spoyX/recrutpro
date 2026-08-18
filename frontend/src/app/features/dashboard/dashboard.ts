@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -93,6 +93,27 @@ export class Dashboard {
 
   // Logout and the topbar identity now live in `shared/app-shell`, which every
   // protected page wraps itself in — one place to change when D-065 is settled.
+
+  /**
+   * The one-line orientation under the page title.
+   *
+   * Role-worded, because the three dashboards answer three different
+   * questions — and like the `@switch` in the template this is PRESENTATION
+   * only. It reads the role the server already decided (D-057); it never
+   * decides anything.
+   */
+  readonly subtitle = computed(() => {
+    switch (this.data()?.role) {
+      case 'Recruteur':
+        return "Vos postes ouverts et l'avancement de vos candidats.";
+      case 'ResponsableHierarchique':
+        return 'Les entretiens de votre département, les évaluations en attente et les décisions qui vous reviennent.';
+      case 'Administrateur':
+        return 'Les comptes actifs et les dernières actions enregistrées sur la plateforme.';
+      default:
+        return '';
+    }
+  });
 
   /** FR-47 audit entries read as `UtilisateurCree`; space them for humans. */
   humanise(action: string): string {
