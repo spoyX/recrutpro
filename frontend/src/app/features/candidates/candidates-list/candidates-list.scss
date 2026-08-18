@@ -100,6 +100,23 @@
 // DESIGN.md: "Horizontal scrolling is permitted for complex data tables."
 // Scoped to this wrapper so the PAGE never scrolls sideways.
 .table-scroll {
+  // Phase 5 finding F. `overflow-x: auto` clips the wide table VISUALLY and
+  // scrolls it internally — every column stays reachable, which is why this was
+  // never a content-reachability bug. But the table's LAYOUT overflow still
+  // propagated into the document's scrollable region, so the whole page gained
+  // a horizontal scrollbar: on /candidates the document measured a constant
+  // 1496px and panned 82px even in a 1414px window.
+  //
+  // `contain: paint` is what stops that: it makes this element a containment
+  // boundary, so a descendant's overflow no longer contributes to any
+  // ancestor's scrollable area. `overflow-x: clip` on html/body did NOT fix it
+  // (verified by injection) because the overflow was being generated below it.
+  //
+  // Isolated by elimination, not guessed: hiding this wrapper collapsed the
+  // document to exactly the viewport width, and `table { min-width: 0 }` did
+  // not. Safe here — no sticky or absolutely-positioned descendants, the two
+  // things paint containment would otherwise re-parent.
+  contain: paint;
   overflow-x: auto;
 }
 
@@ -152,6 +169,12 @@
   background: none;
   border: none;
   padding: 0;
+  // Phase 5 finding D. Measured at 16px tall, under WCAG 2.2 AA's 24x24 CSS px
+  // for a pointer target. NOT covered by the inline exception: a header-cell
+  // control is standalone, not a link inside a sentence whose height is set by
+  // surrounding prose. Height only — the widths (31/41/119px) already cleared.
+  // `min-height` rather than padding so the label stays on the header baseline.
+  min-height: 24px;
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;

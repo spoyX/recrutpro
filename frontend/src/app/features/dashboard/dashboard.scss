@@ -120,6 +120,13 @@
 }
 
 .card__more {
+  // Phase 5 finding E. Measured 56x20 — a standalone navigational link in a
+  // card header, not inline in prose, so the WCAG 2.2 inline exception does not
+  // apply and 20px was 4px short. inline-flex + min-height gives the target its
+  // height without moving the text.
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font: var(--mat-sys-body-small);
   color: var(--mat-sys-secondary);
   text-decoration: none;
