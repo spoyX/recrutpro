@@ -37,18 +37,24 @@ interface NavItem {
 }
 
 /**
- * Unbuilt destinations are shown DISABLED rather than hidden or linked.
- * Hiding them would misrepresent the product's shape in a demo; linking them
- * would 404. Each becomes a live link as its page lands.
+ * *** THE SIDEBAR SHOWS ONLY WHAT THIS ROLE CAN OPEN (D-108). ***
  *
- * A destination the CURRENT ROLE cannot use is disabled the same way, and for
- * the same reason — it would 403 rather than 404.
+ * It used to render unreachable destinations DISABLED — unbuilt ones as « à
+ * venir », role-gated ones as « réservé » — on the reasoning that hiding them
+ * would misrepresent the product's shape in a demo. The human overruled that
+ * from the running app, and they are right about who the sidebar is for: it is
+ * a place to GO, not a catalogue of the product. A Recruteur has no use for a
+ * greyed « Journal d'audit » on every screen, and two of the seven entries
+ * being permanently inert made the column read as half-broken.
  *
- * The two cases still carry different reasons ("à venir" vs "réservé"), but as
- * a `title` rather than a visible badge: the human asked for the « RÉSERVÉ »
- * chip to go, and it was repeating on every gated row what the greyed-out
- * state already says. The distinction is kept for anyone who hovers or asks,
- * and is no longer shouted at everyone who does not.
+ * Nothing is hidden that this role could reach — the filter is exactly the
+ * same predicate that used to decide `disabled`, so a page becomes visible for
+ * precisely the roles it was already a live link for.
+ *
+ * STILL NOT AUTHORISATION. NFR-04 puts access control on the server, which
+ * refuses these routes regardless of what the sidebar draws; typing the URL
+ * directly still gets the same 403 it always did. This decides what is
+ * OFFERED, never what is permitted (D-064).
  *
  * This is presentation, NOT authorisation. NFR-04 puts access control on the
  * server, which refuses these routes regardless of what the sidebar renders.
@@ -93,13 +99,16 @@ const NAV: readonly NavItem[] = [
   },
 ];
 
-/** What the sidebar actually renders for one entry. */
+/**
+ * What the sidebar actually renders for one entry.
+ *
+ * D-108: `href` is no longer nullable and there is no `hint`, because an entry
+ * this role cannot reach is not rendered at all. See the note on `nav` below.
+ */
 interface ResolvedNavItem {
   label: string;
   icon: string;
-  /** Non-null only when this role can actually reach the page. */
-  href: string | null;
-  hint: 'à venir' | 'réservé' | null;
+  href: string;
 }
 
 @Component({
@@ -130,27 +139,16 @@ interface ResolvedNavItem {
         <ul class="sidebar__nav">
           @for (item of nav(); track item.label) {
             <li>
-              @if (item.href) {
-                <a
-                  class="sidebar__link"
-                  [routerLink]="item.href"
-                  routerLinkActive="sidebar__link--active"
-                  #active="routerLinkActive"
-                  [attr.aria-current]="active.isActive ? 'page' : null"
-                >
-                  <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
-                  {{ item.label }}
-                </a>
-              } @else {
-                <span
-                  class="sidebar__link sidebar__link--disabled"
-                  aria-disabled="true"
-                  [attr.title]="item.hint"
-                >
-                  <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
-                  {{ item.label }}
-                </span>
-              }
+              <a
+                class="sidebar__link"
+                [routerLink]="item.href"
+                routerLinkActive="sidebar__link--active"
+                #active="routerLinkActive"
+                [attr.aria-current]="active.isActive ? 'page' : null"
+              >
+                <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+                {{ item.label }}
+              </a>
             </li>
           }
         </ul>
@@ -359,10 +357,6 @@ interface ResolvedNavItem {
       color: var(--mat-sys-on-secondary-fixed-variant);
     }
 
-    .sidebar__link--disabled {
-      color: var(--mat-sys-outline);
-      cursor: default;
-    }
 
 
     .shell__main {
@@ -551,18 +545,9 @@ export class AppShell {
   protected readonly nav = computed<ResolvedNavItem[]>(() => {
     const role = this.auth.currentUser()?.role ?? null;
 
-    return NAV.map((item) => {
-      if (item.route === null) {
-        return { label: item.label, icon: item.icon, href: null, hint: 'à venir' as const };
-      }
-      const allowed = !item.roles || (role !== null && item.roles.includes(role));
-      return {
-        label: item.label,
-        icon: item.icon,
-        href: allowed ? item.route : null,
-        hint: allowed ? null : ('réservé' as const),
-      };
-    });
+    return NAV.filter(
+      (item) => item.route !== null && (!item.roles || (role !== null && item.roles.includes(role))),
+    ).map((item) => ({ label: item.label, icon: item.icon, href: item.route! }));
   });
 
   logout(): void {

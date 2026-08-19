@@ -19,21 +19,10 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
 
   const text = (): string => fixture.nativeElement.textContent as string;
 
-  /**
-   * Sidebar hints, read from the disabled entry's `title`.
-   *
-   * D-107 moved the reason off a visible « RÉSERVÉ » badge and onto the title:
-   * the chip repeated on every gated row what the greyed-out state already
-   * said. These assertions are unchanged in MEANING — which destinations are
-   * gated, and that "not built yet" is never conflated with "not yours" — only
-   * in where they read it from.
-   */
-  const hints = (label: string): HTMLElement[] =>
-    (
-      Array.from(
-        fixture.nativeElement.querySelectorAll('.sidebar__link--disabled'),
-      ) as HTMLElement[]
-    ).filter((el) => el.getAttribute('title') === label);
+  /** The destinations actually offered, by href. */
+  const links = (): string[] =>
+    (Array.from(fixture.nativeElement.querySelectorAll('a.sidebar__link')) as HTMLAnchorElement[])
+      .map((a) => a.getAttribute('href') ?? '');
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -75,25 +64,23 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(dashboard.textContent).toContain('Tableau de bord');
     });
 
-    it('renders unbuilt destinations as DISABLED, never as links that 404', () => {
+    it('D-108: offers ONLY what this role can open — no disabled entries at all', () => {
       create();
 
-      // Every nav entry is present so the product's shape is honest…
-      expect(text()).toContain('Candidats');
-      expect(text()).toContain('Rapports');
-      expect(text()).toContain("Journal d'audit");
+      // The sidebar used to render unreachable destinations greyed out, so the
+      // product's shape stayed visible. The human overruled that from the
+      // running app: a sidebar is a place to GO, not a catalogue. Every entry
+      // is now a live link, and nothing inert is drawn.
+      expect(fixture.nativeElement.querySelectorAll('.sidebar__link--disabled').length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('[aria-disabled="true"]').length).toBe(0);
 
-      // …but they are not anchors.
-      const disabled = fixture.nativeElement.querySelectorAll('.sidebar__link--disabled');
-      disabled.forEach((el: Element) => {
-        expect(el.getAttribute('aria-disabled')).toBe('true');
-        expect(el.tagName.toLowerCase()).not.toBe('a');
+      // …and every rendered entry IS an anchor with a real destination.
+      const entries = fixture.nativeElement.querySelectorAll('.sidebar__link');
+      expect(entries.length).toBeGreaterThan(0);
+      entries.forEach((el: Element) => {
+        expect(el.tagName.toLowerCase()).toBe('a');
+        expect(el.getAttribute('href')).toBeTruthy();
       });
-      // ZERO. Every sidebar destination is now built — « Journal d'audit » was
-      // the last, and « à venir » no longer appears anywhere in the app. The
-      // remaining disabled entries are all « réservé », which is a different
-      // fact: the page exists and is not this role's.
-      expect(hints('à venir').length).toBe(0);
     });
   });
 
@@ -121,18 +108,20 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(link.textContent).toContain('Candidats');
     });
 
-    it('ResponsableHierarchique: « Candidats » is disabled, and is « réservé » not « à venir »', () => {
+    it('ResponsableHierarchique: « Candidats » is ABSENT, not greyed (D-108)', () => {
       signIn('ResponsableHierarchique');
       create();
 
-      expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
-      // The two disabled reasons must not be conflated: the page EXISTS, it is
-      // simply not this role's. « Candidats » (D-041) and « Postes » (D-038
-      // closes that module to this role entirely) are both in that state.
-      // « Candidats » (D-041), « Postes » (D-038), « Utilisateurs » and
-      // « Journal d'audit » (both Administrateur-only) are all « réservé ».
-      expect(hints('réservé').length).toBe(4);
-      expect(hints('à venir').length).toBe(0);
+      // The exact offered set, not a spot check: what this role may open is
+      // the whole claim, and an entry appearing here that the server would
+      // refuse is the bug this asserts against.
+      expect(links().sort()).toEqual(
+        ['/dashboard', '/interviews', '/reports'].sort(),
+      );
+      // « Candidats » (D-041), « Postes » (D-038) and both admin destinations
+      // are simply not drawn.
+      expect(text()).not.toContain('Candidats');
+      expect(text()).not.toContain("Journal d'audit");
     });
 
     it('ResponsableHierarchique: « Entretiens » IS a link — FR-35 is theirs', () => {
@@ -149,17 +138,17 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeTruthy();
     });
 
-    it('Administrateur: « Candidats » is disabled — D-068 did not widen the FR-24 list', () => {
+    it('Administrateur: « Candidats » is ABSENT — D-068 did not widen the FR-24 list', () => {
       signIn('Administrateur');
       create();
 
       expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
       // Entretiens too: neither FR-33 nor FR-35 names that role.
       expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
-      expect(hints('réservé').length).toBe(2);
       // …and both admin destinations ARE theirs, alone among the three roles.
-      expect(fixture.nativeElement.querySelector('a[href="/admin/users"]')).toBeTruthy();
-      expect(fixture.nativeElement.querySelector('a[href="/admin/audit-log"]')).toBeTruthy();
+      expect(links().sort()).toEqual(
+        ['/admin/audit-log', '/admin/users', '/dashboard', '/job-positions', '/reports'].sort(),
+      );
     });
 
     it('FR-6 to FR-13: only the Administrateur gets « Utilisateurs »', () => {
@@ -172,8 +161,8 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
         expect(fixture.nativeElement.querySelector('a[href="/admin/audit-log"]'))
           .withContext(role)
           .toBeNull();
-        // Present but disabled, so the product's shape stays honest.
-        expect(text()).withContext(role).toContain('Utilisateurs');
+        // D-108: absent entirely, not present-but-disabled.
+        expect(text()).withContext(role).not.toContain('Utilisateurs');
         drainShellRequests(http);
       }
     });
@@ -186,17 +175,16 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       }
     });
 
-    it('an ANONYMOUS visitor gets the entry disabled rather than a link that would 403', () => {
+    it('an ANONYMOUS visitor is offered no role-gated destination at all (D-108)', () => {
       // Since D-070 a signed-in user's role survives a refresh, so this is now
-      // only the genuinely-anonymous case.
+      // only the genuinely-anonymous case. Every role-gated entry would 403,
+      // and none of them is drawn — where they used to be drawn disabled.
       create();
 
-      expect(fixture.nativeElement.querySelector('a[href="/candidates"]')).toBeNull();
-      expect(fixture.nativeElement.querySelector('a[href="/interviews"]')).toBeNull();
-      expect(fixture.nativeElement.querySelector('a[href="/job-positions"]')).toBeNull();
-      expect(fixture.nativeElement.querySelector('a[href="/admin/users"]')).toBeNull();
-      expect(fixture.nativeElement.querySelector('a[href="/admin/audit-log"]')).toBeNull();
-      expect(hints('réservé').length).toBe(5);
+      expect(links().sort()).toEqual(['/dashboard', '/reports'].sort());
+      for (const label of ['Candidats', 'Postes', 'Entretiens', 'Utilisateurs']) {
+        expect(text()).withContext(label).not.toContain(label);
+      }
     });
 
     // FR-14 to FR-17. D-038 opened the module's READS to two roles and closed
@@ -214,13 +202,13 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       }
     });
 
-    it('ResponsableHierarchique: « Postes » is disabled — D-038 closes the module to them', () => {
+    it('ResponsableHierarchique: « Postes » is ABSENT — D-038 closes the module to them', () => {
       signIn('ResponsableHierarchique');
       create();
 
       expect(fixture.nativeElement.querySelector('a[href="/job-positions"]')).toBeNull();
-      // Present, so the product's shape stays honest — just not a link.
-      expect(text()).toContain('Postes');
+      // D-108: not drawn at all, where it used to be drawn disabled.
+      expect(text()).not.toContain('Postes');
     });
   });
 
