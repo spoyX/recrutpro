@@ -58,6 +58,20 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
     return matches[0];
   };
 
+  /**
+   * `GET /departments` is cached for the session by `DepartmentDirectory`, so
+   * it is requested on the FIRST load of a spec and never again. Asserting one
+   * per load would be asserting the ABSENCE of that cache — and the write-path
+   * specs below load twice on purpose.
+   */
+  let departmentsServed = false;
+  const serveDepartments = (): void => {
+    const matches = http.match((r) => r.url === DEPARTMENTS_URL);
+    expect(matches.length).toBe(departmentsServed ? 0 : 1);
+    matches[0]?.flush([{ id: DEPT, name: 'Ingénierie' }]);
+    departmentsServed = true;
+  };
+
   const load = (
     overrides: Partial<JobPosition> = {},
     rows: CandidateListItem[] = [candidate('a')],
@@ -66,7 +80,7 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
     create();
     only(URL).flush({ ...position, ...overrides });
     fixture.detectChanges();
-    only(DEPARTMENTS_URL).flush([{ id: DEPT, name: 'Ingénierie' }]);
+    serveDepartments();
     only(CANDIDATES_URL).flush(rows, { headers: { 'X-Total-Count': String(total) } });
     fixture.detectChanges();
   };
@@ -81,6 +95,10 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
 
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
+    // A fresh TestBed means a fresh DepartmentDirectory, so the cache is empty
+    // again for every spec. Without this reset the flag leaks from the last one
+    // and the first load of the next spec expects zero requests.
+    departmentsServed = false;
   });
 
   afterEach(() => {
@@ -288,7 +306,9 @@ describe('JobPositionDetails (FR-14 to FR-17)', () => {
 
       only(URL).flush({ ...position, title: 'Renommé' });
       fixture.detectChanges();
-      only(DEPARTMENTS_URL).flush([{ id: DEPT, name: 'Ingénierie' }]);
+      // The re-read does NOT re-request departments — they are cached for the
+      // session. What this spec guards is that the POSITION is re-read.
+      serveDepartments();
       only(CANDIDATES_URL).flush([], { headers: { 'X-Total-Count': '0' } });
       fixture.detectChanges();
 

@@ -104,11 +104,17 @@
   margin-top: 8px;
 }
 
+// A BUTTON that reads as a link. It opens a panel rather than navigating,
+// because there is nowhere to navigate to — see the comment in login.html.
 .login__forgot-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   color: var(--mat-sys-primary);
-  text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     text-decoration: underline;
@@ -131,9 +137,14 @@
 }
 
 .login__footer-action {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
   font-weight: 600;
   color: var(--mat-sys-primary);
-  text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     text-decoration: underline;
@@ -144,15 +155,39 @@
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+// These were `<span>`s with `cursor: pointer` and no behaviour — they looked
+// clickable, took no keyboard focus and did nothing. Now real buttons, so the
+// focus ring in _tokens.scss applies and Tab reaches them.
+.login__legal-link {
+  border: none;
+  background: none;
+  // WCAG 2.2 target size: a standalone footer control, not a link inside prose.
+  min-height: 24px;
+  padding: 0;
+  font-family: inherit;
   font-size: 13px;
   color: var(--mat-sys-outline);
+  cursor: pointer;
 
-  span {
-    cursor: pointer;
-
-    &:hover {
-      color: var(--mat-sys-on-surface-variant);
-    }
+  &:hover {
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: underline;
   }
+}
+
+// Projected into `app-info-dialog`, so it is styled HERE: content projection
+// keeps the outer component's encapsulation, and the dialog's own styles
+// cannot reach it.
+//
+// Marked as a placeholder visually as well as in words. An honest gap is
+// better than convincing-looking fake legal text.
+.info__placeholder {
+  padding: var(--sp-sm) var(--sp-md);
+  border-left: 3px solid var(--mat-sys-outline-variant);
+  border-radius: var(--radius-sm);
+  background-color: var(--mat-sys-surface-container-low);
+  font-size: 14px;
 }
 

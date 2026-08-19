@@ -85,19 +85,134 @@
       </button>
 
       <div class="login__forgot-row">
-        <a routerLink="/change-password" class="login__forgot-link">Mot de passe oublié ?</a>
+        <!--
+          A BUTTON, not a link, because it goes nowhere: there is no
+          self-service reset to navigate to (D-031 — the reset route is
+          Administrateur-only, and PRD Section 6 rules out the email that would
+          deliver one). It opens the same panel as « Contactez l'administration »
+          below, which says who can actually reset a password.
+
+          What this replaces was an `<a routerLink>` in a component that never
+          imported RouterLink — so it rendered with no href, took no keyboard
+          focus, and did nothing at all when clicked.
+        -->
+        <button type="button" class="login__forgot-link" (click)="panel.set('contact')">
+          Mot de passe oublié ?
+        </button>
       </div>
     </form>
   </section>
 
   <footer class="login__footer">
     <p class="login__footer-help">
-      Vous n'avez pas de compte ? <a routerLink="/change-password" class="login__footer-action">Contactez l'administration</a>
+      Vous n'avez pas de compte ?
+      <button type="button" class="login__footer-action" (click)="panel.set('contact')">
+        Contactez l'administration
+      </button>
     </p>
     <div class="login__footer-legal">
-      <span>Confidentialité</span>
-      <span>Conditions d'utilisation</span>
+      <button type="button" class="login__legal-link" (click)="panel.set('privacy')">
+        Confidentialité
+      </button>
+      <button type="button" class="login__legal-link" (click)="panel.set('terms')">
+        Conditions d'utilisation
+      </button>
     </div>
   </footer>
+
+  <!--
+    Three static panels. No route, no request, no backend — this is copy in a
+    dialog, and the dialog is the shared one so it inherits D-098's focus
+    trapping rather than re-implementing it.
+  -->
+  @switch (panel()) {
+    @case ('contact') {
+      <app-info-dialog
+        heading="Contacter l'administration"
+        titleId="login-contact-title"
+        (dismissed)="panel.set(null)"
+      >
+        <p>
+          Les comptes RecrutPro sont créés et gérés par un administrateur. Il n'y a
+          pas d'inscription en libre-service.
+        </p>
+        <p>
+          <strong>Mot de passe oublié ?</strong> Seul un administrateur peut le
+          réinitialiser. Il vous remettra un mot de passe temporaire que vous
+          devrez changer à votre première connexion.
+        </p>
+        <p>
+          <strong>Aucun email ne vous sera envoyé</strong> — l'application n'envoie
+          pas de courrier électronique. La démarche se fait de vive voix.
+        </p>
+        <p>
+          Pour une création de compte, un accès oublié ou un changement de rôle :
+          <strong>contactez votre service RH</strong>.
+        </p>
+        <!--
+          A placeholder, and it says so. Inventing an address or a phone number
+          that LOOKS real would be worse than an honest gap: someone would try
+          it. No contact details exist in the SRS.
+        -->
+        <p class="info__placeholder">
+          Les coordonnées exactes (téléphone, adresse) sont à renseigner par
+          l'établissement lors du déploiement.
+        </p>
+      </app-info-dialog>
+    }
+
+    @case ('privacy') {
+      <app-info-dialog
+        heading="Confidentialité"
+        titleId="login-privacy-title"
+        (dismissed)="panel.set(null)"
+      >
+        <p class="info__placeholder">
+          <strong>Texte d'exemple.</strong> Ce projet est une application de fin
+          d'études : cette page n'a pas de valeur juridique et doit être remplacée
+          par une politique rédigée par l'établissement avant toute mise en
+          production.
+        </p>
+        <p>
+          RecrutPro traite des données de recrutement : identité et coordonnées des
+          candidats, CV, comptes rendus d'entretien et décisions.
+        </p>
+        <p>
+          L'accès est restreint par rôle et chaque action sensible est consignée
+          dans un journal d'audit indiquant qui a fait quoi et quand.
+        </p>
+        <p>
+          Aucune donnée n'est transmise à un tiers à des fins commerciales, et
+          l'application n'envoie aucun email.
+        </p>
+      </app-info-dialog>
+    }
+
+    @case ('terms') {
+      <app-info-dialog
+        heading="Conditions d'utilisation"
+        titleId="login-terms-title"
+        (dismissed)="panel.set(null)"
+      >
+        <p class="info__placeholder">
+          <strong>Texte d'exemple.</strong> Ce projet est une application de fin
+          d'études : ces conditions sont un gabarit sans valeur contractuelle, à
+          remplacer par un texte rédigé par l'établissement.
+        </p>
+        <p>
+          L'accès est réservé aux personnes disposant d'un compte fourni par un
+          administrateur. Les identifiants sont personnels et ne se partagent pas.
+        </p>
+        <p>
+          Les informations concernant les candidats sont confidentielles et ne
+          doivent être utilisées que dans le cadre du processus de recrutement.
+        </p>
+        <p>
+          Toute action effectuée depuis un compte engage la personne à qui il a été
+          attribué.
+        </p>
+      </app-info-dialog>
+    }
+  }
 </main>
 

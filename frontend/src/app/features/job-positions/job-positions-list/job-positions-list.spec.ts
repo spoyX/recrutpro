@@ -245,10 +245,15 @@ describe('JobPositionsList (FR-14 to FR-17)', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-job-position-form')).toBeTruthy();
-      // CONTROL: the dialog DOES fetch departments on init, so the observer
-      // below is proven able to see a request before it is used to claim none
-      // was made to the positions route.
-      http.expectOne((r) => r.url === DEPARTMENTS).flush(DEPTS);
+      // CONTROL, rewritten. The dialog no longer issues a departments request
+      // of its own — `DepartmentDirectory` caches the one `open()` already
+      // answered, which is the whole point of the shared directory. So the
+      // proof that data reached the dialog is its RENDERED options, not a
+      // second request; the claim below is still an absence measured against
+      // something demonstrably working.
+      const options = fixture.nativeElement.querySelectorAll('app-job-position-form option');
+      expect(options.length).toBeGreaterThan(1);
+      expect(http.match((r) => r.url === DEPARTMENTS).length).toBe(0);
       expect(http.match((r) => r.url === POSITIONS).length).toBe(0);
     });
 

@@ -1,8 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/auth.service';
+import { DepartmentDirectory } from '../../core/department-directory.service';
 import { NotificationPanel } from '../notification-panel/notification-panel';
 import { UserAvatar } from '../user-avatar/user-avatar';
 import { ProfilePhoto } from '../profile-photo/profile-photo';
@@ -175,7 +178,17 @@ interface ResolvedNavItem {
               </button>
               <span class="topbar__identity">
                 <span class="topbar__name">{{ user.name }}</span>
-                <span class="topbar__role label-sm">{{ user.role }}</span>
+                <span class="topbar__role label-sm">
+                  {{ user.role }}
+                  <!--
+                    D-016: an Administrateur has NO department, and nothing is
+                    rendered for them — see the comment on departmentName() below.
+                  -->
+                  @if (departmentName(); as department) {
+                    <span class="topbar__sep" aria-hidden="true">·</span>
+                    <span class="topbar__department">{{ department }}</span>
+                  }
+                </span>
               </span>
             }
 
@@ -411,6 +424,24 @@ interface ResolvedNavItem {
     .topbar__role {
       color: var(--mat-sys-on-surface-variant);
       margin: 0;
+      // The role and the department sit on one line, separated by a dot.
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    // A separator, not information — aria-hidden in the template so a screen
+    // reader reads "Recruteur Ventes" rather than "Recruteur middle dot Ventes".
+    .topbar__sep {
+      color: var(--mat-sys-outline);
+    }
+
+    .topbar__department {
+      // Long department names must not push the notification bell off the bar.
+      max-width: 22ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .page {
@@ -461,6 +492,52 @@ export class AppShell {
 
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly departments = inject(DepartmentDirectory);
+
+  /**
+   * The signed-in user's department name, or null when there is nothing to say.
+   *
+   * NO NEW ENDPOINT, checked rather than assumed: `PublicUser` already carries
+   * `departmentId`, and `GET /departments` is open to every authenticated role
+   * (D-035 — it sits before the `requireRole(Administrateur)` guard in
+   * department.routes.ts, because FR-14 has a Recruteur pick one).
+   *
+   * *** AN ADMINISTRATEUR RENDERS NOTHING HERE, DELIBERATELY. ***
+   * D-016 makes `departmentId` optional for that role alone, because rule 2
+   * scopes the other two BY department and an Administrateur is deliberately
+   * unscoped. So there is no department to name — and labelling them
+   * « Administration » would put a scope on screen that they do not have,
+   * next to a role line that already reads « Administrateur ». It would be
+   * both redundant and, in the one way that matters here, untrue. They keep
+   * the role alone, which is exactly what the topbar showed before.
+   *
+   */
+  private readonly departmentNames = toSignal(
+    // Never even REQUESTED for an Administrateur — `toSignal` subscribes
+    // eagerly, so the choice has to be made here rather than in the `computed`
+    // below. Identity is already resolved at this point: D-070 runs
+    // `restoreSession()` as an app initializer, before the first render, and
+    // every protected page constructs its own shell (D-081).
+    this.auth.currentUser()?.departmentId
+      ? this.departments.names().pipe(
+          // The directory rethrows so each caller degrades its own way — the
+          // job-positions filter empties, and the topbar simply renders no
+          // department. Without this the failure is UNHANDLED: the chrome must
+          // never break over a label it could not resolve.
+          catchError(() => of<ReadonlyMap<string, string>>(new Map())),
+        )
+      : of<ReadonlyMap<string, string>>(new Map()),
+    { initialValue: new Map<string, string>() as ReadonlyMap<string, string> },
+  );
+
+  protected readonly departmentName = computed(() => {
+    const id = this.auth.currentUser()?.departmentId ?? null;
+    if (!id) {
+      return null;
+    }
+    // Null until the list arrives, so the topbar never flashes a raw id.
+    return this.departmentNames().get(id) ?? null;
+  });
 
   /**
    * The nav resolved against the signed-in role.

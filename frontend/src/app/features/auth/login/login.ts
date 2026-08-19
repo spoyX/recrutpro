@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { AuthService, ApiError } from '../../../core/auth.service';
+import { InfoDialog } from '../../../shared/info-dialog/info-dialog';
 
 /**
  * FR-1 — « La page de connexion comporte un champ email et un champ mot de
@@ -25,6 +26,7 @@ import { AuthService, ApiError } from '../../../core/auth.service';
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
+    InfoDialog,
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',
@@ -50,6 +52,26 @@ export class Login {
    */
   readonly passwordVisible = signal(false);
   readonly errorMessage = signal<string | null>(null);
+
+  /**
+   * Which static panel is open, or null. Three panels, no routes.
+   *
+   * *** « MOT DE PASSE OUBLIÉ ? » OPENS THE CONTACT PANEL, NOT A RESET FLOW,
+   * AND THAT IS DELIBERATE. ***
+   *
+   * There is no self-service password reset in this system and there cannot be
+   * one without reversing a ratified decision. D-031 put the reset on
+   * `POST /users/:id/reset-password`, which sits behind
+   * `requireAuth, requireRole(Administrateur)` — a signed-out visitor on this
+   * page cannot reach it, and no anonymous password route exists anywhere in
+   * the API. Delivering a reset link would need email, which PRD Section 6
+   * lists as out of scope with an explicit rule against adding it quietly.
+   *
+   * So the honest thing is to say who CAN reset it. The panel says so in
+   * words, including that no email will arrive — a link labelled « mot de
+   * passe oublié » that silently did nothing is what this replaces.
+   */
+  readonly panel = signal<'contact' | 'privacy' | 'terms' | null>(null);
   /** FR-10: the account must change its password before it can go anywhere. */
 
   togglePassword(): void {

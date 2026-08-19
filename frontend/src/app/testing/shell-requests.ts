@@ -17,15 +17,27 @@ import { environment } from '../../environments/environment';
  * Returns how many it drained, so a spec that wants to assert the badge fired
  * can, rather than merely tolerating it.
  */
+/**
+ * Every url the SHELL itself requests, for any page.
+ *
+ * Two of them now. The notification badge fires on every shell render (D-081),
+ * and the topbar resolves the signed-in user's department name from
+ * `GET /departments` — one list, cached for the session, but a fresh cache per
+ * spec. Both belong to the chrome, not to the page under test.
+ */
+const SHELL_URLS = [`${environment.apiUrl}/notifications`, `${environment.apiUrl}/departments`];
+
+const isShellRequest = (url: string): boolean => SHELL_URLS.includes(url);
+
 export const drainShellRequests = (http: HttpTestingController): number =>
-  http.match((request) => request.url === `${environment.apiUrl}/notifications`).length;
+  http.match((request) => isShellRequest(request.url)).length;
 
 /**
  * "The page issued no further request" — the assertion `http.verify()` used to
  * stand in for, now that the shell legitimately makes one of its own.
  *
  * Two improvements over the bare `verify()` it replaces, both learned the hard
- * way this week. It ignores the SHELL's badge request and nothing else, so a
+ * way this week. It ignores the SHELL's own requests and nothing else, so a
  * page's own stray call still fails. And it is a real Jasmine expectation on a
  * list of what was found — `verify()` records none, which Karma reports as a
  * spec that asserts nothing and which would silently pass if the line were
@@ -33,7 +45,7 @@ export const drainShellRequests = (http: HttpTestingController): number =>
  */
 export const expectNoPageRequests = (http: HttpTestingController): void => {
   const stray = http
-    .match((request) => request.url !== `${environment.apiUrl}/notifications`)
+    .match((request) => !isShellRequest(request.url))
     .map((request) => `${request.request.method} ${request.request.urlWithParams}`);
 
   expect(stray).toEqual([]);

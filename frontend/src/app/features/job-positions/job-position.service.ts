@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { DepartmentDirectory, DepartmentOption } from '../../core/department-directory.service';
 
 /**
  * Mirrors the backend's `PublicJobPosition` (views/jobPosition.view.ts).
@@ -32,17 +33,16 @@ export interface JobPosition {
   createdAt: string;
 }
 
-export interface DepartmentOption {
-  id: string;
-  name: string;
-  /**
-   * D-016/D-030: a position may only point at an ACTIVE department, and the
-   * server refuses an inactive one. Carried here so the create form can offer
-   * only assignable departments — while still being able to NAME a deactivated
-   * one that an existing position already points at.
-   */
-  isActive: boolean;
-}
+/**
+ * Re-exported from `core/department-directory`, which owns the endpoint — one
+ * definition, so the two cannot drift.
+ *
+ * D-016/D-030: a position may only point at an ACTIVE department, and the
+ * server refuses an inactive one. `isActive` is carried so the create form can
+ * offer only assignable departments while still being able to NAME a
+ * deactivated one that an existing position already points at.
+ */
+export type { DepartmentOption };
 
 /** FR-14/FR-15's status choices. « Clôturé » is NOT one of them (D-037). */
 export const ASSIGNABLE_STATUSES = ['Brouillon', 'Ouvert'] as const;
@@ -66,6 +66,7 @@ export interface JobPositionFilters {
 
 @Injectable({ providedIn: 'root' })
 export class JobPositionService {
+  private readonly directory = inject(DepartmentDirectory);
   private readonly http = inject(HttpClient);
 
   /**
@@ -123,13 +124,19 @@ export class JobPositionService {
    * `includeInactive` is set or its name would render as "unknown" on exactly
    * the postings most likely to need explaining.
    */
+  /**
+   * Delegated to `DepartmentDirectory` (core), which owns the one call to
+   * `GET /departments` and caches it for the session.
+   *
+   * It used to issue its own request here. Once the topbar started resolving a
+   * department name from the same endpoint, that meant TWO identical requests
+   * on every /job-positions and /job-position-details load — caught by the
+   * specs finding two matches where they expected one. Errors still propagate,
+   * so this page's "losing the department list costs the filter, never the
+   * page" behaviour is unchanged.
+   */
   listDepartments(): Observable<DepartmentOption[]> {
-    return this.http
-      .get<DepartmentOption[]>(`${environment.apiUrl}/departments`, {
-        params: { includeInactive: 'true' },
-        withCredentials: true,
-      })
-      .pipe(map((departments) => departments ?? []));
+    return this.directory.list();
   }
 
   /** FR-14 — create. Recruteur-only server-side (D-038). */
