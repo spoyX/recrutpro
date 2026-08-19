@@ -10,6 +10,7 @@ import { UserForm } from '../user-form/user-form';
 import { ResetPassword } from '../reset-password/reset-password';
 import { DepartmentForm } from '../department-form/department-form';
 import { AppShell } from '../../../shared/app-shell/app-shell';
+import { SearchBox } from '../../../shared/search-box/search-box';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
 
@@ -34,7 +35,7 @@ import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
  */
 @Component({
   selector: 'app-admin-users',
-  imports: [ModalFocus, 
+  imports: [ModalFocus, SearchBox, 
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
@@ -96,6 +97,27 @@ export class AdminUsers {
   isSelf(user: AdminUser): boolean {
     return this.auth.currentUser()?.id === user.id;
   }
+
+  /**
+   * D-106 — the search box. CLIENT-side: `GET /users` is unpaginated, so every
+   * account the administrator may see is already in `users()`. Matches the
+   * name, the email and the department, which are the three things someone
+   * actually looks an account up by.
+   */
+  readonly search = signal('');
+
+  readonly visibleUsers = computed(() => {
+    const needle = this.search().toLocaleLowerCase();
+    if (!needle) {
+      return this.users();
+    }
+    return this.users().filter((user) =>
+      [user.name, user.email, this.formatRole(user.role), this.departmentName(user.departmentId)]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(needle),
+    );
+  });
 
   formatRole(role: string): string {
     if (role === 'ResponsableHierarchique') return 'RESPONSABLE';

@@ -138,7 +138,7 @@ const asBoundedInt = (
 /** GET /api/v1/candidates — FR-24 */
 export const list: RequestHandler = async (req, res, next) => {
   try {
-    const { jobPositionId, currentStage, fromDate, toDate, limit, offset, sortBy, sortDir } =
+    const { search, jobPositionId, currentStage, fromDate, toDate, limit, offset, sortBy, sortDir } =
       req.query;
 
     if (sortBy !== undefined && !CANDIDATE_SORT_FIELDS.includes(sortBy as CandidateSortField)) {
@@ -155,6 +155,10 @@ export const list: RequestHandler = async (req, res, next) => {
     }
 
     const { items, total } = await listCandidates({
+      // D-106 — free-text over name, email and phone. Capped: a needle longer
+      // than any stored value can only be a mistake or an attempt to make the
+      // database work for nothing.
+      search: search === undefined ? undefined : String(search).slice(0, 100),
       jobPositionId: jobPositionId === undefined ? undefined : String(jobPositionId),
       currentStage: asStageFilter(currentStage),
       fromDate: from,

@@ -397,44 +397,16 @@
     />
   }
 
-  <!-- FR-34 — the motive is mandatory, and the server enforces it too. -->
+  <!-- FR-34 — the motive is mandatory, and the server enforces it too.
+       The dialog is SHARED with the candidate file (D-106): one statement of
+       the rule, two places you can reach it from. -->
   @if (cancelling(); as target) {
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title" (escaped)="dismissCancel()">
-      <div class="modal__panel">
-        <h2 id="cancel-title" class="modal__title">Annuler cet entretien</h2>
-        <p class="modal__body">
-          {{ target.candidate?.fullName ?? 'Ce candidat' }} —
-          {{ target.scheduledAt | date: 'dd/MM/yyyy à HH:mm' }}.
-          Le candidat reviendra à l'étape « Présélection CV validée ».
-        </p>
-
-        <label class="modal__label label-sm" for="cancel-reason">Motif d'annulation</label>
-        <textarea
-          id="cancel-reason"
-          class="modal__input"
-          rows="3"
-          [value]="cancelReason()"
-          (input)="cancelReason.set($any($event.target).value)"
-        ></textarea>
-
-        @if (cancelError(); as message) {
-          <p class="modal__error" role="alert">{{ message }}</p>
-        }
-
-        <div class="modal__actions">
-          <button matButton type="button" [disabled]="cancelBusy()" (click)="dismissCancel()">
-            Retour
-          </button>
-          <button
-            matButton="filled"
-            type="button"
-            [disabled]="cancelBusy()"
-            (click)="confirmCancel()"
-          >
-            Confirmer l'annulation
-          </button>
-        </div>
-      </div>
-    </div>
+    <app-cancel-interview
+      [interviewId]="target.id"
+      [candidateName]="target.candidate?.fullName ?? null"
+      [scheduledAt]="target.scheduledAt"
+      (cancelled)="onCancelled()"
+      (dismissed)="dismissCancel()"
+    />
   }
 </app-shell>

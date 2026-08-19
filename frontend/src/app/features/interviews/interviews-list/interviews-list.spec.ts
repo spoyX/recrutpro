@@ -325,59 +325,23 @@ describe('InterviewsList (FR-33, FR-34, FR-35)', () => {
       expect(fixture.componentInstance.canCancel(row('a'))).toBeFalse();
     });
 
-    it('refuses a blank motive without calling the server', () => {
+    // The dialog's own rules — blank motive refused, trimmed body, the
+    // server's refusal surfaced — MOVED to cancel-interview.spec.ts with the
+    // component (D-106). What stays here is what this page still owns: who
+    // is offered the action, and that it RELOADS afterwards.
+    it('reloads the list after a cancellation rather than patching the row', () => {
       signIn('Recruteur');
       load();
 
       fixture.componentInstance.startCancel(row('a'));
-      fixture.componentInstance.cancelReason.set('   ');
-      fixture.componentInstance.confirmCancel();
+      expect(fixture.componentInstance.cancelling()).not.toBeNull();
 
-      expect(fixture.componentInstance.cancelError()).toContain('motif');
-      // http.verify() in afterEach proves no request was made.
-    });
+      fixture.componentInstance.onCancelled();
 
-    it('posts the trimmed motive and RELOADS rather than patching the row', () => {
-      signIn('Recruteur');
-      load();
-
-      fixture.componentInstance.startCancel(row('a'));
-      fixture.componentInstance.cancelReason.set('  Candidat indisponible.  ');
-      fixture.componentInstance.confirmCancel();
-
-      const req = http.expectOne(`${environment.apiUrl}/interviews/a/cancel`);
-      expect(req.request.method).toBe('POST');
-      expect(req.request.withCredentials).toBeTrue();
-      expect(req.request.body).toEqual({ cancellationReason: 'Candidat indisponible.' });
-      req.flush({});
-
-      // Cancelling also reverts the candidate's stage and removes the row from
-      // the default view — guessing the new shape would be a lie.
+      // Cancelling also reverts the candidate's stage and drops the row from
+      // the default view (D-045/D-049) — guessing the new shape would be a lie.
       listRequest().flush([], { headers: { 'X-Total-Count': '0' } });
       expect(fixture.componentInstance.cancelling()).toBeNull();
-    });
-
-    it("NFR-09: surfaces the server's own refusal, keeping the dialog open", () => {
-      signIn('Recruteur');
-      load();
-
-      fixture.componentInstance.startCancel(row('a'));
-      fixture.componentInstance.cancelReason.set('Motif');
-      fixture.componentInstance.confirmCancel();
-
-      http.expectOne(`${environment.apiUrl}/interviews/a/cancel`).flush(
-        {
-          error: {
-            code: 'INVALID_STAGE_TRANSITION',
-            message: 'Ce candidat a déjà dépassé l’étape « Entretien planifié ».',
-          },
-        },
-        { status: 409, statusText: 'Conflict' },
-      );
-      fixture.detectChanges();
-
-      expect(fixture.componentInstance.cancelError()).toContain('déjà dépassé');
-      expect(fixture.componentInstance.cancelling()).not.toBeNull();
     });
   });
 

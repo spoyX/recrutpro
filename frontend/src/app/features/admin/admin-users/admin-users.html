@@ -16,6 +16,17 @@
   <section class="card filters-card" aria-labelledby="users-title">
     <h2 id="users-title" class="visually-hidden">Gestion des comptes</h2>
     <div class="filters">
+      <div class="filters__field filters__field--search">
+        <span class="filters__label label-sm">Rechercher</span>
+        <!-- D-106: filtered in the BROWSER — `GET /users` returns every row. -->
+        <app-search-box
+          label="Rechercher un utilisateur"
+          placeholder="Nom, email ou département…"
+          [debounceMs]="0"
+          (search)="search.set($event)"
+        />
+      </div>
+
       <div class="filters__field">
         <label class="filters__label label-sm" for="filter-role">FILTRER PAR RÔLE</label>
         <select
@@ -51,7 +62,7 @@
       <div class="filters__end">
         @if (!usersLoading() && !usersError()) {
           <span class="filters__count">
-            {{ users().length }} utilisateur{{ users().length > 1 ? 's' : '' }} trouvé{{ users().length > 1 ? 's' : '' }}
+            {{ visibleUsers().length }} utilisateur{{ visibleUsers().length > 1 ? 's' : '' }} trouvé{{ visibleUsers().length > 1 ? 's' : '' }}
           </span>
         }
         @if (isFiltered()) {
@@ -88,7 +99,7 @@
       </p>
     }
 
-    @if (!usersError() && users().length) {
+    @if (!usersError() && visibleUsers().length) {
       <div class="table-scroll">
         <table class="table table--roomy">
           <thead>
@@ -102,7 +113,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (user of users(); track user.id) {
+            @for (user of visibleUsers(); track user.id) {
               <tr [class.row--inactive]="!user.isActive">
                 <td>
                   <span class="row__person">
@@ -199,14 +210,23 @@
       -->
       <div class="table-footer">
         <span class="table-footer__info">
-          {{ users().length }} compte{{ users().length > 1 ? 's' : '' }} —
-          la liste complète, sans pagination
+          <!-- D-106: « la liste complète » stops being true the moment a search
+               narrows it, so the wording follows the search rather than
+               claiming completeness over a subset. -->
+          @if (search()) {
+            {{ visibleUsers().length }} sur {{ users().length }} compte{{
+              users().length > 1 ? 's' : ''
+            }} — filtré par la recherche
+          } @else {
+            {{ users().length }} compte{{ users().length > 1 ? 's' : '' }} —
+            la liste complète, sans pagination
+          }
         </span>
       </div>
     } @else if (!usersLoading() && !usersError()) {
       <p class="empty">
-        @if (isFiltered()) {
-          Aucun compte ne correspond à ces filtres.
+        @if (isFiltered() || search()) {
+          Aucun compte ne correspond à cette recherche.
         } @else {
           Aucun compte enregistré.
         }

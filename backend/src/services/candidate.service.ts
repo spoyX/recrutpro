@@ -584,6 +584,8 @@ export const DEFAULT_CANDIDATE_LIMIT = 25;
 export const MAX_CANDIDATE_LIMIT = 100;
 
 export interface ListCandidatesInput {
+  /** D-106 — free-text over name, email and phone. */
+  search?: string;
   jobPositionId?: string;
   currentStage?: CandidateStage;
   fromDate?: Date;
@@ -620,6 +622,30 @@ export const listCandidates = async (input: ListCandidatesInput): Promise<ListCa
 
   if (input.currentStage) {
     query.currentStage = input.currentStage;
+  }
+
+  // D-106 — the search box. BEYOND FR-24, which names only poste, étape and a
+  // date range; added because a recruiter looking for one person should not
+  // have to know which poste they applied to.
+  //
+  // SERVER-side and not a client filter, because this list is PAGINATED: a
+  // client-side box would search the 25 rows on screen and silently miss the
+  // rest, which is worse than no search at all — it answers "no results" for a
+  // candidate that exists.
+  //
+  // The needle is ESCAPED before it becomes a RegExp. Without that, a stray
+  // « ( » is a syntax error the driver throws on, and a pattern like « (a+)+ »
+  // is a catastrophic-backtracking denial of service. Anchored with `$options:
+  // 'i'` rather than a case-insensitive collation so it works the same on every
+  // deployment.
+  const needle = input.search?.trim();
+  if (needle) {
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    query.$or = [
+      { fullName: { $regex: escaped, $options: 'i' } },
+      { email: { $regex: escaped, $options: 'i' } },
+      { phone: { $regex: escaped, $options: 'i' } },
+    ];
   }
 
   if (input.fromDate || input.toDate) {

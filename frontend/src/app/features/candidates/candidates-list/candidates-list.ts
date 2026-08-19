@@ -20,6 +20,7 @@ import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 import { pageWindow } from '../../../shared/page-window';
+import { SearchBox } from '../../../shared/search-box/search-box';
 
 type SortField = 'fullName' | 'currentStage' | 'registeredAt';
 
@@ -48,6 +49,7 @@ type SortField = 'fullName' | 'currentStage' | 'registeredAt';
     AppShell,
     StageChip,
     UserAvatar,
+    SearchBox,
   ],
   templateUrl: './candidates-list.html',
   styleUrl: './candidates-list.scss',
@@ -153,6 +155,21 @@ export class CandidatesList {
   /** Any filter change resets to page 1 — page 3 of a new filter is meaningless. */
   setFilter(key: keyof CandidateListQuery, value: string): void {
     this.filters.update((current) => ({ ...current, [key]: value || undefined }));
+    this.offset.set(0);
+    this.load();
+  }
+
+  /**
+   * D-106 — the search box. SERVER-side, because this list is paginated: a
+   * client filter would search the 25 rows on screen and answer "no results"
+   * for a candidate that exists on page 2.
+   *
+   * Resets to page 1 for the same reason any other filter change does, and
+   * rides the existing switchMap pipeline, so a slow response for "ma" cannot
+   * land after the one for "marie" (D-083).
+   */
+  setSearch(value: string): void {
+    this.filters.update((current) => ({ ...current, search: value || undefined }));
     this.offset.set(0);
     this.load();
   }

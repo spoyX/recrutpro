@@ -21,6 +21,17 @@
   <!-- FR-17: filtrable par statut et département. -->
   <section class="filters card filters-card" aria-label="Filtres">
     <div class="filters">
+      <div class="filters__field filters__field--search">
+        <span class="filters__label label-sm">Rechercher</span>
+        <!-- D-106: filtered in the BROWSER — this endpoint returns every row. -->
+        <app-search-box
+          label="Rechercher un poste"
+          placeholder="Intitulé ou département…"
+          [debounceMs]="0"
+          (search)="search.set($event)"
+        />
+      </div>
+
       <div class="filters__field">
         <span class="filters__label label-sm" id="filter-status-label">Statut</span>
         <!-- Four statuses at most, and the choice is the page's main lever —
@@ -68,11 +79,11 @@
       <div class="filters__end">
         @if (!loading() && !errorMessage()) {
           <span class="filters__count">
-            @if (rows().length === 0) {
+            @if (visibleRows().length === 0) {
               Aucun poste
             } @else {
-              {{ rows().length }} poste{{ rows().length > 1 ? 's' : '' }} trouvé{{
-                rows().length > 1 ? 's' : ''
+              {{ visibleRows().length }} poste{{ visibleRows().length > 1 ? 's' : '' }} trouvé{{
+                visibleRows().length > 1 ? 's' : ''
               }}
             }
           </span>
@@ -103,7 +114,7 @@
     <section class="card table-card" aria-labelledby="positions-title">
       <h2 id="positions-title" class="visually-hidden">Liste des postes</h2>
 
-      @if (rows().length) {
+      @if (visibleRows().length) {
         <div class="table-scroll">
           <table class="table table--roomy">
             <thead>
@@ -119,7 +130,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (position of rows(); track position.id) {
+              @for (position of visibleRows(); track position.id) {
                 <tr>
                   <td>
                     <span class="row__person">
@@ -173,10 +184,10 @@
         </div>
       } @else if (!loading()) {
         <div class="empty">
-          @if (isFiltered()) {
+          @if (isFiltered() || search()) {
             <mat-icon aria-hidden="true">search_off</mat-icon>
-            <p class="empty__title">Aucun poste ne correspond à ces filtres.</p>
-            <p class="empty__hint">Élargissez la recherche ou réinitialisez-les.</p>
+            <p class="empty__title">Aucun poste ne correspond à cette recherche.</p>
+            <p class="empty__hint">Élargissez la recherche ou réinitialisez les filtres.</p>
             <button matButton type="button" (click)="resetFilters()">
               <mat-icon>filter_alt_off</mat-icon>
               Réinitialiser les filtres

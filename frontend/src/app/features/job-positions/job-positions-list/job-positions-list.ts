@@ -18,6 +18,7 @@ import {
 import { JobPositionForm } from '../job-position-form/job-position-form';
 import { ClosePosition } from '../close-position/close-position';
 import { AppShell } from '../../../shared/app-shell/app-shell';
+import { SearchBox } from '../../../shared/search-box/search-box';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 
 /**
@@ -51,6 +52,7 @@ import { StageChip } from '../../../shared/stage-chip/stage-chip';
     MatIconModule,
     MatProgressBarModule,
     AppShell,
+    SearchBox,
     StageChip,
     JobPositionForm,
     ClosePosition,
@@ -146,6 +148,30 @@ export class JobPositionsList {
     this.filters.update((current) => ({ ...current, [key]: value || undefined }));
     this.load();
   }
+
+  /**
+   * D-106 — the search box. CLIENT-side here, and that is not a shortcut.
+   *
+   * `GET /job-positions` is UNPAGINATED (see the note above): every row the
+   * user is allowed to see is already in `rows()`, so filtering in the browser
+   * searches all of them and costs no request. The candidate list pages, which
+   * is why its box goes to the server instead — the difference is the
+   * endpoint's, not a preference.
+   */
+  readonly search = signal('');
+
+  readonly visibleRows = computed(() => {
+    const needle = this.search().toLocaleLowerCase();
+    if (!needle) {
+      return this.rows();
+    }
+    return this.rows().filter((row) =>
+      [row.title, this.departmentName(row.departmentId), row.status]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(needle),
+    );
+  });
 
   resetFilters(): void {
     this.filters.set({});

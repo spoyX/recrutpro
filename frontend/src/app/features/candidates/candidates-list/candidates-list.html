@@ -19,6 +19,16 @@
   <!-- FR-24: filtrable par poste, étape et plage de dates d'enregistrement. -->
   <section class="filters card filters-card" aria-label="Filtres">
     <div class="filters">
+      <div class="filters__field filters__field--search">
+        <span class="filters__label label-sm">Rechercher</span>
+        <!-- D-106: the term goes to the SERVER — see setSearch(). -->
+        <app-search-box
+          label="Rechercher un candidat"
+          placeholder="Nom, email ou téléphone…"
+          (search)="setSearch($event)"
+        />
+      </div>
+
       <div class="filters__field">
         <label class="filters__label label-sm" for="filter-position">Poste</label>
         <select

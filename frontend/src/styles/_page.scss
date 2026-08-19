@@ -181,6 +181,13 @@
 
 // DESIGN.md: "Small labels use an uppercase treatment with increased tracking
 // to differentiate functional UI text from content-heavy body text."
+// The search field is the widest control in the row and the one people reach
+// for first, so it gets room to grow rather than the fixed 200px the selects use.
+.filters__field--search {
+  flex: 1 1 22rem;
+  max-width: 28rem;
+}
+
 .filters__label {
   color: var(--text-slate);
   margin: 0;

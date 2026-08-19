@@ -132,6 +132,24 @@
                       />
                       {{ interview.interviewer?.name ?? 'Responsable inconnu' }}
                     </span>
+
+                    <!-- D-106 / FR-34 — cancel it from HERE. Cancelling used to
+                         mean leaving the candidate you were reading, going to
+                         /interviews and finding the row again. Same dialog, same
+                         mandatory motive, same server rule; only the way in is
+                         new. Offered on the same terms as the list (`canCancel`):
+                         a planned interview, and a Recruteur. -->
+                    @if (canCancelInterview(interview)) {
+                      <button
+                        matButton
+                        type="button"
+                        class="action-btn interview__cancel"
+                        (click)="cancelling.set(interview)"
+                      >
+                        <mat-icon>event_busy</mat-icon>
+                        <span class="action-btn__label">Annuler</span>
+                      </button>
+                    }
                   </div>
 
                   <!-- FR-34: a cancelled interview keeps its row and its motive. -->
@@ -401,6 +419,19 @@
         [candidateName]="candidate.fullName"
         (decided)="onDecided()"
         (dismissed)="deciding.set(false)"
+      />
+    }
+
+    <!-- FR-34 — the SHARED cancellation dialog (D-106), the same one the
+         interview list opens. Inside the `candidate` block on purpose: it
+         names the candidate, so it only exists where that name does. -->
+    @if (cancelling(); as interview) {
+      <app-cancel-interview
+        [interviewId]="interview.id"
+        [candidateName]="candidate.fullName"
+        [scheduledAt]="interview.scheduledAt"
+        (cancelled)="onInterviewCancelled()"
+        (dismissed)="cancelling.set(null)"
       />
     }
   }

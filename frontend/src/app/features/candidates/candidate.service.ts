@@ -68,6 +68,8 @@ export interface CandidateListItem {
 
 /** FR-24's filters, plus D-041's pagination and sorting. */
 export interface CandidateListQuery {
+  /** D-106 — free-text over name, email and phone. Server-side: this list pages. */
+  search?: string;
   jobPositionId?: string;
   currentStage?: string;
   fromDate?: string;

@@ -6,7 +6,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ApiError, AuthService } from '../../../core/auth.service';
-import { CandidateService, CandidateDetail } from '../candidate.service';
+import {
+  CandidateService,
+  CandidateDetail,
+  CandidateDetailInterview,
+} from '../candidate.service';
 import { ScheduleInterview } from '../../interviews/schedule-interview/schedule-interview';
 import { FinalDecision } from '../final-decision/final-decision';
 import { CvReview } from '../cv-review/cv-review';
@@ -14,6 +18,7 @@ import { ReplaceResume } from '../replace-resume/replace-resume';
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
+import { CancelInterview } from '../../interviews/cancel-interview/cancel-interview';
 import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
 
 /**
@@ -40,6 +45,7 @@ import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
     AppShell,
     StageChip,
     UserAvatar,
+    CancelInterview,
     ScheduleInterview,
     FinalDecision,
     CvReview,
@@ -168,7 +174,6 @@ export class CandidateDetails {
     );
   }
 
-  /** FR-25 moves the stage (and may set a motive), so the file is re-read. */
   /**
    * D-105 — a CV was uploaded from inside the preselection dialog.
    *
@@ -180,8 +185,37 @@ export class CandidateDetails {
     this.load();
   }
 
+  /** FR-25 moves the stage (and may set a motive), so the file is re-read. */
   onReviewed(): void {
     this.reviewing.set(false);
+    this.load();
+  }
+
+  // ------------------------------------------------------------ FR-34
+
+  /** The interview being cancelled from this file, or null. */
+  readonly cancelling = signal<CandidateDetailInterview | null>(null);
+
+  /**
+   * Whether to OFFER cancellation here — an affordance, not a permission.
+   *
+   * The SAME two conditions the interview list applies, because it is the same
+   * action on the same route: a planned interview, and a Recruteur. FR-34 is
+   * the recruiter's action, and `POST /interviews/:id/cancel` re-checks both
+   * (D-046). Mirrored so the button is never present to be clicked into a 403
+   * (NFR-04, D-064).
+   */
+  canCancelInterview(interview: CandidateDetailInterview): boolean {
+    return interview.status === 'Planifié' && this.auth.currentUser()?.role === 'Recruteur';
+  }
+
+  /**
+   * Cancelling reverts the candidate's stage to « Présélection CV validée »
+   * (D-046), so the whole file is re-read rather than the row patched — the
+   * header chip and the available actions both change with it.
+   */
+  onInterviewCancelled(): void {
+    this.cancelling.set(null);
     this.load();
   }
 

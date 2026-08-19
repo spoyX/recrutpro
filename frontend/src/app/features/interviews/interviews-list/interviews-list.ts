@@ -17,6 +17,7 @@ import {
 import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { EvaluationForm } from '../evaluation-form/evaluation-form';
+import { CancelInterview } from '../cancel-interview/cancel-interview';
 import { UserAvatar } from '../../../shared/user-avatar/user-avatar';
 import { pageWindow } from '../../../shared/page-window';
 import { InterviewCalendar } from '../interview-calendar/interview-calendar';
@@ -70,6 +71,7 @@ export interface InterviewDay {
     UserAvatar,
     StageChip,
     EvaluationForm,
+    CancelInterview,
     InterviewCalendar,
   ],
   templateUrl: './interviews-list.html',
@@ -110,9 +112,6 @@ export class InterviewsList {
 
   /** The row awaiting a cancellation motive, or null. */
   readonly cancelling = signal<InterviewListItem | null>(null);
-  readonly cancelReason = signal('');
-  readonly cancelError = signal<string | null>(null);
-  readonly cancelBusy = signal(false);
 
   readonly rangeStart = computed(() => (this.total() === 0 ? 0 : this.offset() + 1));
   readonly rangeEnd = computed(() => Math.min(this.offset() + this.rows().length, this.total()));
@@ -309,14 +308,20 @@ export class InterviewsList {
 
   startCancel(row: InterviewListItem): void {
     this.cancelling.set(row);
-    this.cancelReason.set('');
-    this.cancelError.set(null);
   }
 
   dismissCancel(): void {
     this.cancelling.set(null);
-    this.cancelReason.set('');
-    this.cancelError.set(null);
+  }
+
+  /**
+   * FR-34 succeeded. Reload rather than patch the row: cancelling also reverts
+   * the candidate's stage, and by default a cancelled interview leaves this
+   * list entirely (D-045/D-049).
+   */
+  onCancelled(): void {
+    this.cancelling.set(null);
+    this.load();
   }
 
   // ------------------------------------------------------ FR-36, FR-37
@@ -360,38 +365,4 @@ export class InterviewsList {
     this.load();
   }
 
-  confirmCancel(): void {
-    const row = this.cancelling();
-    if (!row) return;
-
-    // FR-26-style guard mirrored client-side purely to save a round trip; the
-    // server enforces it regardless (D-046), whitespace included.
-    if (!this.cancelReason().trim()) {
-      this.cancelError.set('Un motif est obligatoire pour annuler un entretien.');
-      return;
-    }
-
-    this.cancelBusy.set(true);
-    this.interviews.cancelInterview(row.id, this.cancelReason().trim()).subscribe({
-      next: () => {
-        this.cancelBusy.set(false);
-        this.dismissCancel();
-        // Reload rather than patch the row: cancelling also reverts the
-        // candidate's stage, and by default a cancelled interview leaves this
-        // list entirely (D-045/D-049). Guessing the new shape would be a lie.
-        this.load();
-      },
-      error: (response: HttpErrorResponse) => {
-        this.cancelBusy.set(false);
-        if (response.status === 401) {
-          void this.router.navigate(['/login']);
-          return;
-        }
-        const body = response.error as ApiError | null;
-        this.cancelError.set(
-          body?.error?.message ?? "L'annulation a échoué. Réessayez.",
-        );
-      },
-    });
-  }
 }

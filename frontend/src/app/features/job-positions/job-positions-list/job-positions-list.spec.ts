@@ -161,7 +161,7 @@ describe('JobPositionsList (FR-14 to FR-17)', () => {
       http.expectOne((r) => r.url === POSITIONS).flush([]);
       fixture.detectChanges();
 
-      expect(text()).toContain('Aucun poste ne correspond à ces filtres');
+      expect(text()).toContain('Aucun poste ne correspond à cette recherche');
     });
 
     it('renders NO pager — the endpoint is unpaginated', () => {
