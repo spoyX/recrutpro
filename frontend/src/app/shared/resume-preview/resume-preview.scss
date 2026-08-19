@@ -20,6 +20,14 @@
   background-color: var(--mat-sys-surface-container-low);
 }
 
+// Opened as the SUBJECT of the screen (FR-25's preselection dialog) rather than
+// as one fact on a file. The reader is being asked to judge this document, so
+// it gets the height to be judged in.
+.preview__frame--subject {
+  height: 62vh;
+  min-height: 420px;
+}
+
 .preview__unsupported,
 .preview__error {
   display: flex;

@@ -42,6 +42,9 @@ import { Interview } from '../src/models/Interview.model';
 import { InterviewEvaluation } from '../src/models/InterviewEvaluation.model';
 import { AuditLog } from '../src/models/AuditLog.model';
 import { Notification } from '../src/models/Notification.model';
+import { Resume } from '../src/models/Resume.model';
+import { uploadResumeForCandidate, destroyAsset } from '../src/services/resume.service';
+import { isCloudinaryConfigured } from '../src/config/cloudinary';
 import {
   Role,
   JobPositionStatus,
@@ -576,6 +579,109 @@ const phoneFor = (index: number): string => {
  * password the application would refuse produces accounts whose credential
  * cannot be re-entered through the FR-10 change-password screen.
  */
+// ---------------------------------------------------------------------------
+// CVs - a real PDF per candidate, uploaded through the application's own path.
+//
+// The seed used to create NONE, for a reason that was correct as far as it
+// went: a `Resume` row with no Cloudinary object behind it would render a
+// « Télécharger le CV » button that fails. The consequence was worse, though,
+// and it took a human noticing it - with zero resumes in the database, FR-25's
+// preselection dialog ALWAYS said « Aucun CV », and that dialog exists to show
+// the document the decision rests on. So the answer is a real file.
+//
+// The bytes are a genuine one-page PDF generated here rather than a binary
+// fixture: it keeps the repository text-only, and each CV carries its own
+// candidate's name, which is what makes the preview obviously live in a demo
+// rather than the same stock page forty times over.
+
+/** Escapes the three characters a PDF literal string cannot carry raw. */
+const pdfText = (value: string): string => value.replace(/[\\()]/g, (c) => '\\' + c);
+
+/**
+ * A minimal but VALID single-page PDF, with a correct cross-reference table.
+ *
+ * Browsers repair a broken xref, so a lazier version would usually still render
+ * - and would fail exactly where it matters, in whatever the examiner opens it
+ * with. The offsets are computed rather than guessed.
+ *
+ * `WinAnsiEncoding` because these are French names: without it « Élodie » and
+ * « Noël » lose their accents in the rendered page.
+ */
+const minimalPdf = (title: string, lines: string[]): Buffer => {
+  const content =
+    `BT /F1 20 Tf 60 780 Td (${pdfText(title)}) Tj ET\n` +
+    lines
+      .map((line, i) => `BT /F1 12 Tf 60 ${740 - i * 22} Td (${pdfText(line)}) Tj ET`)
+      .join('\n');
+
+  const objects = [
+    '<</Type/Catalog/Pages 2 0 R>>',
+    '<</Type/Pages/Kids[3 0 R]/Count 1>>',
+    '<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]' +
+      '/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>',
+    '<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>',
+    `<</Length ${Buffer.byteLength(content, 'latin1')}>>stream\n${content}\nendstream`,
+  ];
+
+  let pdf = '%PDF-1.4\n';
+  const offsets: number[] = [];
+  objects.forEach((body, i) => {
+    offsets.push(Buffer.byteLength(pdf, 'latin1'));
+    pdf += `${i + 1} 0 obj${body}endobj\n`;
+  });
+
+  const xrefAt = Buffer.byteLength(pdf, 'latin1');
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets) {
+    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  }
+  pdf += `trailer<</Size ${objects.length + 1}/Root 1 0 R>>\nstartxref\n${xrefAt}\n%%EOF`;
+
+  return Buffer.from(pdf, 'latin1');
+};
+
+/**
+ * Who gets a CV.
+ *
+ * Everyone past the CV review necessarily had one - they could not have been
+ * preselected on a document that did not exist, and a demo where « Présélection
+ * CV validée » sits on an empty file tells a small lie about its own pipeline.
+ *
+ * At « Candidature reçue » the answer is MOST, not all: FR-25 has to be
+ * demonstrable, which needs candidates with a CV waiting to be judged, and the
+ * « Aucun CV n'est joint » branch has to stay reachable too. Every third one is
+ * left without.
+ */
+const wantsResume = (plan: CandidatePlan, index: number): boolean =>
+  REACHED_CV_REVIEW.includes(plan.stage) || index % 3 !== 2;
+
+const resumeFor = (plan: CandidatePlan): Buffer =>
+  minimalPdf(`CV - ${plan.name}`, [
+    `Candidature : ${plan.position}`,
+    '',
+    'Document de DEMONSTRATION généré par le script de peuplement.',
+    "Ce n'est pas un vrai CV et il ne contient aucune donnée personnelle réelle.",
+    '',
+    'Expérience',
+    '  2021-2025   Poste précédent, entreprise précédente',
+    '  2018-2021   Premier poste, autre entreprise',
+    '',
+    'Formation',
+    "  2018        Diplôme d'ingénieur",
+    '',
+    'Compétences',
+    '  TypeScript, Node.js, MongoDB, Angular',
+  ]);
+
+/**
+ * CVs need Cloudinary. Without the keys the rest of the dataset is still
+ * complete and correct, so the seed runs and says what is missing rather than
+ * refusing - but FR-25 will show « Aucun CV » for everyone, and the notice at
+ * the end says so in as many words.
+ */
+const cvEnabled = isCloudinaryConfigured && !process.argv.includes('--no-cv');
+let resumesWritten = 0;
+
 const MIN_PASSWORD_LENGTH = 8;
 
 const chosenPassword = (): string | null => {
@@ -1094,6 +1200,27 @@ const run = async (): Promise<void> => {
   // constraints the application relies on (User.email, one evaluation per
   // interview) — so they are rebuilt explicitly. Without this the reseed
   // succeeds against a database that has quietly lost them.
+  // The Cloudinary assets have to go BEFORE the database does. Dropping first
+  // destroys the `publicId`s that are the only handle on them - which is
+  // exactly how the ten orphaned objects on the pre-demo checklist came about,
+  // and they can now only be removed from the console by hand. Deleting them
+  // here stops a repeated seed leaking a fresh set on every run.
+  if (cvEnabled) {
+    const stale = await Resume.find({}, { publicId: 1 }).lean();
+    let destroyed = 0;
+    for (const row of stale) {
+      try {
+        await destroyAsset(row.publicId);
+        destroyed += 1;
+      } catch {
+        // Best effort: one orphan is strictly better than refusing to reseed.
+      }
+    }
+    if (stale.length) {
+      console.log(`[seed] ${destroyed}/${stale.length} CV supprimés chez Cloudinary.`);
+    }
+  }
+
   await mongoose.connection.dropDatabase();
   await Promise.all(MODELS.map((model) => model.createIndexes()));
   console.log(`[seed] base « ${name} » vidée, index reconstruits.`);
@@ -1118,6 +1245,18 @@ const run = async (): Promise<void> => {
       rejectionReason: plan.rejectionReason,
       decisionComment: plan.decisionComment,
     });
+
+    // FR-21's upload, through `uploadResumeForCandidate` - the SAME function the
+    // route calls, so the magic-byte check (D-007), the Cloudinary options and
+    // the `Resume` row are whatever the application does, not a second
+    // implementation that can drift from it.
+    if (cvEnabled && wantsResume(plan, index)) {
+      await uploadResumeForCandidate(String(candidate._id), {
+        buffer: resumeFor(plan),
+        mimetype: 'application/pdf',
+      });
+      resumesWritten += 1;
+    }
 
     timelines.set(plan.name, walkCandidate(plan, index, candidate, position, users));
     backdate.push({
@@ -1197,11 +1336,21 @@ const run = async (): Promise<void> => {
     console.log(`  ${label.padEnd(18)} ${count}`);
   }
 
-  console.log(
-    '\n[seed] AUCUN CV : un CV vit chez Cloudinary (D-040) et une ligne Resume sans fichier\n' +
-      "       derrière donnerait un bouton « Télécharger le CV » qui échoue. Le parcours\n" +
-      '       FR-21/FR-22 se démontre en téléversant un fichier depuis l\'interface.',
-  );
+  if (cvEnabled) {
+    console.log(
+      `\n[seed] ${resumesWritten} CV téléversés chez Cloudinary (D-040) : un vrai PDF par\n` +
+        '       candidat. Tous ceux qui ont dépassé la présélection en ont un ; à\n' +
+        "       « Candidature reçue » la plupart en ont un et quelques-uns non, pour que\n" +
+        '       les DEUX branches de FR-25 soient démontrables.',
+    );
+  } else {
+    console.log(
+      "\n[seed] AUCUN CV : Cloudinary n'est pas configuré (CLOUDINARY_CLOUD_NAME /\n" +
+        '       CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET). Le reste du jeu de données\n' +
+        "       est complet, mais l'écran de présélection FR-25 affichera « Aucun CV »\n" +
+        '       pour tout le monde. Renseignez les clés puis relancez.',
+    );
+  }
 
   // ---- The one-time disclosure
   console.log('\n' + '='.repeat(78));

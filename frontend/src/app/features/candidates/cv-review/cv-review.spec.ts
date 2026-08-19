@@ -19,12 +19,33 @@ describe('CvReview (FR-25, FR-26)', () => {
   const ID = '64b7f0c2e1a2b3c4d5e6f7a8';
   const URL = `${environment.apiUrl}/candidates/${ID}/stage`;
 
-  const open = (resumeUrl: string | null = `/api/v1/candidates/${ID}/resume`): void => {
+  const RESUME_URL = `/api/v1/candidates/${ID}/resume`;
+
+  /**
+   * The CV request this dialog now makes ON OPEN, and answers it.
+   *
+   * FR-25's decision IS the document, so the preview opens immediately rather
+   * than behind a toggle — which means one request the dialog did not use to
+   * make. Drained here so the assertions below still measure what they were
+   * written to measure: that no OTHER request happens.
+   */
+  const serveResume = (): number => {
+    const matches = http.match((r) => r.url === RESUME_URL);
+    matches.forEach((m) => m.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' })));
+    return matches.length;
+  };
+
+  /** Requests other than the CV the dialog exists to show. */
+  const otherRequests = (): string[] =>
+    http.match((r) => r.url !== RESUME_URL).map((r) => `${r.request.method} ${r.request.url}`);
+
+  const open = (resumeUrl: string | null = RESUME_URL): void => {
     fixture = TestBed.createComponent(CvReview);
     fixture.componentRef.setInput('candidateId', ID);
     fixture.componentRef.setInput('candidateName', 'Jean Martin');
     fixture.componentRef.setInput('resumeUrl', resumeUrl);
     fixture.detectChanges();
+    serveResume();
   };
 
   /** `textContent`, never `innerText` — the chips and legend are uppercased. */
@@ -62,15 +83,34 @@ describe('CvReview (FR-25, FR-26)', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // The CV fetch belongs to the preview and may still be open on a spec that
+    // never rendered one; drained narrowly so a stray request of any OTHER url
+    // still fails.
+    serveResume();
+    http.verify();
+  });
 
   describe('No new endpoint — the shared stage route', () => {
-    it('issues NO request when it opens', () => {
-      open();
-      // `http.verify()` alone would throw on a stray request but records no
-      // Jasmine expectation — Karma flags it as a spec that asserts nothing,
-      // and deleting the line would leave a test that could never fail. The
-      // count IS the assertion.
+    it('re-reads NOTHING when it opens — only the CV it exists to show', () => {
+      fixture = TestBed.createComponent(CvReview);
+      fixture.componentRef.setInput('candidateId', ID);
+      fixture.componentRef.setInput('candidateName', 'Jean Martin');
+      fixture.componentRef.setInput('resumeUrl', RESUME_URL);
+      fixture.detectChanges();
+
+      // The ONE request is the document itself: FR-25's decision rests on it,
+      // so the preview opens immediately instead of behind a toggle.
+      expect(serveResume()).toBe(1);
+      // And nothing else. The dialog acts on a candidate the page already
+      // holds, so there is still no `GET /candidates/:id` here.
+      // An explicit count, not a bare `verify()` Jasmine cannot see.
+      expect(otherRequests()).toEqual([]);
+    });
+
+    it('fetches no CV at all when the candidate has none', () => {
+      open(null);
+
       expect(http.match(() => true).length).toBe(0);
     });
 
@@ -233,8 +273,9 @@ describe('CvReview (FR-25, FR-26)', () => {
       fixture.componentInstance.submit();
 
       // Same point as the open-time check: an explicit count, not a bare
-      // `verify()` that Jasmine cannot see.
-      expect(http.match(() => true).length).toBe(0);
+      // `verify()` that Jasmine cannot see. The CV fetch is excluded because
+      // it belongs to the preview, not to the submit path under test.
+      expect(otherRequests()).toEqual([]);
     });
   });
 

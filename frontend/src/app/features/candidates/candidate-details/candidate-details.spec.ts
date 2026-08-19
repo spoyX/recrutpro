@@ -381,7 +381,7 @@ describe('CandidateDetails (D-067)', () => {
       expect(reviewButton()).toBeUndefined();
     });
 
-    it('opens the dialog with the CV link the file already holds — no follow-up request', () => {
+    it('opens the dialog with the CV link the file already holds — no candidate re-read', () => {
       signIn('Recruteur');
       load({
         currentStage: 'Candidature reçue',
@@ -392,6 +392,15 @@ describe('CandidateDetails (D-067)', () => {
 
       reviewButton()!.click();
       fixture.detectChanges();
+
+      // The dialog DOES fetch the CV bytes now: FR-25's decision rests on the
+      // document, so the preview opens immediately rather than behind a toggle.
+      // That is the one request it may make. Drained here so the assertion
+      // below still means what it was written to mean — that opening the
+      // dialog does not re-read the CANDIDATE, whose record the page holds.
+      const resume = http.match((r) => r.url.endsWith('/resume'));
+      expect(resume.length).toBe(1);
+      resume.forEach((r) => r.flush(new Blob(['%PDF-1.4'], { type: 'application/pdf' })));
 
       expectNoPageRequests(http);
       expect(fixture.nativeElement.querySelector('app-cv-review')).toBeTruthy();

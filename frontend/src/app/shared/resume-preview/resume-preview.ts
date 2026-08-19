@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, input, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,7 +44,7 @@ import { ApiError } from '../../core/auth.service';
   templateUrl: './resume-preview.html',
   styleUrl: './resume-preview.scss',
 })
-export class ResumePreview {
+export class ResumePreview implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly sanitizer = inject(DomSanitizer);
 
@@ -59,6 +59,17 @@ export class ResumePreview {
    */
   readonly url = input.required<string | null>();
 
+  /**
+   * Open the document immediately instead of behind the toggle.
+   *
+   * Off by default, because on the candidate FILE the CV is one fact among
+   * many and an unrequested 60vh frame would push the rest of the record off
+   * screen. It is turned on for FR-25's preselection dialog, where the
+   * decision IS the document: a reviewer asked to accept or reject a CV must
+   * be looking at it, not at a button promising it.
+   */
+  readonly startOpen = input(false);
+
   protected readonly open = signal(false);
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -72,6 +83,14 @@ export class ResumePreview {
     // A blob URL lives until it is revoked or the document goes away. Leaving
     // it behind pins the whole file in memory for the tab's lifetime.
     inject(DestroyRef).onDestroy(() => this.revoke());
+  }
+
+  ngOnInit(): void {
+    // Not in the constructor: `url` and `startOpen` are inputs and are not set
+    // until after construction, so `load()` would see an undefined url.
+    if (this.startOpen()) {
+      this.load();
+    }
   }
 
   protected toggle(): void {

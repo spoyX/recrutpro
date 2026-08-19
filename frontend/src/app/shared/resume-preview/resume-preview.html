@@ -25,6 +25,7 @@
              frame renders a document supplied by a third party. -->
         <iframe
           class="preview__frame"
+          [class.preview__frame--subject]="startOpen()"
           [src]="safeUrl"
           sandbox
           title="Aperçu du CV"

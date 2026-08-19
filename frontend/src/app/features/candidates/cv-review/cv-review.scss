@@ -3,9 +3,22 @@
 // same KIND of action (a stage decision on a candidate) at different points in
 // the pipeline, and should not look like different features.
 
+// The shared panel is 480px, which is right for a prompt and far too narrow to
+// READ an A4 page in. This dialog's whole content is a document, so it gets the
+// width a document needs — still capped by the viewport, and still the same
+// panel in every other respect.
+.modal__panel--cv {
+  width: min(920px, 100%);
+}
+
 .review__resume {
   margin: 0 0 var(--sp-md);
 }
+
+// NOTE: the frame's height is NOT set here. The iframe belongs to
+// `app-resume-preview`, a child component, so Angular's emulated encapsulation
+// scopes any selector written here to THIS component's DOM and it would never
+// match. The preview owns that rule, keyed off its own `startOpen` input.
 
 .review__noresume,
 .review__missing {

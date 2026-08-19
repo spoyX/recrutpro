@@ -118,7 +118,7 @@ export const uploadResumeForCandidate = async (
  * to be deactivated either way, so the worst case is one orphaned asset, which
  * is strictly better than refusing a valid replacement.
  */
-const destroyAsset = async (publicId: string): Promise<void> => {
+export const destroyAsset = async (publicId: string): Promise<void> => {
   try {
     await cloudinary.uploader.destroy(publicId, {
       resource_type: RESUME_UPLOAD_OPTIONS.resource_type,

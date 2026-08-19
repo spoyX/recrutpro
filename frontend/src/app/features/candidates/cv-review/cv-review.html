@@ -1,5 +1,5 @@
 <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cv-review-title" (escaped)="dismissed.emit()">
-  <div class="modal__panel">
+  <div class="modal__panel modal__panel--cv">
     <h2 id="cv-review-title" class="modal__title">Présélection CV</h2>
     <p class="modal__body">
       {{ candidateName() }} — cette décision est <strong>définitive</strong> :
@@ -13,7 +13,7 @@
         <!-- 4.4: FR-25's whole decision rests on this document, so it is
              readable HERE rather than in a tab the reviewer has to come back
              from. The download stays for anything the frame cannot render. -->
-        <app-resume-preview [url]="url" />
+        <app-resume-preview [url]="url" [startOpen]="true" />
         <a matButton [href]="url" target="_blank" rel="noopener">
           <mat-icon>download</mat-icon>
           Télécharger le CV
