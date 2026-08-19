@@ -24,6 +24,15 @@ import { Component, computed, input } from '@angular/core';
  * two of its tones is a collision on a real screen rather than a theoretical
  * one: `chip--attention` and `chip--negative` were 7 channel-units apart and
  * rendered side by side.
+ *
+ * COLOUR NOTE (D-103): `progress` moved to `primary-fixed-dim` and `neutral` to
+ * `outline-variant` on 2026-08-19, again DESIGN.md first. An external audit
+ * found `info`/`progress` 4 units apart; measuring ALL FIFTEEN pairs rather
+ * than the reported one found two more, `neutral`/`info` at 7 and
+ * `neutral`/`progress` at 8. D-080 introduced the 32-unit floor and then
+ * checked it only against the pair it was changing, which is how two
+ * collisions survived the fix that created the rule. The whole set now clears
+ * 32, worst pair 33, every text tone still past 4.5:1.
  */
 type StageTone = 'neutral' | 'info' | 'progress' | 'attention' | 'positive' | 'negative';
 
@@ -61,16 +70,23 @@ const TONES: Record<string, StageTone> = {
       white-space: nowrap;
     }
     // Low-saturation tint, high-saturation text of the SAME hue.
+    // D-103: was surface-container-high, which sat 7 units from info and 8 from
+    // progress. outline-variant is 40 from both, and a status meaning "nothing
+    // has happened yet" reads better as a true grey than as a third pale blue.
     .chip--neutral {
-      background-color: var(--mat-sys-surface-container-high);
+      background-color: var(--mat-sys-outline-variant);
       color: var(--mat-sys-on-surface-variant);
     }
     .chip--info {
       background-color: var(--mat-sys-secondary-fixed);
       color: var(--mat-sys-on-secondary-fixed-variant);
     }
+    // D-103: was primary-fixed (#dce1ff), FOUR channel-units from info's
+    // secondary-fixed (#d8e2ff) — the two rendered as one colour in the same
+    // Etape column. primary-fixed-dim is 33 units away and still the primary
+    // hue, so "in progress" keeps reading as the brand-blue family.
     .chip--progress {
-      background-color: var(--mat-sys-primary-fixed);
+      background-color: var(--mat-sys-primary-fixed-dim);
       color: var(--mat-sys-on-primary-fixed-variant);
     }
     // DESIGN.md's ATTENTION role: tertiary-fixed-dim, NOT tertiary-fixed. That

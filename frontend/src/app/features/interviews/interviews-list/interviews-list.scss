@@ -15,8 +15,19 @@
 }
 
 // A cancelled or already-held slot is context, not the working set.
+//
+// NOT `opacity`, which is what this used to be. Measured on the live page:
+// `opacity: 0.65` composites the row's TEXT against the page behind it, and
+// four of five sampled elements fell below AA — the candidate name from
+// 6.69:1 to 3.22:1, the responsable from 10.31:1 to 3.79:1, the status chip's
+// label from 9.35:1 to 3.59:1. Seventeen rows were affected. Context still has
+// to be readable; de-emphasis must not be paid for in contrast.
+//
+// A background tint carries the same "this is not the working set" meaning at
+// full text strength, and the status chip beside it already names the state.
+// The same reasoning is why this pattern was NOT copied onto Cloture postings.
 .rows__row--inactive {
-  opacity: 0.65;
+  background-color: var(--mat-sys-surface-container-low);
 }
 
 .rows__time {
