@@ -169,6 +169,17 @@ export class CandidateDetails {
   }
 
   /** FR-25 moves the stage (and may set a motive), so the file is re-read. */
+  /**
+   * D-105 — a CV was uploaded from inside the preselection dialog.
+   *
+   * Re-reads the file so `resume.url` stops being null and the validation
+   * unblocks, but does NOT close the dialog: the reader opened it to make a
+   * decision and is still making it.
+   */
+  onReviewResumeUploaded(): void {
+    this.load();
+  }
+
   onReviewed(): void {
     this.reviewing.set(false);
     this.load();

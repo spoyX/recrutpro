@@ -96,12 +96,31 @@ describe('ResumePreview — Phase 4.4', () => {
       expect(src).not.toContain('/api/v1/');
     });
 
-    it('sandboxes the frame — a third party supplied this document', () => {
+    it('does NOT sandbox the frame — the sandbox is what blocked the viewer', () => {
       open();
       respondWith(new Blob([new Uint8Array(8)], { type: 'application/pdf' }));
 
-      // Present and EMPTY: no allow-scripts. A PDF needs none.
-      expect(frame()!.getAttribute('sandbox')).toBe('');
+      // D-105. This asserted `sandbox === ''` until 2026-08-19, on the reasoning
+      // that "a PDF needs no script". The reasoning was about the wrong thing:
+      // Chromium's PDF VIEWER is an internal extension that cannot initialise
+      // in a sandboxed frame, so Edge refused the document and painted « This
+      // page has been blocked » where the CV should be. Measured on the running
+      // app: `sandbox=""`, `allow-scripts`, `allow-same-origin` and
+      // `allow-scripts allow-same-origin` ALL give a null frame document; only
+      // removing the attribute renders. The assertion is kept, inverted, so
+      // re-adding it fails here rather than in front of a user.
+      expect(frame()!.hasAttribute('sandbox')).toBeFalse();
+    });
+
+    it('and the guarantee the sandbox was standing in for still holds', () => {
+      open();
+      // What actually keeps hostile markup out of that frame: this component
+      // builds one ONLY for a payload the server typed as a PDF. D-007 refuses
+      // a file whose bytes are not a PDF/DOCX at upload, and the proxy replays
+      // the stored Content-Type, so this is the third of three gates.
+      respondWith(new Blob(['<script>alert(1)</script>'], { type: 'text/html' }));
+
+      expect(frame()).toBeNull();
     });
 
     it('closing revokes the blob rather than pinning the file for the tab', () => {

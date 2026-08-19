@@ -20,10 +20,27 @@
         </a>
       </div>
     } @else {
-      <p class="review__noresume">
+      <!--
+        D-105 — no CV, so there is nothing to validate. Stated as a RULE with
+        the way out beside it, not as a bare absence: the reader can attach the
+        CV here and continue, or reject on the grounds that none was sent.
+        The server refuses the validation regardless (409 RESUME_REQUIRED).
+      -->
+      <div class="review__noresume">
         <mat-icon aria-hidden="true">info</mat-icon>
-        <span>Aucun CV n'est joint à ce dossier.</span>
-      </p>
+        <div class="review__noresume-text">
+          <p class="review__noresume-title">Aucun CV n'est joint à ce dossier.</p>
+          <p class="review__noresume-hint">
+            La présélection ne peut pas être <strong>validée</strong> sans CV — il n'y
+            aurait rien à évaluer. Téléversez-le, ou rejetez la candidature en
+            indiquant le motif.
+          </p>
+        </div>
+        <button matButton="filled" type="button" (click)="uploading.set(true)">
+          <mat-icon>upload_file</mat-icon>
+          Téléverser le CV
+        </button>
+      </div>
     }
 
     <fieldset class="outcome">
@@ -31,14 +48,22 @@
 
       <div class="outcome__choices">
         @for (option of outcomes; track option) {
-          <label class="outcome__choice" [class.outcome__choice--on]="outcome() === option">
+          <!-- D-105: the PASS is unavailable without a CV; the rejection is
+               not, because "none was submitted" is a real motive. -->
+          @let blocked = option !== 'Rejeté (CV)' && !canValidate();
+          <label
+            class="outcome__choice"
+            [class.outcome__choice--on]="outcome() === option"
+            [class.outcome__choice--blocked]="blocked"
+            [attr.title]="blocked ? 'Un CV est nécessaire pour valider la présélection.' : null"
+          >
             <input
               class="visually-hidden"
               type="radio"
               name="cv-review-outcome"
               [value]="option"
               [checked]="outcome() === option"
-              [disabled]="busy()"
+              [disabled]="busy() || blocked"
               (change)="setOutcome(option)"
             />
             <app-stage-chip [stage]="option" />
@@ -75,7 +100,11 @@
         <mat-icon aria-hidden="true">info</mat-icon>
         <span>
           @if (outcome() === null) {
-            Choisissez une décision.
+            @if (canValidate()) {
+              Choisissez une décision.
+            } @else {
+              Sans CV, seule la décision « Rejeté (CV) » est possible.
+            }
           } @else {
             Un motif est obligatoire pour rejeter un candidat à la présélection CV.
           }
@@ -97,3 +126,18 @@
     </div>
   </div>
 </div>
+
+<!--
+  FR-21's upload, reached from the blocked-validation notice above. The SAME
+  component the candidate file uses, so the magic-byte limits, the size cap and
+  the FR-22 replacement semantics are one implementation, not two.
+-->
+@if (uploading()) {
+  <app-replace-resume
+    [candidateId]="candidateId()"
+    [candidateName]="candidateName()"
+    [hasExisting]="false"
+    (replaced)="onResumeUploaded()"
+    (dismissed)="uploading.set(false)"
+  />
+}

@@ -647,17 +647,23 @@ const minimalPdf = (title: string, lines: string[]): Buffer => {
  * preselected on a document that did not exist, and a demo where « Présélection
  * CV validée » sits on an empty file tells a small lie about its own pipeline.
  *
- * At « Candidature reçue » the answer is MOST, not all: FR-25 has to be
- * demonstrable, which needs candidates with a CV waiting to be judged, and the
- * « Aucun CV n'est joint » branch has to stay reachable too. Every third one is
- * left without.
+ * At « Candidature reçue » the answer is MOST, not all - and since D-105 the
+ * ones left without are the point rather than an oversight. A candidate with no
+ * CV is where the new rule is visible: « Présélection CV validée » is refused
+ * (409 RESUME_REQUIRED), « Rejeté (CV) » stays open, and the dialog offers the
+ * upload inline. Every third candidate at that stage is left without, which is
+ * 3 of the 11 - enough to land on one without hunting, few enough that the
+ * ordinary path is still the common one.
  */
 const wantsResume = (plan: CandidatePlan, index: number): boolean =>
   REACHED_CV_REVIEW.includes(plan.stage) || index % 3 !== 2;
 
-const resumeFor = (plan: CandidatePlan): Buffer =>
+// `plan.position` is the internal KEY ('backend'), not the posting's title, so
+// the title is passed in: a CV that says « Candidature : backend » reads as a
+// leaked identifier, which is exactly how it looked on screen.
+const resumeFor = (plan: CandidatePlan, positionTitle: string): Buffer =>
   minimalPdf(`CV - ${plan.name}`, [
-    `Candidature : ${plan.position}`,
+    `Candidature : ${positionTitle}`,
     '',
     'Document de DEMONSTRATION généré par le script de peuplement.',
     "Ce n'est pas un vrai CV et il ne contient aucune donnée personnelle réelle.",
@@ -1252,7 +1258,7 @@ const run = async (): Promise<void> => {
     // implementation that can drift from it.
     if (cvEnabled && wantsResume(plan, index)) {
       await uploadResumeForCandidate(String(candidate._id), {
-        buffer: resumeFor(plan),
+        buffer: resumeFor(plan, position.title),
         mimetype: 'application/pdf',
       });
       resumesWritten += 1;

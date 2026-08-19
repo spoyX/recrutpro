@@ -194,6 +194,33 @@ export const reviewCandidateCv = async (
     );
   }
 
+  // D-105 — A VALIDATION NEEDS A CV TO VALIDATE.
+  //
+  // Beyond the SRS and deliberately so: FR-19 does not list a CV among the
+  // registration fields, FR-21 makes the upload its own action, and FR-25 says
+  // nothing about one existing. Read literally, all three permit « Présélection
+  // CV validée » on a candidate with no CV — which is not a preselection at
+  // all, it is a stage change wearing the name of a judgement nobody could have
+  // made. That was reachable in the running app and a human caught it.
+  //
+  // ONLY the validation is blocked. « Rejeté (CV) » stays open on purpose: "no
+  // CV was ever submitted" is a real and common reason to reject, and closing
+  // that branch would strand the candidate with no way forward at all.
+  //
+  // Here rather than only in the UI, per NFR-04 and D-064: the client disables
+  // the choice as an affordance, and this is what makes it true.
+  if (!isRejection) {
+    const hasResume = await Resume.exists({ candidateId: candidate._id, isActive: true });
+    if (!hasResume) {
+      throw new AppError(
+        409,
+        'RESUME_REQUIRED',
+        "Un CV est nécessaire pour valider la présélection : il n'y a rien à évaluer. " +
+          'Téléversez le CV du candidat, ou rejetez la candidature en indiquant le motif.',
+      );
+    }
+  }
+
   // Storing a rejection motive against a candidate who was NOT rejected would
   // put a false statement in the record, so this is refused rather than dropped.
   if (!isRejection && reason) {

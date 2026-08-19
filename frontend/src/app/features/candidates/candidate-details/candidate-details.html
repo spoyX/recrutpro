@@ -240,42 +240,15 @@
             <p class="prose">{{ candidate.rejectionReason }}</p>
           </section>
         }
-      </div>
 
-      <div class="columns__side">
-        <!-- ------------------------------------------------------ contact -->
-        <section class="card" aria-labelledby="contact-title">
-          <h2 id="contact-title" class="card__title">Coordonnées</h2>
-          <dl class="facts">
-            <div class="facts__row">
-              <dt>Email</dt>
-              <!--
-                Null for a Responsable hiérarchique: FR-35 grants them the name,
-                the poste and the CV, not the contact details. Stated rather
-                than left blank, so it reads as a rule and not as missing data.
-              -->
-              <dd>
-                @if (candidate.email) {
-                  <a href="mailto:{{ candidate.email }}">{{ candidate.email }}</a>
-                } @else {
-                  <span class="facts__restricted">Non communiqué pour votre rôle</span>
-                }
-              </dd>
-            </div>
-            <div class="facts__row">
-              <dt>Téléphone</dt>
-              <dd>
-                @if (candidate.phone) {
-                  {{ candidate.phone }}
-                } @else {
-                  <span class="facts__restricted">Non communiqué pour votre rôle</span>
-                }
-              </dd>
-            </div>
-          </dl>
-        </section>
-
-        <!-- --------------------------------------------------------- CV -->
+        <!-- ---------------------------------------------------------- CV -->
+        <!-- D-105 item 4 — the CV lives in the MAIN column, not the side one.
+             In the 280px-minimum sidebar the preview frame rendered at 297px:
+             legible, but a CV read through a letterbox. Here it gets the
+             two-thirds column (~870px at 1440), past the dialog's own width.
+             It also belongs here by weight: the sidebar holds small facts
+             about the record, and the CV is one of the things the record is
+             FOR. -->
         <section class="card" aria-labelledby="resume-title">
           <h2 id="resume-title" class="card__title">CV</h2>
           <!--
@@ -327,6 +300,41 @@
         </section>
 
         <!-- ------------------------------------------------------ dossier -->
+      </div>
+
+      <div class="columns__side">
+        <!-- ------------------------------------------------------ contact -->
+        <section class="card" aria-labelledby="contact-title">
+          <h2 id="contact-title" class="card__title">Coordonnées</h2>
+          <dl class="facts">
+            <div class="facts__row">
+              <dt>Email</dt>
+              <!--
+                Null for a Responsable hiérarchique: FR-35 grants them the name,
+                the poste and the CV, not the contact details. Stated rather
+                than left blank, so it reads as a rule and not as missing data.
+              -->
+              <dd>
+                @if (candidate.email) {
+                  <a href="mailto:{{ candidate.email }}">{{ candidate.email }}</a>
+                } @else {
+                  <span class="facts__restricted">Non communiqué pour votre rôle</span>
+                }
+              </dd>
+            </div>
+            <div class="facts__row">
+              <dt>Téléphone</dt>
+              <dd>
+                @if (candidate.phone) {
+                  {{ candidate.phone }}
+                } @else {
+                  <span class="facts__restricted">Non communiqué pour votre rôle</span>
+                }
+              </dd>
+            </div>
+          </dl>
+        </section>
+
         <section class="card" aria-labelledby="file-title">
           <h2 id="file-title" class="card__title">Dossier</h2>
           <dl class="facts">
@@ -367,6 +375,7 @@
         [candidateId]="candidate.id"
         [candidateName]="candidate.fullName"
         [resumeUrl]="candidate.resume.url"
+        (resumeUploaded)="onReviewResumeUploaded()"
         (reviewed)="onReviewed()"
         (dismissed)="reviewing.set(false)"
       />

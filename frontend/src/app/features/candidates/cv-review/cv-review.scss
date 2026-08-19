@@ -20,6 +20,41 @@
 // scopes any selector written here to THIS component's DOM and it would never
 // match. The preview owns that rule, keyed off its own `startOpen` input.
 
+// D-105's notice: a rule with its way out beside it, so it never reads as a
+// bare absence. `align-items: flex-start` because the text is now two lines
+// and the action sits beside them.
+.review__noresume {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.review__noresume-text {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.review__noresume-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+.review__noresume-hint {
+  margin: var(--sp-xs) 0 0;
+}
+
+// Unavailable, not broken: the same shape as the others, visibly inert. The
+// title attribute and the notice below both say why.
+.outcome__choice--blocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background-color: var(--mat-sys-surface-container-low);
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-low);
+  }
+}
+
 .review__noresume,
 .review__missing {
   display: flex;

@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import { app } from '../src/app';
 import { User } from '../src/models/User.model';
 import { Candidate } from '../src/models/Candidate.model';
+import { Resume } from '../src/models/Resume.model';
 import { JobPosition } from '../src/models/JobPosition.model';
 import { Notification } from '../src/models/Notification.model';
 import { AuditLog } from '../src/models/AuditLog.model';
@@ -19,12 +20,14 @@ import { loginRateLimitStore } from '../src/middleware/rateLimit.middleware';
 
 jest.mock('../src/models/User.model');
 jest.mock('../src/models/Candidate.model');
+jest.mock('../src/models/Resume.model');
 jest.mock('../src/models/JobPosition.model');
 jest.mock('../src/models/Notification.model');
 jest.mock('../src/models/AuditLog.model');
 
 const mockedUser = User as unknown as { findOne: jest.Mock; findById: jest.Mock };
 const mockedCandidate = Candidate as unknown as { findById: jest.Mock };
+const mockedResume = Resume as unknown as { exists: jest.Mock };
 const mockedJobPosition = JobPosition as unknown as { findById: jest.Mock };
 const mockedNotification = Notification as unknown as { insertMany: jest.Mock };
 const mockedAuditLog = AuditLog as unknown as { create: jest.Mock };
@@ -96,6 +99,10 @@ beforeEach(async () => {
   };
 
   mockedCandidate.findById.mockResolvedValue(candidate);
+  // D-105: a validation needs a CV to validate. The default is "there is one",
+  // so every pre-existing assertion in this file keeps testing what it was
+  // written to test; the no-CV case sets this to null explicitly.
+  mockedResume.exists.mockResolvedValue({ _id: new Types.ObjectId() });
   // D-052: the position carries the notification recipient.
   mockedJobPosition.findById.mockResolvedValue({ createdBy: OWNER_ID });
   mockedNotification.insertMany.mockResolvedValue([]);
@@ -138,6 +145,55 @@ describe('CV review transition — FR-25, FR-26', () => {
 
       expect(res.status).toBe(400);
       expect(candidate.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('D-105: a validation needs a CV to validate', () => {
+    it('REFUSES the pass with 409 RESUME_REQUIRED when no CV is attached', async () => {
+      mockedResume.exists.mockResolvedValue(null);
+
+      const res = await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('RESUME_REQUIRED');
+      // The refusal says what to do next, not merely that it refused (NFR-09).
+      expect(res.body.error.message).toMatch(/Téléversez le CV/i);
+    });
+
+    it('the SERVER refuses even if the client is bypassed — nothing is written', async () => {
+      mockedResume.exists.mockResolvedValue(null);
+
+      await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      // This is the point of the test: the UI disables the choice, but a caller
+      // that ignores the UI entirely — curl, a replayed request, a stale tab —
+      // still cannot get past it. NFR-04 / D-064: the client affords, the
+      // server decides.
+      expect(candidate.save).not.toHaveBeenCalled();
+      expect(candidate.currentStage).toBe(CandidateStage.CandidatureRecue);
+      expect(mockedAuditLog.create).not.toHaveBeenCalled();
+      expect(mockedNotification.insertMany).not.toHaveBeenCalled();
+    });
+
+    it('a REJECTION is still allowed without a CV — "none was submitted" is a real motive', async () => {
+      mockedResume.exists.mockResolvedValue(null);
+
+      const res = await review({
+        targetStage: CandidateStage.RejeteCv,
+        rejectionReason: "Aucun CV n'a été transmis malgré relance.",
+      });
+
+      expect(res.status).toBe(200);
+      expect(candidate.currentStage).toBe(CandidateStage.RejeteCv);
+    });
+
+    it('checks only the ACTIVE resume, so an FR-22 replacement in flight does not count', async () => {
+      mockedResume.exists.mockResolvedValue(null);
+      await review({ targetStage: CandidateStage.PreselectionCvValidee });
+
+      expect(mockedResume.exists).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: true }),
+      );
     });
   });
 

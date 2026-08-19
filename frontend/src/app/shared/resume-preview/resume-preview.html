@@ -21,13 +21,27 @@
         <!-- A blob: URL, not the API route — that route answers with
              `Content-Disposition: attachment` and an iframe pointed at it
              downloads the file instead of showing it (verified, not assumed).
-             `sandbox` without allow-scripts: a PDF needs no script, and this
-             frame renders a document supplied by a third party. -->
+
+             *** NO `sandbox`, AND THAT IS THE WHOLE BUG THIS FIXES. ***
+             It used to carry a bare `sandbox`, reasoned as "a PDF needs no
+             script". The reasoning was about the wrong thing: Chromium's PDF
+             VIEWER is an internal extension that cannot initialise inside a
+             sandboxed frame, so Edge refused the document outright and painted
+             « This page has been blocked by Microsoft Edge » where the CV
+             should be. Measured across every variant on the running app —
+             `sandbox=""`, `allow-scripts`, `allow-same-origin` and
+             `allow-scripts allow-same-origin` ALL produce a null frame
+             document; only removing the attribute renders.
+
+             What the sandbox was guarding is already guarded three times over,
+             each verified: D-007 rejects a file whose BYTES are not a PDF or
+             DOCX at upload, the proxy replays the stored `Content-Type`, and
+             this component only builds a frame when `blob.type` is exactly
+             `application/pdf`. An HTML payload cannot reach this element. -->
         <iframe
           class="preview__frame"
           [class.preview__frame--subject]="startOpen()"
           [src]="safeUrl"
-          sandbox
           title="Aperçu du CV"
           loading="lazy"
         ></iframe>

@@ -7,6 +7,7 @@ import { CandidateService, CvReviewStage, CV_REVIEW_STAGES } from '../candidate.
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { ResumePreview } from '../../../shared/resume-preview/resume-preview';
 import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
+import { ReplaceResume } from '../replace-resume/replace-resume';
 
 /**
  * FR-25 / FR-26 — the Recruteur's CV preselection.
@@ -36,7 +37,7 @@ import { ModalFocus } from '../../../shared/modal-focus/modal-focus';
  */
 @Component({
   selector: 'app-cv-review',
-  imports: [ModalFocus, ResumePreview, MatButtonModule, MatIconModule, StageChip],
+  imports: [ModalFocus, ResumePreview, ReplaceResume, MatButtonModule, MatIconModule, StageChip],
   templateUrl: './cv-review.html',
   styleUrl: './cv-review.scss',
 })
@@ -62,6 +63,36 @@ export class CvReview {
   readonly isRejection = computed(() => this.outcome() === 'Rejeté (CV)');
 
   /**
+   * D-105 — a validation needs a CV to validate, and this is the CLIENT HALF.
+   *
+   * The server owns the rule (`RESUME_REQUIRED`, 409); this only stops the
+   * reader walking into a refusal they could have been spared. NFR-04 / D-064:
+   * an affordance, never the enforcement.
+   *
+   * Rejection stays available with no CV on purpose — "no CV was ever
+   * submitted" is a real motive, and closing that branch would strand the
+   * candidate with no way forward at all.
+   */
+  readonly canValidate = computed(() => this.resumeUrl() !== null);
+
+  /** The inline FR-21 upload, opened from the blocked-validation notice. */
+  readonly uploading = signal(false);
+
+  /**
+   * A CV arrived from the dialog above. The parent owns the candidate payload,
+   * so it re-reads and passes a fresh `resumeUrl` down; this only closes the
+   * upload and clears the stale refusal.
+   */
+  onResumeUploaded(): void {
+    this.uploading.set(false);
+    this.errorMessage.set(null);
+    this.resumeUploaded.emit();
+  }
+
+  /** Asks the parent to re-read the candidate, so `resumeUrl` becomes non-null. */
+  readonly resumeUploaded = output<void>();
+
+  /**
    * FR-26's motive is required ONLY on the rejection branch — the client half
    * of a rule the server owns. Trimmed, because a motive of spaces is not a
    * motive and `reviewCandidateCv` refuses it too.
@@ -70,10 +101,18 @@ export class CvReview {
     if (this.busy() || this.outcome() === null) {
       return false;
     }
+    // D-105: a pass with no CV is refused by the server, so it is not offered.
+    if (!this.isRejection() && !this.canValidate()) {
+      return false;
+    }
     return this.isRejection() ? this.reason().trim().length > 0 : true;
   });
 
   setOutcome(value: CvReviewStage): void {
+    // D-105: the validation is not selectable without a CV.
+    if (value !== 'Rejeté (CV)' && !this.canValidate()) {
+      return;
+    }
     this.outcome.set(value);
     this.errorMessage.set(null);
     // Switching back to a validation DISCARDS any motive already typed, rather
