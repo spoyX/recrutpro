@@ -115,6 +115,18 @@ export class AuditLog {
    * An unrecognised ending falls through to the neutral slate pill rather than
    * being guessed at: a new action must not be silently mis-tinted.
    */
+  /**
+   * `EtapeCandidatModifiee` reads as ETAPECANDIDATMODIFIEE once the badge
+   * uppercases it — one unbroken word nobody can scan. Split on the camel-case
+   * boundaries the backend builds these names from.
+   *
+   * DISPLAY ONLY. The filter `<option>` keeps the raw value, because that is
+   * what `GET /audit-logs?action=` accepts; a humanised value would be a 400.
+   */
+  humanise(action: string): string {
+    return action.replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+
   tone(action: string): string {
     if (/(Desactive|Annule|Cloture)$/.test(action)) return 'pill--amber';
     if (/(Modifie|Modifiee)$/.test(action)) return 'pill--sky';

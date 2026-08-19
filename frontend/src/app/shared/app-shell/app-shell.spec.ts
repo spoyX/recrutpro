@@ -20,14 +20,20 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
   const text = (): string => fixture.nativeElement.textContent as string;
 
   /**
-   * Sidebar hints by their SOURCE casing. `.label-sm` applies
-   * `text-transform: uppercase`, so `innerText` would report « À VENIR » —
-   * `textContent` is what returns the string as written.
+   * Sidebar hints, read from the disabled entry's `title`.
+   *
+   * D-107 moved the reason off a visible « RÉSERVÉ » badge and onto the title:
+   * the chip repeated on every gated row what the greyed-out state already
+   * said. These assertions are unchanged in MEANING — which destinations are
+   * gated, and that "not built yet" is never conflated with "not yours" — only
+   * in where they read it from.
    */
   const hints = (label: string): HTMLElement[] =>
-    (Array.from(fixture.nativeElement.querySelectorAll('.sidebar__soon')) as HTMLElement[]).filter(
-      (el) => el.textContent?.trim() === label,
-    );
+    (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('.sidebar__link--disabled'),
+      ) as HTMLElement[]
+    ).filter((el) => el.getAttribute('title') === label);
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -115,7 +121,7 @@ describe('AppShell — sidebar and topbar (D-067)', () => {
       expect(link.textContent).toContain('Candidats');
     });
 
-    it('ResponsableHierarchique: « Candidats » is disabled, and says « réservé » not « à venir »', () => {
+    it('ResponsableHierarchique: « Candidats » is disabled, and is « réservé » not « à venir »', () => {
       signIn('ResponsableHierarchique');
       create();
 

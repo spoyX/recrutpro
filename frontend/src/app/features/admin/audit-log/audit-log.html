@@ -20,7 +20,8 @@
         >
           <option value="">Toutes les actions</option>
           @for (option of actions; track option) {
-            <option [value]="option">{{ option }}</option>
+            <!-- The VALUE stays raw — it is what the endpoint accepts. -->
+            <option [value]="option">{{ humanise(option) }}</option>
           }
         </select>
       </div>
@@ -110,9 +111,13 @@
                   </span>
                 </td>
                 <td>
-                  <!-- The action name verbatim. The tint groups it by what the
-                       verb does; the words carry the meaning on their own. -->
-                  <span class="pill" [class]="'pill ' + tone(entry.action)">{{ entry.action }}</span>
+                  <!-- The action name, split on its camel-case boundaries: the
+                       badge uppercases it, and ETAPECANDIDATMODIFIEE is one
+                       unbroken word nobody can scan. The tint groups it by what
+                       the verb does; the words carry the meaning on their own. -->
+                  <span class="pill" [class]="'pill ' + tone(entry.action)">{{
+                    humanise(entry.action)
+                  }}</span>
                 </td>
                 <td class="table__meta">{{ entry.targetType }}</td>
                 <!-- The raw id, on purpose: it is what the entry stores, and

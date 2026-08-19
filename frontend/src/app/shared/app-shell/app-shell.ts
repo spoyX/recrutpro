@@ -42,9 +42,13 @@ interface NavItem {
  * would 404. Each becomes a live link as its page lands.
  *
  * A destination the CURRENT ROLE cannot use is disabled the same way, and for
- * the same reason — it would 403 rather than 404. The two cases carry
- * different hints ("à venir" vs "réservé"), because "not built yet" and "not
- * yours" are different facts and a user should not have to guess which.
+ * the same reason — it would 403 rather than 404.
+ *
+ * The two cases still carry different reasons ("à venir" vs "réservé"), but as
+ * a `title` rather than a visible badge: the human asked for the « RÉSERVÉ »
+ * chip to go, and it was repeating on every gated row what the greyed-out
+ * state already says. The distinction is kept for anyone who hovers or asks,
+ * and is no longer shouted at everyone who does not.
  *
  * This is presentation, NOT authorisation. NFR-04 puts access control on the
  * server, which refuses these routes regardless of what the sidebar renders.
@@ -138,12 +142,13 @@ interface ResolvedNavItem {
                   {{ item.label }}
                 </a>
               } @else {
-                <span class="sidebar__link sidebar__link--disabled" aria-disabled="true">
+                <span
+                  class="sidebar__link sidebar__link--disabled"
+                  aria-disabled="true"
+                  [attr.title]="item.hint"
+                >
                   <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
                   {{ item.label }}
-                  @if (item.hint) {
-                    <span class="sidebar__soon label-sm">{{ item.hint }}</span>
-                  }
                 </span>
               }
             </li>
@@ -359,10 +364,6 @@ interface ResolvedNavItem {
       cursor: default;
     }
 
-    .sidebar__soon {
-      margin-left: auto;
-      color: var(--mat-sys-outline);
-    }
 
     .shell__main {
       flex: 1 1 auto;
@@ -472,10 +473,6 @@ interface ResolvedNavItem {
       .sidebar__nav {
         flex-direction: row;
         flex-wrap: wrap;
-      }
-
-      .sidebar__soon {
-        display: none;
       }
 
       .topbar__inner,

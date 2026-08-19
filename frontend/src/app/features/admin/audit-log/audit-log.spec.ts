@@ -135,7 +135,10 @@ describe('AuditLog (FR-11, UC-04)', () => {
       load();
 
       expect(text()).toContain('Admin Un');
-      expect(text()).toContain('UtilisateurDesactive');
+      // Split for readability (the badge uppercases it, so the raw name would
+      // render as one unbroken word). The `<option>` VALUE stays raw — the
+      // assertion above reads `.value` and still sees `UtilisateurDesactive`.
+      expect(text()).toContain('Utilisateur Desactive');
       expect(text()).toContain('User');
       expect(text()).toContain('64b7f0c2e1a2b3c4d5e6f7a8');
       expect(text()).toContain('16/08/2026');
