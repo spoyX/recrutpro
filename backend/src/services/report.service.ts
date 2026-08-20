@@ -120,6 +120,23 @@ export const pipelineReport = async (
   });
 };
 
+/**
+ * One month of the D-110 series.
+ *
+ * *** `averageDays` IS NULL, NEVER 0, FOR A MONTH WITH NO HIRES. ***
+ * `hires: 0` is a true statement - nobody was hired. `averageDays: 0` would be
+ * a false one: it claims those nobodies were hired instantly, and on a trend
+ * line it draws a plunge to the axis that reads as a dramatic improvement. The
+ * flat summary beside it has always returned `null` rather than `0` for an
+ * empty sample, for exactly this reason; the series inherits the rule.
+ */
+export interface TimeToHireMonth {
+  /** `YYYY-MM`, in SERIES_TIMEZONE. */
+  month: string;
+  hires: number;
+  averageDays: number | null;
+}
+
 export interface TimeToHireReport {
   fromDate: Date | null;
   toDate: Date | null;
@@ -127,7 +144,87 @@ export interface TimeToHireReport {
   averageDays: number | null;
   fastestDays: number | null;
   slowestDays: number | null;
+  /**
+   * D-110 - the same sample as the summary above, grouped by month and
+   * ZERO-FILLED across the window so a quiet month is a visible zero rather
+   * than a missing point. A gap in the array would let a chart draw a straight
+   * line between two distant months and imply data that does not exist.
+   */
+  byMonth: TimeToHireMonth[];
 }
+
+/**
+ * The timezone the months are cut on.
+ *
+ * EXPLICIT, because the default is not neutral: `$dateToString` without a
+ * timezone groups in UTC, so a hire decided at 00:30 on 1 March in Paris lands
+ * in February for every reader of this report. The application is French and
+ * its users read these months as French calendar months.
+ */
+const SERIES_TIMEZONE = 'Europe/Paris';
+
+/** Months returned when the caller gives no range. */
+const DEFAULT_SERIES_MONTHS = 12;
+
+/**
+ * Hard ceiling on the series length.
+ *
+ * Without one the window runs from whatever `fromDate` the caller sends to
+ * `toDate`, and `?fromDate=1970-01-01` would return 670 points - a request that
+ * costs the server nothing to answer and the browser a great deal to draw. When
+ * a range is wider than this, the MOST RECENT months win: a trend is read from
+ * its right-hand end.
+ */
+const MAX_SERIES_MONTHS = 24;
+
+/**
+ * `YYYY-MM` for an instant, in SERIES_TIMEZONE.
+ *
+ * Uses `Intl` rather than `toISOString().slice(0, 7)`, which would silently be
+ * UTC and disagree with the aggregation's own `$dateToString` above - the two
+ * MUST cut the months identically or the zero-fill would create a phantom
+ * month beside a real one.
+ */
+const monthKey = (at: Date): string => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SERIES_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(at);
+  const year = parts.find((p) => p.type === 'year')!.value;
+  const month = parts.find((p) => p.type === 'month')!.value;
+  return `${year}-${month}`;
+};
+
+/** `n` months before `at`, on a mid-month UTC cursor. */
+const monthsBack = (at: Date, n: number): Date =>
+  new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() - n, 15));
+
+/**
+ * Every `YYYY-MM` from `start` to `end` inclusive, oldest first.
+ *
+ * The cursor sits mid-month deliberately: stepping a 31st forward by one month
+ * skips February entirely, and the 15th is far enough from either edge that a
+ * timezone shift cannot move it into a neighbouring month.
+ *
+ * The caller caps the START rather than letting this run long — an earlier
+ * version walked from the caller's `fromDate` and sliced afterwards, and a
+ * `fromDate=1970-01-01` needed 672 steps against a 600-step guard, so the
+ * series silently ENDED in 2019. Bounding the input is what makes the guard
+ * unreachable instead of load-bearing.
+ */
+const monthsBetween = (start: Date, end: Date): string[] => {
+  const keys: string[] = [];
+  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 15));
+  const last = monthKey(end);
+  for (let guard = 0; guard <= MAX_SERIES_MONTHS + 2; guard += 1) {
+    const key = monthKey(cursor);
+    keys.push(key);
+    if (key >= last) break;
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return keys;
+};
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const toDays = (ms: number): number => Math.round((ms / MS_PER_DAY) * 10) / 10;
@@ -186,19 +283,74 @@ export const timeToHireReport = async (
     match.jobPositionId = { $in: positions.map((p) => p._id) };
   }
 
-  const [summary]: Array<{ hires: number; avgMs: number; minMs: number; maxMs: number }> =
-    await Candidate.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: null,
-          hires: { $sum: 1 },
-          avgMs: { $avg: { $subtract: ['$decidedAt', '$registeredAt'] } },
-          minMs: { $min: { $subtract: ['$decidedAt', '$registeredAt'] } },
-          maxMs: { $max: { $subtract: ['$decidedAt', '$registeredAt'] } },
-        },
+  // ONE round trip for both shapes. `$facet` runs the flat summary and the
+  // monthly series over the SAME `$match`, so the chart can never disagree with
+  // the averages printed beside it - two queries could, if a decision landed
+  // between them.
+  const [faceted]: Array<{
+    summary: Array<{ hires: number; avgMs: number; minMs: number; maxMs: number }>;
+    months: Array<{ _id: string; hires: number; avgMs: number }>;
+  }> = await Candidate.aggregate([
+    { $match: match },
+    {
+      $facet: {
+        summary: [
+          {
+            $group: {
+              _id: null,
+              hires: { $sum: 1 },
+              avgMs: { $avg: { $subtract: ['$decidedAt', '$registeredAt'] } },
+              minMs: { $min: { $subtract: ['$decidedAt', '$registeredAt'] } },
+              maxMs: { $max: { $subtract: ['$decidedAt', '$registeredAt'] } },
+            },
+          },
+        ],
+        // D-110. `timezone` is explicit - see SERIES_TIMEZONE.
+        months: [
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: '%Y-%m',
+                  date: '$decidedAt',
+                  timezone: SERIES_TIMEZONE,
+                },
+              },
+              hires: { $sum: 1 },
+              avgMs: { $avg: { $subtract: ['$decidedAt', '$registeredAt'] } },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ],
       },
-    ]);
+    },
+  ]);
+
+  const summary = faceted?.summary?.[0];
+  const found = new Map((faceted?.months ?? []).map((m) => [m._id, m]));
+
+  // The WINDOW the series covers, bounded rather than open-ended. An explicit
+  // range wins; otherwise the last DEFAULT_SERIES_MONTHS ending now.
+  const end = toDate ?? new Date();
+  const requested = fromDate ?? monthsBack(end, DEFAULT_SERIES_MONTHS - 1);
+  // The cap is applied to the START, not by slicing a long list afterwards: a
+  // wide `fromDate` must never make this walk thousands of months just to throw
+  // most of them away. The most recent months win — a trend is read from its
+  // right-hand end.
+  const floor = monthsBack(end, MAX_SERIES_MONTHS - 1);
+  const start = requested > floor ? requested : floor;
+
+  const window = monthsBetween(start > end ? end : start, end).slice(-MAX_SERIES_MONTHS);
+
+  const byMonth: TimeToHireMonth[] = window.map((month) => {
+    const row = found.get(month);
+    return {
+      month,
+      hires: row?.hires ?? 0,
+      // Null, never 0 - see TimeToHireMonth.
+      averageDays: row ? toDays(row.avgMs) : null,
+    };
+  });
 
   return {
     fromDate: fromDate ?? null,
@@ -207,5 +359,6 @@ export const timeToHireReport = async (
     averageDays: summary ? toDays(summary.avgMs) : null,
     fastestDays: summary ? toDays(summary.minMs) : null,
     slowestDays: summary ? toDays(summary.maxMs) : null,
+    byMonth,
   };
 };

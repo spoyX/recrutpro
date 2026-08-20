@@ -1,0 +1,83 @@
+// The chart and its table are ONE figure: the picture and the words are the
+// same statement, so they sit in one bordered block rather than reading as two
+// unrelated widgets.
+.trend {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+  min-width: 0;
+}
+
+.trend__caption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trend__title {
+  font: var(--mat-sys-title-large);
+  font-size: 16px;
+  color: var(--mat-sys-on-surface);
+}
+
+.trend__hint {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// A fixed height: chart.js sizes a responsive canvas from its PARENT, and a
+// parent that sizes itself from the canvas is a loop that collapses to zero.
+.trend__canvas {
+  position: relative;
+  height: 260px;
+  min-width: 0;
+}
+
+.trend__table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--mat-sys-body-small);
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px var(--sp-sm);
+    border-bottom: var(--border-level-1);
+  }
+
+  thead th {
+    font: var(--mat-sys-label-small);
+    letter-spacing: var(--recrutpro-tracking-label-sm);
+    text-transform: uppercase;
+    color: var(--text-slate);
+    background-color: var(--surface-table-head);
+  }
+
+  tbody th {
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant);
+    font-variant-numeric: tabular-nums;
+  }
+
+  tbody td {
+    color: var(--mat-sys-on-surface);
+    font-variant-numeric: tabular-nums;
+  }
+
+  tbody tr:last-child :is(th, td) {
+    border-bottom: none;
+  }
+}
+
+// A month with no data. Muted, because « — » is an absence and should not
+// compete with the months that carry a number.
+.trend__none {
+  color: var(--mat-sys-outline);
+}
+
+@media (max-width: 700px) {
+  .trend__canvas {
+    height: 200px;
+  }
+}

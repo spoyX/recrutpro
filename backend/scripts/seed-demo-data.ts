@@ -402,6 +402,14 @@ interface CandidatePlan {
  * handful of conclusions. Every one of the seven pipeline stages is occupied,
  * so the FR-45 breakdown and the pipeline report have no empty column.
  */
+// D-110: the SIX acceptances are deliberately spread across roughly ten months
+// rather than bunched into three. Two charts over three points is a shape, not
+// a trend, and the empty months between them are the part worth showing: the
+// volume bars sit at zero while the delay line BREAKS, which is the whole
+// null-is-not-zero rule made visible on screen.
+//
+// The delays widen as they approach the present (29-34 days early on, 62 and 70
+// days recently), so the trend line has somewhere to go instead of being flat.
 const CANDIDATES: CandidatePlan[] = [
   // ---- Ingénieur logiciel backend
   { name: 'Yanis Bouaziz', position: 'backend', stage: CandidateStage.CandidatureRecue, registered: -4, handledBy: 'thomas' },
@@ -411,7 +419,7 @@ const CANDIDATES: CandidatePlan[] = [
   { name: 'Mehdi Slimani', position: 'backend', stage: CandidateStage.EvaluationCompletee, registered: -40, interviewAt: -9, interviewer: 'claire', scores: [4, 5, 4], handledBy: 'amelie' },
   {
     name: 'Laura Bénichou', position: 'backend', stage: CandidateStage.Accepte,
-    registered: -96, concluded: -44, interviewAt: -60, interviewer: 'claire', scores: [5, 4, 5],
+    registered: -300, concluded: -268, interviewAt: -280, interviewer: 'claire', scores: [5, 4, 5],
     decisionComment:
       "Très bon niveau technique et une vraie capacité à expliquer ses choix d'architecture. Proposition " +
       'envoyée sur la fourchette haute, prise de poste convenue au début du mois suivant.',
@@ -438,7 +446,7 @@ const CANDIDATES: CandidatePlan[] = [
   { name: 'Manon Leroy', position: 'frontend', stage: CandidateStage.EntretienPlanifie, registered: -31, interviewAt: -2, interviewer: 'claire', handledBy: 'thomas' },
   {
     name: 'Théo Vidal', position: 'frontend', stage: CandidateStage.Accepte,
-    registered: -66, concluded: -35, interviewAt: -48, interviewer: 'hugo', scores: [4, 4, 5],
+    registered: -268, concluded: -238, interviewAt: -252, interviewer: 'hugo', scores: [4, 4, 5],
     decisionComment:
       'Excellente culture accessibilité et un portfolio solide. Retenu à l\'unanimité par l\'équipe, ' +
       'intégration prévue sur le chantier de refonte du portail.',
@@ -459,7 +467,7 @@ const CANDIDATES: CandidatePlan[] = [
   { name: 'Adrien Fauré', position: 'devops', stage: CandidateStage.EvaluationCompletee, registered: -38, interviewAt: -8, interviewer: 'rachid', scores: [5, 3, 4], handledBy: 'amelie' },
   {
     name: 'Lucie Chevalier', position: 'devops', stage: CandidateStage.Accepte,
-    registered: -80, concluded: -56, interviewAt: -68, interviewer: 'rachid', scores: [5, 5, 4],
+    registered: -205, concluded: -176, interviewAt: -190, interviewer: 'rachid', scores: [5, 5, 4],
     decisionComment:
       'Maîtrise complète de la chaîne de livraison et une expérience d\'astreinte déjà rodée. Recrutement ' +
       'validé rapidement pour sécuriser la migration cloud en cours.',
@@ -470,7 +478,7 @@ const CANDIDATES: CandidatePlan[] = [
   // ---- Administrateur systèmes et réseaux (poste clôturé : le recrutement est allé à son terme)
   {
     name: 'Julien Deschamps', position: 'sysadmin', stage: CandidateStage.Accepte,
-    registered: -120, concluded: -102, interviewAt: -112, interviewer: 'rachid', scores: [4, 5, 5],
+    registered: -150, concluded: -116, interviewAt: -134, interviewer: 'rachid', scores: [4, 5, 5],
     decisionComment:
       'Candidature interne recommandée par l\'équipe : périmètre déjà connu, prise de poste immédiate. ' +
       'Le poste a été clôturé dans la foulée.',
@@ -505,7 +513,7 @@ const CANDIDATES: CandidatePlan[] = [
   { name: 'Victor Lambert', position: 'ux', stage: CandidateStage.EntretienPlanifie, registered: -28, interviewAt: -1, interviewer: 'lea', handledBy: 'thomas' },
   {
     name: 'Marine Delaunay', position: 'ux', stage: CandidateStage.Accepte,
-    registered: -88, concluded: -49, interviewAt: -62, interviewer: 'lea', scores: [4, 5, 4],
+    registered: -120, concluded: -58, interviewAt: -92, interviewer: 'lea', scores: [4, 5, 4],
     decisionComment:
       'Portfolio très convaincant sur les parcours complexes et une vraie sensibilité accessibilité. ' +
       'Offre acceptée après une négociation courte sur le télétravail.',
@@ -535,7 +543,7 @@ const CANDIDATES: CandidatePlan[] = [
   // ---- Chargé de recrutement (poste clôturé)
   {
     name: 'Céline Barreau', position: 'recruteur', stage: CandidateStage.Accepte,
-    registered: -105, concluded: -70, interviewAt: -85, interviewer: 'farah', scores: [5, 4, 4],
+    registered: -96, concluded: -26, interviewAt: -60, interviewer: 'farah', scores: [5, 4, 4],
     decisionComment:
       'Expérience directement transposable sur les recrutements techniques et une bonne lecture du marché. ' +
       'Poste pourvu, annonce clôturée.',

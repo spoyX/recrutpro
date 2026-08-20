@@ -30,6 +30,16 @@ export interface PublicTimeToHire {
   averageDays: number | null;
   fastestDays: number | null;
   slowestDays: number | null;
+  /** D-110 — the same sample, grouped by month and zero-filled. */
+  byMonth: PublicTimeToHireMonth[];
+}
+
+export interface PublicTimeToHireMonth {
+  /** `YYYY-MM`, cut in the service's explicit timezone. */
+  month: string;
+  hires: number;
+  /** Null, NEVER 0, for a month with no hires — see the service. */
+  averageDays: number | null;
 }
 
 export const toPublicTimeToHire = (report: TimeToHireReport): PublicTimeToHire => ({
@@ -41,4 +51,8 @@ export const toPublicTimeToHire = (report: TimeToHireReport): PublicTimeToHire =
   averageDays: report.averageDays,
   fastestDays: report.fastestDays,
   slowestDays: report.slowestDays,
+  // Passed through as-is: the service already zero-filled the window and
+  // already decided `null` vs `0`. Re-deriving either here would be a second
+  // place for that rule to live.
+  byMonth: report.byMonth,
 });

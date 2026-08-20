@@ -29,6 +29,22 @@ export interface TimeToHire {
   averageDays: number | null;
   fastestDays: number | null;
   slowestDays: number | null;
+  /**
+   * D-110 — the same sample grouped by month, zero-filled across the window
+   * and bounded server-side. Oldest first, so a trend reads left to right.
+   */
+  byMonth: TimeToHireMonth[];
+}
+
+export interface TimeToHireMonth {
+  /** `YYYY-MM`, cut in Europe/Paris by the server. */
+  month: string;
+  hires: number;
+  /**
+   * Null, NEVER 0, for a month with no hires. Zero days would claim those
+   * nobodies were hired instantly; the chart draws a gap instead of a dip.
+   */
+  averageDays: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

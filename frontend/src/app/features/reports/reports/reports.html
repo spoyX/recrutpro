@@ -266,6 +266,52 @@
             <app-stat-tile label="Le plus lent" [value]="report.slowestDays + ' j'" />
           </div>
 
+          <!-- ============================================ D-109 / D-110 -->
+          <!--
+            Two time-series charts over the SAME sample the tiles above
+            summarise — one $facet, so they cannot disagree. The pipeline
+            breakdown stays CSS (D-057); nothing on the dashboard changed.
+          -->
+          @if (hasSeries()) {
+            <div class="charts">
+              <app-trend-chart
+                class="charts__item"
+                title="Recrutements par mois"
+                hint="Nombre de recrutements conclus, par mois de décision."
+                valueLabel="Recrutements"
+                kind="bar"
+                [colour]="volumeColour"
+                [points]="volumeSeries()"
+              />
+              <app-trend-chart
+                class="charts__item"
+                title="Délai de recrutement par mois"
+                hint="Délai moyen entre candidature et acceptation. Un mois sans recrutement n'a pas de moyenne — la courbe est interrompue."
+                valueLabel="Délai moyen"
+                unit=" j"
+                kind="line"
+                [colour]="delayColour"
+                [points]="delaySeries()"
+              />
+            </div>
+
+            <!--
+              The SAME warning the averages carry, applied to the charts.
+              A trend drawn through four points is a shape, not a trend, and a
+              chart is far more persuasive than the number it draws.
+            -->
+            @if (smallSample()) {
+              <p class="note">
+                <mat-icon aria-hidden="true">info</mat-icon>
+                <span>
+                  Ces courbes reposent sur {{ report.hires }} recrutement{{
+                    report.hires > 1 ? 's' : ''
+                  }} : à lire comme une tendance indicative, pas comme une série statistique.
+                </span>
+              </p>
+            }
+          }
+
           <!-- The server returns `hires` so this can be said out loud. -->
           @if (smallSample()) {
             <p class="note">

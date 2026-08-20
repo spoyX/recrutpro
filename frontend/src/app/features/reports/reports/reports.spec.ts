@@ -7,7 +7,9 @@ import {
 } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { Reports } from './reports';
+import { By } from '@angular/platform-browser';
 import { PipelineRow, TimeToHire } from '../report.service';
+import { TrendChart } from '../../../shared/trend-chart/trend-chart';
 import { AuthService, AuthenticatedUser } from '../../../core/auth.service';
 import { environment } from '../../../../environments/environment';
 import { drainShellRequests, expectNoPageRequests } from '../../../testing/shell-requests';
@@ -51,7 +53,85 @@ describe('Reports (user stories 22, 23)', () => {
     averageDays: 21.5,
     fastestDays: 8,
     slowestDays: 44.2,
+    // D-110's series, with a deliberate GAP: February has no hires, so its
+    // average is null rather than 0. Every spec that renders the page now
+    // renders the charts too, so the gap is exercised throughout.
+    byMonth: [
+      { month: '2026-01', hires: 5, averageDays: 18 },
+      { month: '2026-02', hires: 0, averageDays: null },
+      { month: '2026-03', hires: 7, averageDays: 24 },
+    ],
     ...over,
+  });
+
+  describe('D-109 / D-110: the time-series charts', () => {
+    const tables = (): HTMLTableElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('app-trend-chart table.trend__table'));
+
+    it('renders BOTH charts once there is a series', () => {
+      load();
+
+      expect(fixture.nativeElement.querySelectorAll('app-trend-chart').length).toBe(2);
+      expect(fixture.nativeElement.querySelectorAll('app-trend-chart canvas').length).toBe(2);
+    });
+
+    it('every chart carries a TEXT table — no number is chart-only', () => {
+      load();
+
+      // The rule the rest of the app follows: a canvas is invisible to a screen
+      // reader and gone entirely if the script fails.
+      expect(tables().length).toBe(2);
+      for (const table of tables()) {
+        expect(table.querySelectorAll('tbody tr').length).toBe(3);
+      }
+    });
+
+    it('the table prints the same months and values as the payload', () => {
+      load();
+
+      const volume = tables()[0].textContent!;
+      expect(volume).toContain('janv. 2026');
+      expect(volume).toContain('5');
+      expect(volume).toContain('mars 2026');
+      expect(volume).toContain('7');
+    });
+
+    it('a zero-hire month is a ZERO on volume and a GAP on the delay', () => {
+      load();
+
+      const volumeRows = tables()[0].querySelectorAll('tbody tr');
+      const delayRows = tables()[1].querySelectorAll('tbody tr');
+
+      // February: nobody was hired — that is a true zero.
+      expect(volumeRows[1].querySelector('td')!.textContent!.trim()).toBe('0');
+      // …but it has no AVERAGE. A 0 here would claim those nobodies were hired
+      // instantly, and on the line it draws a plunge that reads as a triumph.
+      expect(delayRows[1].querySelector('td')!.textContent!.trim()).toBe('—');
+      expect(delayRows[1].querySelector('td')!.classList).toContain('trend__none');
+    });
+
+    it('passes DESIGN.md tokens as the colours, never a chart.js default', () => {
+      load();
+
+      const charts = fixture.debugElement.queryAll(By.directive(TrendChart));
+      expect(charts[0].componentInstance.colour()).toBe('#1D4ED8');
+      expect(charts[1].componentInstance.colour()).toBe('#0058BE');
+    });
+
+    it('warns on a small sample, the same way the averages already do', () => {
+      load([row()], hire({ hires: 3, averageDays: 19 }));
+
+      // A trend drawn through four points is a shape, not a trend — and a chart
+      // is far more persuasive than the number it draws.
+      expect(text()).toContain('3 recrutements');
+      expect(text()).toContain('tendance indicative');
+    });
+
+    it('draws NOTHING rather than an empty frame when there is no series', () => {
+      load([row()], hire({ hires: 0, averageDays: null, byMonth: [] }));
+
+      expect(fixture.nativeElement.querySelectorAll('app-trend-chart').length).toBe(0);
+    });
   });
 
   const signIn = (role: AuthenticatedUser['role']): void => {

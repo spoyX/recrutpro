@@ -12,6 +12,7 @@ import { AppShell } from '../../../shared/app-shell/app-shell';
 import { StageChip } from '../../../shared/stage-chip/stage-chip';
 import { StatTile } from '../../../shared/stat-tile/stat-tile';
 import { PipelineBreakdown } from '../../../shared/pipeline-breakdown/pipeline-breakdown';
+import { TrendChart, TrendPoint } from '../../../shared/trend-chart/trend-chart';
 
 /**
  * SRS Section 1.5 — the Reports page. User story 22 (pipeline par poste) and
@@ -50,6 +51,7 @@ import { PipelineBreakdown } from '../../../shared/pipeline-breakdown/pipeline-b
     StageChip,
     StatTile,
     PipelineBreakdown,
+    TrendChart,
   ],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
@@ -120,6 +122,55 @@ export class Reports {
     const report = this.hire();
     return report !== null && report.hires > 0 && report.hires < 5;
   });
+
+  // -------------------------------------------------- D-109/D-110: the charts
+
+  /**
+   * DESIGN.md tokens, not chart.js defaults.
+   *
+   * `primary` for volume and `secondary` for the delay: two different
+   * questions, two different hues, both already in the palette. Read as
+   * literals rather than through `var(--mat-sys-*)` because chart.js paints
+   * into a CANVAS — a CSS custom property means nothing to a 2D context, and
+   * passing one would silently draw black.
+   */
+  protected readonly volumeColour = '#1D4ED8';
+  protected readonly delayColour = '#0058BE';
+
+  /** `2026-07` reads as « juil. 2026 » on an axis. */
+  private monthLabel(key: string): string {
+    const [year, month] = key.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, 15)).toLocaleDateString('fr-FR', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  }
+
+  /** Hires per month. A quiet month is a real zero, so it stays a zero. */
+  readonly volumeSeries = computed<TrendPoint[]>(() =>
+    (this.hire()?.byMonth ?? []).map((m) => ({
+      label: this.monthLabel(m.month),
+      value: m.hires,
+    })),
+  );
+
+  /**
+   * Average days-to-hire per month.
+   *
+   * `averageDays` is passed through UNTOUCHED, nulls included: a month with no
+   * hires has no average, and coercing it to 0 would draw a plunge to the axis
+   * that reads as a dramatic improvement. The chart leaves a gap.
+   */
+  readonly delaySeries = computed<TrendPoint[]>(() =>
+    (this.hire()?.byMonth ?? []).map((m) => ({
+      label: this.monthLabel(m.month),
+      value: m.averageDays,
+    })),
+  );
+
+  /** True once there is anything at all to plot. */
+  readonly hasSeries = computed(() => (this.hire()?.byMonth ?? []).length > 0);
 
   constructor() {
     this.pipelineTrigger$

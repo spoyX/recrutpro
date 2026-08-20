@@ -64,13 +64,17 @@ const positions = [
 ];
 
 /** currentStage + the decided delay in days, where accepted. */
+// `decidedMonth` feeds D-110's series. The three hires sit in TWO months with
+// a deliberate GAP between them (May, then July, nothing in June), because the
+// zero-fill is the part most worth testing: a month with no hires has to come
+// back as `hires: 0, averageDays: null`, not be missing.
 const candidates = [
   { position: POS_A1, stage: CandidateStage.CandidatureRecue },
   { position: POS_A1, stage: CandidateStage.EntretienPlanifie },
-  { position: POS_A1, stage: CandidateStage.Accepte, days: 10 },
-  { position: POS_A1, stage: CandidateStage.Accepte, days: 20 },
+  { position: POS_A1, stage: CandidateStage.Accepte, days: 10, decidedMonth: '2026-05' },
+  { position: POS_A1, stage: CandidateStage.Accepte, days: 20, decidedMonth: '2026-07' },
   { position: POS_A1, stage: CandidateStage.Rejete },
-  { position: POS_B1, stage: CandidateStage.Accepte, days: 60 },
+  { position: POS_B1, stage: CandidateStage.Accepte, days: 60, decidedMonth: '2026-07' },
   { position: POS_B1, stage: CandidateStage.CandidatureRecue },
 ];
 
@@ -114,6 +118,43 @@ beforeEach(() => {
       (c) => !posFilter?.$in || posFilter.$in.map(String).includes(c.position),
     );
 
+    // D-110: the time-to-hire report is now ONE $facet over the same $match,
+    // so the summary and the monthly series cannot disagree. The pipeline
+    // report is still a plain $group.
+    const facet = pipeline[1].$facet as Record<string, unknown> | undefined;
+    if (facet) {
+      const accepted = inScope.filter(
+        (c) => c.stage === CandidateStage.Accepte && typeof c.days === 'number',
+      );
+      const msOf = (c: (typeof accepted)[number]) => c.days! * 24 * 3600 * 1000;
+
+      const summary = accepted.length
+        ? [
+            {
+              hires: accepted.length,
+              avgMs: accepted.reduce((t, c) => t + msOf(c), 0) / accepted.length,
+              minMs: Math.min(...accepted.map(msOf)),
+              maxMs: Math.max(...accepted.map(msOf)),
+            },
+          ]
+        : [];
+
+      const buckets = new Map<string, number[]>();
+      for (const c of accepted) {
+        const key = c.decidedMonth ?? '2026-07';
+        buckets.set(key, [...(buckets.get(key) ?? []), msOf(c)]);
+      }
+      const months = [...buckets.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([_id, list]) => ({
+          _id,
+          hires: list.length,
+          avgMs: list.reduce((a, b) => a + b, 0) / list.length,
+        }));
+
+      return [{ summary, months }];
+    }
+
     // The pipeline report groups by (position, stage).
     const group = pipeline[1].$group as Record<string, unknown>;
     if ((group._id as Record<string, unknown>)?.position) {
@@ -128,22 +169,9 @@ beforeEach(() => {
       });
     }
 
-    // The time-to-hire report groups everything into one bucket.
-    const accepted = inScope.filter(
-      (c) => c.stage === CandidateStage.Accepte && typeof c.days === 'number',
-    );
-    if (accepted.length === 0) {
-      return [];
-    }
-    const msList = accepted.map((c) => c.days! * 24 * 3600 * 1000);
-    return [
-      {
-        hires: accepted.length,
-        avgMs: msList.reduce((a, b) => a + b, 0) / msList.length,
-        minMs: Math.min(...msList),
-        maxMs: Math.max(...msList),
-      },
-    ];
+    // Any other shape is a pipeline this fake does not model, and returning a
+    // plausible-looking empty array would hide that. Fail loudly instead.
+    throw new Error('report.spec aggregate fake: unrecognised pipeline');
   });
 });
 
@@ -253,6 +281,120 @@ describe('Pipeline report — SRS §1.5, user story 22', () => {
 });
 
 describe('Time-to-hire report — SRS §1.5, user story 23', () => {
+  describe('D-110: the monthly series', () => {
+    const series = async () => {
+      const res = await get(marie, '/api/v1/reports/time-to-hire?fromDate=2026-05-01&toDate=2026-07-31');
+      expect(res.status).toBe(200);
+      return res.body.byMonth as Array<{ month: string; hires: number; averageDays: number | null }>;
+    };
+
+    it('returns one entry per month across the WHOLE window, gaps included', async () => {
+      const months = await series();
+
+      // June has no hires and must still be present: a missing point lets a
+      // line chart draw straight from May to July and invent the month between.
+      //
+      // August is here too, and that is CORRECT rather than an off-by-one.
+      // `toDate=2026-07-31` becomes the last instant of that day in UTC, which
+      // is 01:59 on 1 August in Europe/Paris — the timezone the months are cut
+      // in. A hire decided in those two hours WOULD be counted by the summary,
+      // so the series has to own a bucket for it; dropping the month would let
+      // the two disagree. The trailing month is empty, and honest.
+      expect(months.map((m) => m.month)).toEqual(['2026-05', '2026-06', '2026-07', '2026-08']);
+    });
+
+    it('a zero-hire month is hires: 0 with averageDays NULL, never 0', async () => {
+      const june = (await series()).find((m) => m.month === '2026-06')!;
+
+      expect(june.hires).toBe(0);
+      // The whole point. `0` would claim nobody was hired instantly, and on a
+      // trend line it plunges to the axis and reads as an improvement.
+      expect(june.averageDays).toBeNull();
+    });
+
+    it('carries the real numbers for the months that DO have hires', async () => {
+      const months = await series();
+
+      expect(months.find((m) => m.month === '2026-05')).toEqual({
+        month: '2026-05',
+        hires: 1,
+        averageDays: 10,
+      });
+      // 20 and 60 in July, both departments.
+      expect(months.find((m) => m.month === '2026-07')).toEqual({
+        month: '2026-07',
+        hires: 2,
+        averageDays: 40,
+      });
+    });
+
+    it('the series agrees with the flat summary it is returned beside', async () => {
+      const res = await get(marie, '/api/v1/reports/time-to-hire?fromDate=2026-05-01&toDate=2026-07-31');
+      const months = res.body.byMonth as Array<{ hires: number }>;
+
+      // One $facet over one $match, so these cannot drift apart.
+      expect(months.reduce((t, m) => t + m.hires, 0)).toBe(res.body.hires);
+    });
+
+    it('cuts the months in an EXPLICIT timezone, not the UTC default', async () => {
+      await get(marie, '/api/v1/reports/time-to-hire');
+
+      const facet = mockedCandidate.aggregate.mock.calls.at(-1)![0][1].$facet;
+      const group = facet.months[0].$group._id.$dateToString;
+      // Without this a hire decided at 00:30 on 1 March in Paris is filed
+      // under February for every reader of the report.
+      expect(group.timezone).toBe('Europe/Paris');
+      expect(group.format).toBe('%Y-%m');
+    });
+
+    it('is BOUNDED when the caller gives no range — not one point per month since 1970', async () => {
+      const res = await get(marie, '/api/v1/reports/time-to-hire');
+
+      expect(res.body.byMonth.length).toBe(12);
+      // Newest last, so a trend reads left to right.
+      const keys = res.body.byMonth.map((m: { month: string }) => m.month);
+      expect([...keys].sort()).toEqual(keys);
+    });
+
+    it('caps an absurdly wide range at 24 months, keeping the MOST RECENT', async () => {
+      const res = await get(
+        marie,
+        '/api/v1/reports/time-to-hire?fromDate=1970-01-01&toDate=2026-07-31',
+      );
+
+      expect(res.body.byMonth.length).toBe(24);
+      // The most recent end, not the oldest. Before the start was capped this
+      // walked 672 months against a 600-step guard and silently ended in 2019.
+      // ('2026-08' rather than '07' for the timezone reason above.)
+      expect(res.body.byMonth.at(-1).month).toBe('2026-08');
+    });
+
+    it('D-047: the series is department-scoped like everything else on this route', async () => {
+      // Pierre is a Responsable in department A, so department B's 60-day hire
+      // must be invisible to him — in the SERIES, not merely in the total.
+      const res = await get(
+        pierre,
+        '/api/v1/reports/time-to-hire?fromDate=2026-05-01&toDate=2026-07-31',
+      );
+
+      const months = res.body.byMonth as Array<{
+        month: string;
+        hires: number;
+        averageDays: number | null;
+      }>;
+      expect(months.reduce((t, m) => t + m.hires, 0)).toBe(2);
+      // The assertion that matters: unscoped, July averages 40 (20 and 60).
+      // Scoped to A it must be 20 — the monthly AVERAGE changes, not just the
+      // count, so the scoping is applied inside the grouping and not after it.
+      expect(months.find((m) => m.month === '2026-07')).toEqual({
+        month: '2026-07',
+        hires: 1,
+        averageDays: 20,
+      });
+      expect(months.find((m) => m.month === '2026-05')!.averageDays).toBe(10);
+    });
+  });
+
   it('averages decidedAt - registeredAt over ACCEPTED candidates only', async () => {
     const res = await get(marie, '/api/v1/reports/time-to-hire');
 
