@@ -5,6 +5,9 @@
 // styles/_tokens.scss (spacing, radius, elevation, layout). D-012 is closed:
 // the placeholder azure-blue palette is gone.
 
+// Self-hosted Inter + Material Icons (checklist B1) - FIRST, so the faces
+// are declared before anything references them.
+@use 'styles/fonts';
 @use 'styles/theme';
 @use 'styles/tokens';
 // Shared by the FR-34 cancellation prompt and the FR-30 scheduling dialog.

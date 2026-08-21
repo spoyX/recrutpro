@@ -10,22 +10,6 @@
   min-width: 980px;
 }
 
-.table__num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-// A zero is data, so it is SHOWN — but muted, so the counts that carry
-// information are the ones the eye lands on.
-.table__num--zero {
-  color: var(--mat-sys-outline);
-}
-
-.table__num--total {
-  font: var(--mat-sys-label-large);
-  color: var(--mat-sys-on-surface);
-}
-
 .table__id {
   font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
   font-size: 0.85rem;

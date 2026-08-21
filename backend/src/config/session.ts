@@ -61,14 +61,39 @@ export const closeSessionStore = async (): Promise<void> => {
 export const SESSION_COOKIE_NAME = 'recrutpro.sid';
 
 /** Cookie attributes shared by the session middleware and clearCookie (FR-4). */
+/**
+ * D-111 - `secure` is driven by the environment, NOT hardcoded either way.
+ *
+ * *** HARDCODING `true` BREAKS LOCAL DEVELOPMENT COMPLETELY, and silently. ***
+ * A `Secure` cookie is only ever sent back over HTTPS. The local stack serves
+ * plain HTTP through nginx on :4200, so the browser accepts the Set-Cookie,
+ * declines to store it, and every subsequent request arrives anonymous - login
+ * "succeeds" with a 200 and the next page bounces to /login. Measured, not
+ * assumed: see D-111.
+ *
+ * So the gate is an env var. It defaults to ON under `NODE_ENV=production`,
+ * which is the deployment case the checklist item exists for, and OFF
+ * otherwise. `COOKIE_SECURE` overrides both, for a local HTTPS setup or to
+ * prove the flag works.
+ *
+ * `app.set('trust proxy', 1)` is already in app.ts (D-025) and is required for
+ * this: behind nginx, Express decides "is this connection secure?" from
+ * `X-Forwarded-Proto`, and without trusting the proxy it would refuse to set a
+ * secure cookie even over real TLS.
+ */
+const secureCookies = (): boolean => {
+  const explicit = process.env.COOKIE_SECURE;
+  if (explicit !== undefined) {
+    return explicit === 'true';
+  }
+  return process.env.NODE_ENV === 'production';
+};
+
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: 'lax',
   path: '/',
-  // Local dev runs over plain HTTP through nginx, so this stays false.
-  // PRODUCTION GATE: must become true (and the app must trust the proxy)
-  // before any TLS deployment, or the cookie travels in the clear.
-  secure: false,
+  secure: secureCookies(),
 } as const;
 
 export const sessionMiddleware = session({

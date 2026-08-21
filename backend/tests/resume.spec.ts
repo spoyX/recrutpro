@@ -94,7 +94,6 @@ beforeEach(async () => {
   mockedResume.create.mockResolvedValue({
     _id: RESUME_ID,
     candidateId: CANDIDATE_ID,
-    fileUrl: 'https://res.cloudinary.com/demo/raw/authenticated/s--sig--/recrutpro/resumes/abc.pdf',
     publicId: 'recrutpro/resumes/abc.pdf',
     uploadedAt: UPLOADED_AT,
     isActive: true,
@@ -313,7 +312,6 @@ describe('Resume upload / replace / download — FR-21 to FR-23', () => {
         _id: RESUME_ID,
         candidateId: CANDIDATE_ID,
         publicId: 'recrutpro/resumes/abc.pdf',
-        fileUrl: 'https://res.cloudinary.com/x',
         uploadedAt: UPLOADED_AT,
         isActive: true,
       });

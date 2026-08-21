@@ -31,6 +31,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-production}
+      # D-111: the Secure cookie gate. Defaults ON under NODE_ENV=production;
+      # the local .env sets it false because this stack serves plain HTTP.
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
       PORT: "3000"
       MONGO_URI: mongodb://${MONGO_USER:-recrutpro}:${MONGO_PASSWORD:-recrutpro}@mongo:27017/${MONGO_DB:-recrutpro}?authSource=admin
       SESSION_SECRET: ${SESSION_SECRET:-dev-only-change-me}

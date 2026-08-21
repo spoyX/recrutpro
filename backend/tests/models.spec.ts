@@ -313,16 +313,26 @@ describe('Mongoose schemas — ARCHITECTURE.md Section 7', () => {
     // delete the old asset on replacement and to sign a delivery URL.
     const resume = new Resume({
       candidateId: oid(),
-      fileUrl: 'https://res.cloudinary.com/demo/raw/authenticated/s--x--/recrutpro/resumes/abc.pdf',
       publicId: 'recrutpro/resumes/abc.pdf',
     });
     expect(resume.isActive).toBe(true);
     expect(await validationError(resume)).toBeUndefined();
   });
 
+  it('D-111: a Resume stores NO Cloudinary URL at all', async () => {
+    const resume = new Resume({ candidateId: oid(), publicId: 'recrutpro/resumes/abc.pdf' });
+
+    // `fileUrl` held `secure_url` and nothing ever read it — FR-23 signs a
+    // fresh short-lived URL from `publicId`. Mongoose strips unknown keys
+    // silently, so setting one would look like it worked; this asserts the
+    // field is absent from the document rather than merely unused.
+    expect((resume.toObject() as Record<string, unknown>).fileUrl).toBeUndefined();
+    expect(Object.keys(Resume.schema.paths)).not.toContain('fileUrl');
+  });
+
   it('FR-22 / D-040: a resume without a publicId is invalid', async () => {
     // Without it, a replaced CV could only ever be orphaned in Cloudinary.
-    const resume = new Resume({ candidateId: oid(), fileUrl: 'https://res.cloudinary.com/x' });
+    const resume = new Resume({ candidateId: oid() });
     expect(await validationError(resume)).toBeDefined();
   });
 

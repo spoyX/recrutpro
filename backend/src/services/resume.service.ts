@@ -104,9 +104,14 @@ export const uploadResumeForCandidate = async (
     await previous.save();
   }
 
+  // D-111: `fileUrl` is GONE. It stored Cloudinary's `secure_url` and nothing
+  // ever read it - FR-23's download signs a fresh short-lived URL from
+  // `publicId` instead. Not a security hole (D-092 verified a `raw`
+  // authenticated asset returns 401 unauthenticated, unlike the `image` case
+  // that forced `User.avatarUrl` out), but a stored URL nobody reads is a
+  // liability waiting for someone to start reading it.
   return Resume.create({
     candidateId,
-    fileUrl: uploaded.secure_url,
     publicId: uploaded.public_id,
     isActive: true,
   });

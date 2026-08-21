@@ -14,8 +14,8 @@ import { Role } from '../common/constants';
  *
  * `User.avatarUrl` in the DATABASE is the Cloudinary `secure_url`, and it NEVER
  * leaves the server. The `avatarUrl` in a RESPONSE is this API's own proxy
- * path, or null. Same name, two different values — exactly as `Resume.fileUrl`
- * stays server-side while `resume.url` is the proxy route clients call.
+ * path, or null. Same name, two different values. `Resume` used to carry the
+ * same trap in a `fileUrl` column; D-111 removed it, because nothing read it.
  *
  * The argument is `hasAvatar`, not the stored URL, so it is impossible to pass
  * the Cloudinary URL through by mistake: this function has no way to emit it.

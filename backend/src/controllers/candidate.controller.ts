@@ -271,6 +271,14 @@ export const getResume: RequestHandler = async (req, res, next) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);
+    // D-111 / D-093. The avatar proxy has set `private, max-age=300` since
+    // D-091; this route set NOTHING, so the two disagreed for no stated reason.
+    //
+    // `no-store`, not `max-age`, and the difference is the point: an avatar
+    // repeats down a list page and is worth caching, while a CV is one
+    // person's confidential document fetched on demand. `private` alone would
+    // still let the BROWSER keep it on disk after the reader signs out.
+    res.setHeader('Cache-Control', 'private, no-store');
     res.status(200).send(buffer);
   } catch (error) {
     next(error);

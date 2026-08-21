@@ -54,7 +54,8 @@ const userSchema = new Schema<IUser>({
   // handle.
   //
   // *** DO NOT ADD AN `avatarUrl` FIELD BESIDE THIS ONE. *** D-091 ratified
-  // exactly that, mirroring `Resume.fileUrl`, and D-092 removed it: for
+  // exactly that, mirroring the old `Resume.fileUrl` (itself removed in
+  // D-111), and D-092 removed it: for
   // `resource_type: 'image'`, an `authenticated` asset's `secure_url` embeds a
   // signature that NEVER EXPIRES, so the stored value was a working,
   // unauthenticated, permanent link to an employee's face. Verified by fetching
